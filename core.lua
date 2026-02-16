@@ -1,8 +1,10 @@
 local _, MapUtils = ...
 local dungeonMaps = {}
+dungeonMaps[246] = {"Interface\\AddOns\\MapUtils\\media\\246"} -- The Shattered Halls
 dungeonMaps[256] = {"Interface\\AddOns\\MapUtils\\media\\256-1", "Interface\\AddOns\\MapUtils\\media\\256-2"} -- Auchenaikrypta
 dungeonMaps[258] = {"Interface\\AddOns\\MapUtils\\media\\258-1", "Interface\\AddOns\\MapUtils\\media\\258-2"} -- Sethekkhallen
 dungeonMaps[260] = {"Interface\\AddOns\\MapUtils\\media\\260"} -- Schattenlabyrinth
+dungeonMaps[261] = {"Interface\\AddOns\\MapUtils\\media\\261"} -- Der Blutkessel
 dungeonMaps[272] = {"Interface\\AddOns\\MapUtils\\media\\272"} -- Managruft
 dungeonMaps[347] = {"Interface\\AddOns\\MapUtils\\media\\347"} -- Höllenfeuerbollwerk
 hooksecurefunc(
@@ -12,7 +14,7 @@ hooksecurefunc(
 		local mapID = C_Map.GetBestMapForUnit("player")
 		if mapID == nil then return end
 		if dungeonMaps[mapID] == nil then
-			if true then
+			if false then
 				print("mapID: " .. mapID)
 			end
 
