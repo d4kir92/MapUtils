@@ -1,5 +1,5 @@
 ## Interface: 40402
-## Version: 1.0.2
+## Version: 1.0.3
 ## Title: M|cff3FC7EBap|rU|cff3FC7EBtils|r |T134269:16:16:0:0|t by |cff3FC7EBD4KiR |T132115:16:16:0:0|t 
 ## Notes: Adds Dungeon Maps to the WorldMap
 ## Notes-deDE: Fügt Dungeonsmaps zu der Weltkarte hinzu
