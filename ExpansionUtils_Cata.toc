@@ -1,5 +1,5 @@
 ## Interface: 40402
-## Version: 1.0.3
+## Version: 1.0.4
 ## Title: M|cff3FC7EBap|rU|cff3FC7EBtils|r |T134269:16:16:0:0|t by |cff3FC7EBD4KiR |T132115:16:16:0:0|t 
 ## Notes: Adds Dungeon Maps to the WorldMap
 ## Notes-deDE: Fügt Dungeonsmaps zu der Weltkarte hinzu
@@ -11,7 +11,7 @@
 ## SavedVariables: MAUTTAB
 ## SavedVariablesPerCharacter: MAUTTABPC
 ## X-Curse-Project-ID: 1463967
-## X-Wago-ID: XANzkwg64
+## X-Wago-ID: ANzkwg64
 ## IconTexture: 134269
 
 libs\D4Lib\D4Lib.xml
