@@ -1,0 +1,29 @@
+## Interface: 50503
+## Version: 1.2.19
+## Title: M|cff3FC7EBap|rU|cff3FC7EBtils|r |T133740:16:16:0:0|t by |cff3FC7EBD4KiR |T132115:16:16:0:0|t 
+## Notes: Adds Dungeon Maps to the WorldMap
+## Notes-deDE: Fügt Dungeonsmaps zu der Weltkarte hinzu
+## Notes-ruRU: Adds Dungeon Maps to the WorldMap.
+## Author: D|cff3FC7EB4KiR |T132115:16:16:0:0|t
+## Category: D|cff3FC7EB4KiR |T132115:16:16:0:0|t
+## X-Category: D|cff3FC7EB4KiR |T132115:16:16:0:0|t
+## DefaultState: enabled
+## SavedVariables: MAUTTAB
+## SavedVariablesPerCharacter: MAUTTABPC
+## X-Curse-Project-ID: 449513
+## X-Wago-ID: XrNkvzGa
+## IconTexture: 133740
+
+libs\D4Lib\D4Lib.xml
+
+locale\enUS.lua
+locale\deDE.lua
+locale\esES.lua
+locale\frFR.lua
+locale\itIT.lua
+locale\koKR.lua
+locale\ptBR.lua
+locale\ruRU.lua
+locale\zhCN.lua
+
+core.lua
