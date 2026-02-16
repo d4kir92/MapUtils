@@ -8,7 +8,12 @@ dungeonMaps[261] = {"Interface\\AddOns\\MapUtils\\media\\261"} -- Der Blutkessel
 dungeonMaps[262] = {"Interface\\AddOns\\MapUtils\\media\\262"} -- The Underbog
 dungeonMaps[263] = {"Interface\\AddOns\\MapUtils\\media\\263"} -- The Steamvault
 dungeonMaps[265] = {"Interface\\AddOns\\MapUtils\\media\\265"} -- The Slave Pens
+dungeonMaps[266] = {"Interface\\AddOns\\MapUtils\\media\\266"} -- The Botanica
+dungeonMaps[267] = {"Interface\\AddOns\\MapUtils\\media\\267-1", "Interface\\AddOns\\MapUtils\\media\\267-2"} -- The Mechanar
+dungeonMaps[269] = {"Interface\\AddOns\\MapUtils\\media\\269-1", "Interface\\AddOns\\MapUtils\\media\\269-2", "Interface\\AddOns\\MapUtils\\media\\269-3"} -- The Arcatraz
 dungeonMaps[272] = {"Interface\\AddOns\\MapUtils\\media\\272"} -- Managruft
+dungeonMaps[273] = {"Interface\\AddOns\\MapUtils\\media\\273"} -- The Black Morass
+dungeonMaps[274] = {"Interface\\AddOns\\MapUtils\\media\\274"} -- Old Hillsbrad Foothills
 dungeonMaps[347] = {"Interface\\AddOns\\MapUtils\\media\\347"} -- Höllenfeuerbollwerk
 hooksecurefunc(
 	WorldMapFrame,
@@ -61,6 +66,7 @@ local oldGetMapArtLayerTextures = C_Map.GetMapArtLayerTextures
 function C_Map.GetMapArtLayerTextures(uiMapID, layerIndex)
 	local textures = oldGetMapArtLayerTextures(uiMapID, layerIndex)
 	if dungeonMaps[uiMapID] then
+		textures = {}
 		for i, map in pairs(dungeonMaps[uiMapID]) do
 			tinsert(textures, map)
 		end
