@@ -125,6 +125,11 @@ function C_Map.GetMapArtLayerTextures(uiMapID, layerIndex)
 		for i, map in pairs(dungeonMaps[uiMapID]) do
 			tinsert(textures, map)
 		end
+	elseif raidMaps[uiMapID] then
+		textures = {}
+		for i, map in pairs(raidMaps[uiMapID]) do
+			tinsert(textures, map)
+		end
 	end
 
 	return textures
