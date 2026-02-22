@@ -93,6 +93,25 @@ function C_Map.GetMapArtLayers(mapID)
 		end
 
 		return result
+	elseif raidMaps[mapID] then
+		local num = raidMaps[mapID] and #raidMaps[mapID] or 1
+		local result = {}
+		for i, map in pairs(raidMaps[mapID]) do
+			tinsert(
+				result,
+				{
+					["layerWidth"] = 1024 * num / 4,
+					["layerHeight"] = 683 / 4,
+					["tileWidth"] = 1024 / 4,
+					["tileHeight"] = 683 / 4,
+					["minScale"] = 1,
+					["maxScale"] = 2.5,
+					["additionalZoomSteps"] = 6,
+				}
+			)
+		end
+
+		return result
 	end
 
 	return oldGetMapArtLayers(mapID)
