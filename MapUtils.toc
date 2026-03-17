@@ -1,13 +1,22 @@
 ## Interface: 20505
 
 ## Version: 1.1.2
-## Title: M|cff3FC7EBap|rU|cff3FC7EBtils|r by |cff3FC7EBD4KiR |T132115:16:16:0:0|t 
+## Title: MapUtils by |cff55d2ffD4KiR |T132115:16:16:0:0|t 
 ## Notes: Adds Dungeon Maps to the WorldMap
 ## Notes-deDE: Fügt Dungeonsmaps zu der Weltkarte hinzu
 ## Notes-ruRU: Adds Dungeon Maps to the WorldMap
-## Author: D|cff3FC7EB4KiR |T132115:16:16:0:0|t
-## Category: D|cff3FC7EB4KiR |T132115:16:16:0:0|t
-## X-Category: D|cff3FC7EB4KiR |T132115:16:16:0:0|t
+## Author: D4KiR |T132115:16:16:0:0|t
+## Category: Map
+## Category-deDE: Karte
+## Category-esES: Mapa
+## Category-esMX: Mapa
+## Category-frFR: Carte
+## Category-itIT: Mappa
+## Category-koKR: 지도
+## Category-ptBR: Mapa
+## Category-ruRU: Карта
+## Category-zhCN: 地图
+## Category-zhTW: 地圖
 ## DefaultState: enabled
 ## SavedVariables: MAUTTAB
 ## SavedVariablesPerCharacter: MAUTTABPC
