@@ -416,6 +416,7 @@ function D4:GetSpellCastCount(...)
 end
 
 function D4:GetMouseFocus()
+    if GetMouseOverWidget then return GetMouseOverWidget() end
     if GetMouseFoci then return GetMouseFoci()[1] end
     if GetMouseFocus then return GetMouseFocus() end
     D4:MSG("[D4][GetMouseFocus] FAILED")
@@ -727,7 +728,7 @@ function D4:ReplaceStr(text, old, new)
     return table.concat(parts)
 end
 
-local genderNames = {"", "Male", "Female"}
+local genderNames = {"", "male", "female"}
 function D4:GetClassAtlas(class)
     return ("classicon-%s"):format(class)
 end
@@ -737,17 +738,45 @@ function D4:GetClassIcon(class)
 end
 
 function D4:GetRaceAtlas(race, gender)
+    local raceIcon = ("raceicon128-%s-%s"):format(race:lower(), gender:lower())
+    if C_Texture.GetAtlasInfo(raceIcon) then return raceIcon end
+
     return ("raceicon-%s-%s"):format(race:lower(), gender:lower())
 end
 
+local invalidAtlas = {}
+local raceAtlasFix = {}
+raceAtlasFix["scourge"] = "undead"
+raceAtlasFix["highmountaintauren"] = "highmountain"
+raceAtlasFix["lightforgeddraenei"] = "lightforged"
+raceAtlasFix["zandalaritroll"] = "zandalari"
+raceAtlasFix["harronir"] = "haranir"
+raceAtlasFix["earthendwarf"] = "earthen"
+if false then
+    for i, v in ipairs(C_Texture.GetAtlasElements()) do
+        if v:lower():find("raceicon") and (v:lower():find("dwarf") or v:lower():find("dwarf")) then
+            print("Möglicher Key: " .. v)
+        end
+    end
+end
+
 function D4:GetRaceIcon(race, gender)
-    if race:lower() == "scourge" and C_Texture.GetAtlasInfo(D4:GetRaceAtlas(race, genderNames[gender])) == nil then
-        race = "Undead"
+    if race == nil then return end
+    if gender == nil then return end
+    race = race:lower()
+    if raceAtlasFix[race] ~= nil and C_Texture.GetAtlasInfo(D4:GetRaceAtlas(race, genderNames[gender])) == nil then
+        race = raceAtlasFix[race]
     end
 
-    local atlas = "|A:" .. D4:GetRaceAtlas(race, genderNames[gender]) .. ":16:16:0:0|a"
-    if C_Texture.GetAtlasInfo(D4:GetRaceAtlas(race, genderNames[gender])) == nil then
-        D4:INFO("[D4][GetRaceIcon] INVALID ATLAS", race, gender)
+    local raceAtlas = D4:GetRaceAtlas(race, genderNames[gender])
+    local atlas = "|A:" .. raceAtlas .. ":16:16:0:0|a"
+    if C_Texture.GetAtlasInfo(raceAtlas) == nil then
+        if invalidAtlas[raceAtlas] == nil then
+            invalidAtlas[raceAtlas] = true
+            D4:INFO("[D4][GetRaceIcon] INVALID ATLAS", race, gender)
+        end
+
+        return atlas
     end
 
     return atlas
@@ -1246,40 +1275,6 @@ end
 D4:After(
     1,
     function()
-        if D4:GetWoWBuild() == "TBC" and PlayerFrame.RangeFix == nil then
-            PlayerFrame.RangeFix = true
-            local cufs = {}
-            hooksecurefunc(
-                "CompactUnitFrame_OnLoad",
-                function(frame)
-                    local name = frame:GetName()
-                    if name and name:sub(1, 7) == "Compact" then
-                        cufs[frame] = true
-                    end
-                end
-            )
-
-            for i = 1, 5 do
-                cufs[_G["CompactPartyFrameMember" .. i]] = true
-                cufs[_G["CompactPartyFramePet" .. i]] = true
-            end
-
-            C_Timer.NewTicker(
-                0.29,
-                function()
-                    for frame in pairs(cufs) do
-                        if frame and frame:IsShown() then
-                            local unit = frame.displayedUnit
-                            if unit and unit ~= "" then
-                                local inRange = UnitInRange(unit)
-                                frame:SetAlpha(inRange and 1 or 0.45)
-                            end
-                        end
-                    end
-                end
-            )
-        end
-
         if (D4:GetWoWBuild() == "TBC" or D4:GetWoWBuild() == "RETAIL") and PlayerFrame.RoleFix == nil then
             PlayerFrame.RoleFix = true
             D4:AddTrans("enUS", "LID_CHOOSEROLE", "Select Role")
