@@ -1,6 +1,6 @@
 ## Interface: 20506
 
-## Version: 1.1.9
+## Version: 1.1.10
 ## Title: MapUtils by |cff55d2ffD4KiR |T132115:16:16:0:0|t 
 ## Notes: Adds Dungeon Maps to the WorldMap
 ## Notes-deDE: Fügt Dungeonsmaps zu der Weltkarte hinzu
@@ -37,11 +37,13 @@ libs\D4Lib\D4Lib.xml
 locale\enUS.lua
 locale\deDE.lua
 locale\esES.lua
+locale\esMX.lua
 locale\frFR.lua
 locale\itIT.lua
 locale\koKR.lua
 locale\ptBR.lua
 locale\ruRU.lua
 locale\zhCN.lua
+locale\zhTW.lua
 
 core.lua
