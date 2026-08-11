@@ -1,18 +1,18 @@
 ## Interface: 20506
 
-## Version: 1.1.10
+## Version: 1.1.11
 ## Title: MapUtils by |cff55d2ffD4KiR |T132115:16:16:0:0|t 
-## Notes: Adds Dungeon Maps to the WorldMap
-## Notes-deDE: Fügt Dungeonsmaps zu der Weltkarte hinzu
-## Notes-esES: Añade mapas de mazmorras al mapa del mundo
-## Notes-esMX: Añade mapas de mazmorras al mapa del mundo
-## Notes-frFR: Ajoute des cartes de donjon à la carte du monde
-## Notes-itIT: Aggiunge mappe dei dungeon alla mappa del mondo
-## Notes-koKR: 월드맵에 던전 지도를 추가합니다
-## Notes-ptBR: Adiciona mapas de masmorras ao mapa mundial
-## Notes-ruRU: Добавляет карты подземелий на карту мира
-## Notes-zhCN: 在世界地图上添加地下城地图
-## Notes-zhTW: 在世界地圖上新增地城地圖
+## Notes: Adds Dungeon/Raid Maps to the WorldMap
+## Notes-deDE: Fügt Dungeon-/Raidmaps zu der Weltkarte hinzu
+## Notes-esES: Añade mapas de mazmorras y bandas al mapa del mundo
+## Notes-esMX: Añade mapas de mazmorras y bandas al mapa del mundo
+## Notes-frFR: Ajoute des cartes de donjon et de raid à la carte du monde
+## Notes-itIT: Aggiunge mappe dei dungeon e delle incursioni alla mappa del mondo
+## Notes-koKR: 월드맵에 던전/공격대 지도를 추가합니다
+## Notes-ptBR: Adiciona mapas de masmorras e raides ao mapa mundial
+## Notes-ruRU: Добавляет карты подземелий и рейдов на карту мира
+## Notes-zhCN: 在世界地图上添加地下城/团队副本地图
+## Notes-zhTW: 在世界地圖上新增地城/團隊副本地圖
 ## Author: D4KiR |T132115:16:16:0:0|t
 ## Category: Map
 ## Category-deDE: Karte
