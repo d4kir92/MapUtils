@@ -480,9 +480,7 @@ hooksecurefunc(WorldMapFrame, "Show", function()
 		return
 	end
 
-	WorldMapFrame.mapID = mapID
-	WorldMapFrame:SetMapID(mapID)
-	WorldMapFrame:RefreshDetailLayers()
+	if WorldMapFrame:GetMapID() ~= mapID then WorldMapFrame:SetMapID(mapID) end
 end)
 
 local oldGetMapArtLayers = C_Map.GetMapArtLayers
