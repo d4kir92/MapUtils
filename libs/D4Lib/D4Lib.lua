@@ -12,7 +12,9 @@ local GetAtlasInfo = _G["GetAtlasInfo"]
 -- Basics 
 local buildNr = select(4, GetBuildInfo())
 local buildName = "CLASSIC"
-if buildNr >= 100000 then
+local isCamelot = buildNr >= 16000 and buildNr < 20000
+local isTitanReforged = buildNr >= 38000 and buildNr < 40000
+if buildNr >= 100000 or isCamelot then
     buildName = "RETAIL"
 elseif buildNr >= 50000 then
     buildName = "MISTS"
@@ -30,6 +32,20 @@ end
 
 function D4:GetWoWBuild()
     return buildName
+end
+
+function D4:IsCamelot()
+    return isCamelot
+end
+
+function D4:IsTitanReforged()
+    return isTitanReforged
+end
+
+function D4:IsSecret(value)
+    local isSecret = _G["issecretvalue"]
+    if type(isSecret) ~= "function" then return false end
+    return isSecret(value) == true
 end
 
 D4.oldWow = D4.oldWow or false
@@ -718,8 +734,10 @@ function D4:GetClassAtlas(class)
     return ("classicon-%s"):format(class)
 end
 
-function D4:GetClassIcon(class)
-    return "|A:" .. D4:GetClassAtlas(class) .. ":16:16:0:0|a"
+function D4:GetClassIcon(class, size)
+    size = tonumber(size) or 16
+    if size < 0 then size = 0 end
+    return "|A:" .. D4:GetClassAtlas(class) .. ":" .. size .. ":" .. size .. ":0:0|a"
 end
 
 function D4:GetRaceAtlas(race, gender)
@@ -1085,6 +1103,7 @@ function D4:GetRoleByGuid(guid)
 end
 
 function D4:GetRoleIcon(role)
+    if D4:IsSecret(role) then return "" end
     if role == "" then return "" end
     if role == "NONE" then return "" end
     if role == "DAMAGER" then
@@ -1427,12 +1446,20 @@ function D4:GetMicroMenuButtons()
             end
         end
 
-        if D4:GetWoWBuild() == "RETAIL" then
+        if D4:IsCamelot() and MicroMenu and MicroMenu.GenerateButtonInfos then
+            MBTNS = {}
+            for _, info in ipairs(MicroMenu:GenerateButtonInfos() or {}) do
+                local disabled = (info.gameRule and C_GameRules and C_GameRules.IsGameRuleActive(info.gameRule)) or (info.callback and info.callback())
+                if info.button and not disabled then tinsert(MBTNS, info.button:GetName()) end
+            end
+        elseif D4:GetWoWBuild() == "RETAIL" then
             MBTNS = {"CharacterMicroButton", "ProfessionMicroButton", "PlayerSpellsMicroButton", "SpellbookMicroButton", "TalentMicroButton", "AchievementMicroButton", "QuestLogMicroButton", "HousingMicroButton", "GuildMicroButton", "LFDMicroButton", "CollectionsMicroButton", "EJMicroButton", "StoreMicroButton", "HelpMicroButton", "MainMenuMicroButton"}
         elseif D4:GetWoWBuild() == "CATA" then
             MBTNS = {"CharacterMicroButton", "SpellbookMicroButton", "TalentMicroButton", "AchievementMicroButton", "QuestLogMicroButton", "GuildMicroButton", "LFDMicroButton", "CollectionsMicroButton", "PVPMicroButton", "LFGMicroButton", "EJMicroButton", "StoreMicroButton", "MainMenuMicroButton", "HelpMicroButton"}
         elseif D4:GetWoWBuild() == "MISTS" then
             MBTNS = {"CharacterMicroButton", "SpellbookMicroButton", "TalentMicroButton", "AchievementMicroButton", "QuestLogMicroButton", "GuildMicroButton", "PVPMicroButton", "LFGMicroButton", "CollectionsMicroButton", "EJMicroButton", "StoreMicroButton", "MainMenuMicroButton"}
+        elseif D4:GetWoWBuild() == "WRATH" then
+            MBTNS = {"CharacterMicroButton", "SpellbookMicroButton", "TalentMicroButton", "AchievementMicroButton", "QuestLogMicroButton", "GuildMicroButton", "CollectionsMicroButton", "PVPMicroButton", "LFGMicroButton", "MainMenuMicroButton", "HelpMicroButton"}
         elseif D4:GetWoWBuild() == "TBC" then
             MBTNS = {"CharacterMicroButton", "SpellbookMicroButton", "TalentMicroButton", "QuestLogMicroButton", "GuildMicroButton", "LFDMicroButton", "WorldMapMicroButton", "MainMenuMicroButton", "HelpMicroButton", "StoreMicroButton"}
         elseif D4:GetWoWBuild() == "CLASSIC" then
