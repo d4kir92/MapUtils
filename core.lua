@@ -480,6 +480,7 @@ hooksecurefunc(WorldMapFrame, "Show", function()
 		return
 	end
 
+	if C_Map.GetMapInfo(mapID) == nil then return end
 	if WorldMapFrame:GetMapID() ~= mapID then WorldMapFrame:SetMapID(mapID) end
 end)
 
