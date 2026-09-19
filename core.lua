@@ -485,7 +485,7 @@ hooksecurefunc(WorldMapFrame, "Show", function()
 end)
 
 local oldGetMapArtLayers = C_Map.GetMapArtLayers
-function C_Map.GetMapArtLayers(mapID)
+local function GetMapArtLayers(mapID)
 	if mapID == nil then return oldGetMapArtLayers(mapID) end
 	if dungeonMaps[mapID] then
 		local num = dungeonMaps[mapID] and #dungeonMaps[mapID] or 1
@@ -522,7 +522,7 @@ function C_Map.GetMapArtLayers(mapID)
 end
 
 local oldGetMapArtLayerTextures = C_Map.GetMapArtLayerTextures
-function C_Map.GetMapArtLayerTextures(uiMapID, layerIndex)
+local function GetMapArtLayerTextures(uiMapID, layerIndex)
 	local textures = oldGetMapArtLayerTextures(uiMapID, layerIndex)
 	if dungeonMaps[uiMapID] then
 		textures = {}
@@ -536,4 +536,22 @@ function C_Map.GetMapArtLayerTextures(uiMapID, layerIndex)
 		end
 	end
 	return textures
+end
+
+local function ClientHasOwnMaps()
+	if C_Map.GetMapInfo(947) == nil then return true end
+	for mapID in pairs(dungeonMaps) do
+		if C_Map.GetMapInfo(mapID) ~= nil then return true end
+	end
+
+	for mapID in pairs(raidMaps) do
+		if C_Map.GetMapInfo(mapID) ~= nil then return true end
+	end
+
+	return false
+end
+
+if ClientHasOwnMaps() then
+	C_Map.GetMapArtLayers = GetMapArtLayers
+	C_Map.GetMapArtLayerTextures = GetMapArtLayerTextures
 end
