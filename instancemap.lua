@@ -7,7 +7,9 @@ local art = {}
 art[2999] = {
 	["file"] = "Interface\\AddOns\\MapUtils\\media\\2999",
 	["width"] = 1024,
-	["height"] = 1024,
+	["height"] = 683,
+	["fileWidth"] = 1024,
+	["fileHeight"] = 1024,
 	["zoom"] = 1,
 }
 
@@ -143,6 +145,9 @@ Refresh = function()
 	if key ~= lastKey then
 		lastKey = key
 		overlay.art:SetTexture(info.file)
+		local width = info.width or DEFAULT_ART_WIDTH
+		local height = info.height or DEFAULT_ART_HEIGHT
+		overlay.art:SetTexCoord(0, width / (info.fileWidth or width), 0, height / (info.fileHeight or height))
 		Layout(info)
 	end
 
