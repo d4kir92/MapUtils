@@ -49,3 +49,5 @@ locale\zhTW.lua
 
 core.lua
 docks.lua
+debug.lua
+settings.lua

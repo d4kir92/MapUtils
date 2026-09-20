@@ -282,14 +282,18 @@ end
 local worldPins = {}
 local worldMapID = nil
 local worldScale = nil
+local worldEnabled = nil
 local function UpdateWorldPins()
 	local child = WorldMapFrame.ScrollContainer.Child
 	local mapID = WorldMapFrame:GetMapID()
 	local scale = child:GetScale()
-	if mapID == worldMapID and scale == worldScale then return end
+	local enabled = MapUtils:GetConfig("WORLDMAPPINS", true) == true
+	if mapID == worldMapID and scale == worldScale and enabled == worldEnabled then return end
 	worldMapID = mapID
 	worldScale = scale
+	worldEnabled = enabled
 	HideAll(worldPins)
+	if not enabled then return end
 	local list = nil
 	if mapID ~= nil then list = piers[mapID] end
 	if list == nil then return end
@@ -327,6 +331,12 @@ end
 
 local minimapPins = {}
 local function UpdateMinimapPins()
+	if MapUtils:GetConfig("MINIMAPPINS", true) ~= true then
+		HideAll(minimapPins)
+
+		return
+	end
+
 	local mapID = C_Map.GetBestMapForUnit("player")
 	local list = nil
 	if mapID ~= nil then list = piers[mapID] end
@@ -470,6 +480,15 @@ local function RefreshIcons()
 
 	worldMapID = nil
 	worldScale = nil
+	worldEnabled = nil
+end
+
+function MapUtils:RefreshPiers()
+	worldMapID = nil
+	worldScale = nil
+	worldEnabled = nil
+	HideAll(worldPins)
+	HideAll(minimapPins)
 end
 
 local function SetIcon(value)

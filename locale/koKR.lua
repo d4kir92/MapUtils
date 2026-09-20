@@ -1,4 +1,9 @@
 -- koKR Korean
 local _, MapUtils = ...
+MapUtils:AddTrans("koKR", "LID_GENERAL", "일반")
+MapUtils:AddTrans("koKR", "LID_MINIMAPPINS", "미니맵에 아이콘 표시")
+MapUtils:AddTrans("koKR", "LID_MMBTN", "미니맵 버튼 표시")
+MapUtils:AddTrans("koKR", "LID_PIERS", "선착장")
 MapUtils:AddTrans("koKR", "LID_SHIPTO", "배 목적지")
 MapUtils:AddTrans("koKR", "LID_THEN", "그 다음")
+MapUtils:AddTrans("koKR", "LID_WORLDMAPPINS", "월드맵에 아이콘 표시")
