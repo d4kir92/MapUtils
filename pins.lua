@@ -782,7 +782,7 @@ local function ReportIcons()
 		MapUtils:INFO("atlas", atlas, "exists:", IsAtlas(atlas))
 	end
 
-	MapUtils:INFO("Use /mapdocks icon <atlas or texture path> to try one, /mapdocks icon reset to go back")
+	MapUtils:INFO("Use /mappins icon <atlas or texture path> to try one, /mappins icon reset to go back")
 end
 
 local function ReportState()
@@ -837,7 +837,7 @@ local function ReportLFG(filter)
 		end
 	end
 
-	MapUtils:INFO(format("%d LFG entries found, also saved to SavedVariables - /mapdocks clear empties the list again", hits))
+	MapUtils:INFO(format("%d LFG entries found, also saved to SavedVariables - /mappins clear empties the list again", hits))
 end
 
 local function ReportActivities(filter)
@@ -866,31 +866,31 @@ local function ReportActivities(filter)
 	MapUtils:INFO(format("%d activities found, also saved to SavedVariables", hits))
 end
 
-MapUtils:AddSlash(
-	"mapdocks",
-	function(args)
-		local label = strtrim(args or "")
-		local sub, rest = strsplit(" ", label, 2)
-		sub = strlower(strtrim(sub or ""))
-		rest = strtrim(rest or "")
-		if sub == "debug" then
-			ReportState()
-		elseif sub == "list" then
-			ListCaptures()
-		elseif sub == "clear" then
-			ClearCaptures()
-		elseif sub == "lfg" then
-			ReportLFG(rest)
-		elseif sub == "activities" then
-			ReportActivities(rest)
-		elseif sub == "icon" then
-			if rest == "" then
-				ReportIcons()
-			else
-				SetIcon(rest)
-			end
+local function HandleSlash(args)
+	local label = strtrim(args or "")
+	local sub, rest = strsplit(" ", label, 2)
+	sub = strlower(strtrim(sub or ""))
+	rest = strtrim(rest or "")
+	if sub == "debug" then
+		ReportState()
+	elseif sub == "list" then
+		ListCaptures()
+	elseif sub == "clear" then
+		ClearCaptures()
+	elseif sub == "lfg" then
+		ReportLFG(rest)
+	elseif sub == "activities" then
+		ReportActivities(rest)
+	elseif sub == "icon" then
+		if rest == "" then
+			ReportIcons()
 		else
-			AddCapture(label)
+			SetIcon(rest)
 		end
+	else
+		AddCapture(label)
 	end
-)
+end
+
+MapUtils:AddSlash("mappins", HandleSlash)
+MapUtils:AddSlash("mapdocks", HandleSlash)
