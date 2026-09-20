@@ -48,6 +48,6 @@ locale\zhCN.lua
 locale\zhTW.lua
 
 core.lua
-docks.lua
+pins.lua
 debug.lua
 settings.lua
