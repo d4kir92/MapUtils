@@ -3,6 +3,7 @@ local _, MapUtils = ...
 MapUtils:AddTrans("ptBR", "LID_DUNGEONENTRANCE", "Entrada da masmorra")
 MapUtils:AddTrans("ptBR", "LID_DUNGEONS", "Entradas de masmorra")
 MapUtils:AddTrans("ptBR", "LID_GENERAL", "Geral")
+MapUtils:AddTrans("ptBR", "LID_INSTANCEMAP", "Mostrar o mapa da masmorra no mapa mundial")
 MapUtils:AddTrans("ptBR", "LID_MINIMAPPINS", "Mostrar ícones no minimapa")
 MapUtils:AddTrans("ptBR", "LID_MMBTN", "Mostrar botão do minimapa")
 MapUtils:AddTrans("ptBR", "LID_PIERS", "Cais")

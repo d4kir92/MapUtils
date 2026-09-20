@@ -66,6 +66,8 @@ local function HandleSlash(args)
 	local sub = strlower(strtrim(args or ""))
 	if sub == "debug" then
 		MapUtils:ToggleDebug()
+	elseif sub == "map" then
+		MapUtils:ToggleInstanceMap()
 	else
 		MapUtils:ToggleSettings()
 	end
@@ -103,6 +105,7 @@ function MapUtils:InitSetting()
 		end
 	end)
 
+	AddCheckbox("INSTANCEMAP", true)
 	AddCategory("PIERS")
 	AddCheckbox("WORLDMAPPINS", true, function() MapUtils:RefreshPins() end)
 	AddCheckbox("MINIMAPPINS", true, function() MapUtils:RefreshPins() end)

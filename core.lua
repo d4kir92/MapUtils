@@ -337,11 +337,6 @@ dungeonMaps[347] = {
 	"Interface\\AddOns\\MapUtils\\media\\347" -- Höllenfeuerbollwerk
 }
 
--- WoW Forever Dungeons:
-dungeonMaps[947] = {
-	"Interface\\AddOns\\MapUtils\\media\\947" -- Ruins of Lordaeron
-}
-
 -- TBC Raids:
 raidMaps[330] = {
 	"Interface\\AddOns\\MapUtils\\media\\330" -- Gruul's Lair

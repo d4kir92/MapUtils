@@ -3,6 +3,7 @@ local _, MapUtils = ...
 MapUtils:AddTrans("enUS", "LID_DUNGEONENTRANCE", "Dungeon entrance")
 MapUtils:AddTrans("enUS", "LID_DUNGEONS", "Dungeon entrances")
 MapUtils:AddTrans("enUS", "LID_GENERAL", "General")
+MapUtils:AddTrans("enUS", "LID_INSTANCEMAP", "Show the dungeon map on the world map")
 MapUtils:AddTrans("enUS", "LID_MINIMAPPINS", "Show icons on the minimap")
 MapUtils:AddTrans("enUS", "LID_MMBTN", "Show Minimap Button")
 MapUtils:AddTrans("enUS", "LID_PIERS", "Piers")
