@@ -11,6 +11,9 @@ FACTION_ICONS["Horde"] = "TaxiNode_Continent_Horde"
 FACTION_ICONS["Neutral"] = "TaxiNode_Continent_Neutral"
 local FACTION_ORDER = {"Alliance", "Horde", "Neutral"}
 local ICON_CANDIDATES = {"TaxiNode_Continent", "MagePortalAlliance", "MagePortalHorde", "Portal", "Ferry", "TransportShip", "Vehicle-Temporary-Zone-Boat", "FlightMaster_Neutral"}
+local LFG_SCAN_MAX = 4000
+local DEFAULT_DUNGEON_ICON = "Interface\\Icons\\INV_Misc_Bone_Skull_02"
+local DUNGEON_ICON_CANDIDATES = {"Dungeon", "DungeonSkull", "Dungeon-Normal"}
 local MINIMAP_YARDS = {}
 MINIMAP_YARDS["outdoor"] = {[0] = 466.66666, 400, 333.33333, 266.66666, 200, 133.33333}
 MINIMAP_YARDS["indoor"] = {[0] = 300, 240, 180, 120, 80, 50}
@@ -140,6 +143,24 @@ piers[1453] = {
 	},
 }
 
+local dungeons = {}
+dungeons[1458] = {
+	{
+		["name"] = "Ruins of Lordaeron",
+		["x"] = 0.7220,
+		["y"] = 0.1147,
+		["lfg"] = 3272,
+		["minLevel"] = 11,
+		["maxLevel"] = 24,
+	},
+}
+
+for _, list in pairs(dungeons) do
+	for _, entry in ipairs(list) do
+		entry.kind = "dungeon"
+	end
+end
+
 local mapRects = {}
 local function GetMapRect(mapID)
 	if mapID == nil then return nil end
@@ -167,13 +188,13 @@ local function GetPlayerMapPos(mapID)
 	return (wy - rect[1].y) / rect[2].y, (wx - rect[1].x) / rect[2].x
 end
 
-local function GetPierWorldPos(mapID, pier)
-	if pier.worldPos ~= nil then return pier.worldPos end
+local function GetEntryWorldPos(mapID, entry)
+	if entry.worldPos ~= nil then return entry.worldPos end
 	local rect = GetMapRect(mapID)
 	if rect == nil then return nil end
-	pier.worldPos = CreateVector2D(rect[1].x + rect[2].x * pier.y, rect[1].y + rect[2].y * pier.x)
+	entry.worldPos = CreateVector2D(rect[1].x + rect[2].x * entry.y, rect[1].y + rect[2].y * entry.x)
 
-	return pier.worldPos
+	return entry.worldPos
 end
 
 local function GetMapName(mapID)
@@ -221,6 +242,29 @@ local function GetIcon(faction)
 	return resolvedIcons[faction]
 end
 
+local resolvedDungeonIcon = nil
+local function GetDungeonIcon()
+	if resolvedDungeonIcon ~= nil then return resolvedDungeonIcon end
+	for _, atlas in ipairs(DUNGEON_ICON_CANDIDATES) do
+		if IsAtlas(atlas) then
+			resolvedDungeonIcon = atlas
+
+			return resolvedDungeonIcon
+		end
+	end
+
+	resolvedDungeonIcon = DEFAULT_DUNGEON_ICON
+
+	return resolvedDungeonIcon
+end
+
+local function GetEntryIcon(entry)
+	if entry.icon ~= nil then return entry.icon end
+	if entry.kind == "dungeon" then return GetDungeonIcon() end
+
+	return GetIcon(entry.faction)
+end
+
 local function ApplyIcon(pin, icon)
 	if pin.icon == icon then return end
 	pin.icon = icon
@@ -243,14 +287,82 @@ local function GetRouteText(route, index)
 	return text
 end
 
+local lfgByInstance = nil
+local function GetLFGIndex()
+	if lfgByInstance ~= nil then return lfgByInstance end
+	local index = {}
+	if GetLFGDungeonInfo == nil then
+		lfgByInstance = index
+
+		return index
+	end
+
+	local found = false
+	for id = 1, LFG_SCAN_MAX do
+		local name, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, lfgMapID = GetLFGDungeonInfo(id)
+		if name ~= nil and name ~= "" then
+			found = true
+			if lfgMapID ~= nil and lfgMapID > 0 and index[lfgMapID] == nil then index[lfgMapID] = id end
+		end
+	end
+
+	if not found then return index end
+	lfgByInstance = index
+
+	return index
+end
+
+local function IsRange(min, max)
+	return min ~= nil and max ~= nil and min > 0 and max > min
+end
+
+local function GetDungeonInfo(entry)
+	local minLevel = entry.minLevel
+	local maxLevel = entry.maxLevel
+	local id = entry.lfg
+	if id == nil and entry.instance ~= nil then id = GetLFGIndex()[entry.instance] end
+	if id == nil or GetLFGDungeonInfo == nil then return nil, minLevel, maxLevel end
+	local lfgName, _, _, apiMin, apiMax, _, apiRecMin, apiRecMax = GetLFGDungeonInfo(id)
+	if lfgName == "" then lfgName = nil end
+	if minLevel == nil then
+		if IsRange(apiRecMin, apiRecMax) then
+			minLevel = apiRecMin
+			maxLevel = apiRecMax
+		elseif IsRange(apiMin, apiMax) then
+			minLevel = apiMin
+			maxLevel = apiMax
+		end
+	end
+
+	local recLevel = nil
+	if apiMin ~= nil and apiMin > 0 and apiMin ~= minLevel then recLevel = apiMin end
+
+	return lfgName, minLevel, maxLevel, recLevel
+end
+
 local function OnPinEnter(pin)
-	local pier = pin.pier
-	if pier == nil then return end
+	local entry = pin.entry
+	if entry == nil then return end
 	GameTooltip:SetOwner(pin, "ANCHOR_RIGHT")
-	GameTooltip:AddLine(pier.name, 1, 1, 1)
-	GameTooltip:AddLine(MapUtils:Trans("LID_SHIPTO"), 0.6, 0.6, 0.6)
-	for i, route in ipairs(pier.routes) do
-		GameTooltip:AddLine(GetRouteText(route, i), 1, 0.82, 0)
+	if entry.kind == "dungeon" then
+		local name, minLevel, maxLevel, recLevel = GetDungeonInfo(entry)
+		GameTooltip:AddLine(name or entry.name, 1, 1, 1)
+		GameTooltip:AddLine(MapUtils:Trans("LID_DUNGEONENTRANCE"), 0.6, 0.6, 0.6)
+		if minLevel ~= nil and minLevel > 0 then
+			if maxLevel ~= nil and maxLevel > minLevel then
+				GameTooltip:AddLine(format("%s %d - %d", LEVEL or "Level", minLevel, maxLevel), 1, 0.82, 0)
+			else
+				GameTooltip:AddLine(format("%s %d", LEVEL or "Level", minLevel), 1, 0.82, 0)
+			end
+		end
+
+		if recLevel ~= nil then GameTooltip:AddLine(MapUtils:Trans("LID_RECOMMENDEDLEVEL", nil, recLevel), 0.6, 0.6, 0.6) end
+	else
+		GameTooltip:AddLine(entry.name, 1, 1, 1)
+		GameTooltip:AddLine(MapUtils:Trans("LID_SHIPTO"), 0.6, 0.6, 0.6)
+		for i, route in ipairs(entry.routes) do
+			GameTooltip:AddLine(GetRouteText(route, i), 1, 0.82, 0)
+		end
 	end
 
 	GameTooltip:Show()
@@ -279,40 +391,73 @@ local function HideAll(pins)
 	end
 end
 
+local function PiersEnabled(worldMap)
+	if worldMap then return MapUtils:GetConfig("WORLDMAPPINS", true) == true end
+
+	return MapUtils:GetConfig("MINIMAPPINS", true) == true
+end
+
+local function DungeonsEnabled(worldMap)
+	if worldMap then return MapUtils:GetConfig("DUNGEONWORLDMAPPINS", true) == true end
+
+	return MapUtils:GetConfig("DUNGEONMINIMAPPINS", true) == true
+end
+
+local function BuildList(mapID, piersOn, dungeonsOn)
+	if mapID == nil then return nil end
+	local list = nil
+	if piersOn and piers[mapID] ~= nil then
+		list = list or {}
+		for _, entry in ipairs(piers[mapID]) do
+			tinsert(list, entry)
+		end
+	end
+
+	if dungeonsOn and dungeons[mapID] ~= nil then
+		list = list or {}
+		for _, entry in ipairs(dungeons[mapID]) do
+			tinsert(list, entry)
+		end
+	end
+
+	return list
+end
+
 local worldPins = {}
 local worldMapID = nil
 local worldScale = nil
-local worldEnabled = nil
+local worldPiers = nil
+local worldDungeons = nil
 local function UpdateWorldPins()
 	local child = WorldMapFrame.ScrollContainer.Child
 	local mapID = WorldMapFrame:GetMapID()
 	local scale = child:GetScale()
-	local enabled = MapUtils:GetConfig("WORLDMAPPINS", true) == true
-	if mapID == worldMapID and scale == worldScale and enabled == worldEnabled then return end
+	local piersOn = PiersEnabled(true)
+	local dungeonsOn = DungeonsEnabled(true)
+	if mapID == worldMapID and scale == worldScale and piersOn == worldPiers and dungeonsOn == worldDungeons then return end
 	worldMapID = mapID
 	worldScale = scale
-	worldEnabled = enabled
+	worldPiers = piersOn
+	worldDungeons = dungeonsOn
 	HideAll(worldPins)
-	if not enabled then return end
-	local list = nil
-	if mapID ~= nil then list = piers[mapID] end
+	local list = BuildList(mapID, piersOn, dungeonsOn)
 	if list == nil then return end
 	if scale == nil or scale <= 0 then return end
 	local w = child:GetWidth()
 	local h = child:GetHeight()
 	local size = ICON_SIZE / scale
-	for i, pier in ipairs(list) do
+	for i, entry in ipairs(list) do
 		local pin = worldPins[i]
 		if pin == nil then
 			pin = CreatePin(child, WORLD_PIN_LEVEL)
 			worldPins[i] = pin
 		end
 
-		pin.pier = pier
-		ApplyIcon(pin, pier.icon or GetIcon(pier.faction))
+		pin.entry = entry
+		ApplyIcon(pin, GetEntryIcon(entry))
 		pin:SetSize(size, size)
 		pin:ClearAllPoints()
-		pin:SetPoint("CENTER", child, "TOPLEFT", w * pier.x, -h * pier.y)
+		pin:SetPoint("CENTER", child, "TOPLEFT", w * entry.x, -h * entry.y)
 		pin:Show()
 	end
 end
@@ -330,16 +475,23 @@ local function GetMinimapYards()
 end
 
 local minimapPins = {}
+local minimapMapID = nil
+local minimapPiers = nil
+local minimapDungeons = nil
+local minimapList = nil
+local function GetMinimapList(mapID, piersOn, dungeonsOn)
+	if mapID == minimapMapID and piersOn == minimapPiers and dungeonsOn == minimapDungeons then return minimapList end
+	minimapMapID = mapID
+	minimapPiers = piersOn
+	minimapDungeons = dungeonsOn
+	minimapList = BuildList(mapID, piersOn, dungeonsOn)
+
+	return minimapList
+end
+
 local function UpdateMinimapPins()
-	if MapUtils:GetConfig("MINIMAPPINS", true) ~= true then
-		HideAll(minimapPins)
-
-		return
-	end
-
 	local mapID = C_Map.GetBestMapForUnit("player")
-	local list = nil
-	if mapID ~= nil then list = piers[mapID] end
+	local list = GetMinimapList(mapID, PiersEnabled(false), DungeonsEnabled(false))
 	if list == nil then
 		HideAll(minimapPins)
 
@@ -361,16 +513,16 @@ local function UpdateMinimapPins()
 	if MapUtils:GetCVar("rotateMinimap") == "1" then facing = GetPlayerFacing() or 0 end
 	local cosF = math.cos(facing)
 	local sinF = math.sin(facing)
-	for i, pier in ipairs(list) do
+	for i, entry in ipairs(list) do
 		local pin = minimapPins[i]
 		if pin == nil then
 			pin = CreatePin(Minimap, MINIMAP_PIN_LEVEL)
 			minimapPins[i] = pin
 		end
 
-		pin.pier = pier
-		ApplyIcon(pin, pier.icon or GetIcon(pier.faction))
-		local pos = GetPierWorldPos(mapID, pier)
+		pin.entry = entry
+		ApplyIcon(pin, GetEntryIcon(entry))
+		local pos = GetEntryWorldPos(mapID, entry)
 		if pos == nil then
 			pin:Hide()
 		else
@@ -386,6 +538,10 @@ local function UpdateMinimapPins()
 				pin:Show()
 			end
 		end
+	end
+
+	for i = #list + 1, #minimapPins do
+		minimapPins[i]:Hide()
 	end
 end
 
@@ -412,10 +568,14 @@ if WorldMapFrame ~= nil and WorldMapFrame.ScrollContainer ~= nil and WorldMapFra
 end
 
 if Minimap ~= nil then minimapUpdater = CreateUpdater(Minimap, UpdateMinimapPins) end
-local function CountPiers(mapID)
-	if mapID == nil or piers[mapID] == nil then return 0 end
+local function CountPins(mapID)
+	if mapID == nil then return 0, 0 end
+	local pierCount = 0
+	local dungeonCount = 0
+	if piers[mapID] ~= nil then pierCount = #piers[mapID] end
+	if dungeons[mapID] ~= nil then dungeonCount = #dungeons[mapID] end
 
-	return #piers[mapID]
+	return pierCount, dungeonCount
 end
 
 local function GetCaptures()
@@ -480,13 +640,20 @@ local function RefreshIcons()
 
 	worldMapID = nil
 	worldScale = nil
-	worldEnabled = nil
+	worldPiers = nil
+	worldDungeons = nil
+	resolvedDungeonIcon = nil
 end
 
-function MapUtils:RefreshPiers()
+function MapUtils:RefreshPins()
 	worldMapID = nil
 	worldScale = nil
-	worldEnabled = nil
+	worldPiers = nil
+	worldDungeons = nil
+	minimapMapID = nil
+	minimapPiers = nil
+	minimapDungeons = nil
+	minimapList = nil
 	HideAll(worldPins)
 	HideAll(minimapPins)
 end
@@ -524,6 +691,11 @@ local function ReportIcons()
 		MapUtils:INFO("atlas", atlas, "exists:", IsAtlas(atlas))
 	end
 
+	MapUtils:INFO("current dungeon icon:", GetDungeonIcon(), "- is atlas:", IsAtlas(GetDungeonIcon()))
+	for _, atlas in ipairs(DUNGEON_ICON_CANDIDATES) do
+		MapUtils:INFO("atlas", atlas, "exists:", IsAtlas(atlas))
+	end
+
 	MapUtils:INFO("Use /mapdocks icon <atlas or texture path> to try one, /mapdocks icon reset to go back")
 end
 
@@ -536,9 +708,11 @@ local function ReportState()
 		mapOpen = WorldMapFrame:IsShown() == true
 	end
 
+	local playerPiers, playerDungeons = CountPins(playerMapID)
+	local canvasPiers, canvasDungeons = CountPins(canvasMapID)
 	MapUtils:INFO("world updater:", worldUpdater ~= nil, "minimap updater:", minimapUpdater ~= nil, "map open:", mapOpen)
-	MapUtils:INFO("player uiMapID:", tostring(playerMapID), "-", GetMapName(playerMapID), "- piers:", CountPiers(playerMapID))
-	MapUtils:INFO("canvas uiMapID:", tostring(canvasMapID), "-", GetMapName(canvasMapID), "- piers:", CountPiers(canvasMapID))
+	MapUtils:INFO("player uiMapID:", tostring(playerMapID), "-", GetMapName(playerMapID), "- piers:", playerPiers, "- dungeons:", playerDungeons)
+	MapUtils:INFO("canvas uiMapID:", tostring(canvasMapID), "-", GetMapName(canvasMapID), "- piers:", canvasPiers, "- dungeons:", canvasDungeons)
 	MapUtils:INFO("world pins:", #worldPins, "minimap pins:", #minimapPins, "icon:", GetIcon(DEFAULT_FACTION), "is atlas:", IsAtlas(GetIcon(DEFAULT_FACTION)))
 	for i, pin in ipairs(worldPins) do
 		local ox, oy = 0, 0
@@ -556,6 +730,30 @@ local function ReportState()
 	end
 end
 
+local function ReportLFG(filter)
+	if GetLFGDungeonInfo == nil then
+		MapUtils:INFO("GetLFGDungeonInfo does not exist on this client")
+
+		return
+	end
+
+	local needle = nil
+	if filter ~= nil and filter ~= "" then needle = strlower(filter) end
+	local list = GetCaptures()
+	local hits = 0
+	for id = 1, LFG_SCAN_MAX do
+		local name, _, _, minLevel, maxLevel, recLevel, minRecLevel, maxRecLevel, _, _, _, _, _, _, _, _, _, _, _, _, _, lfgMapID = GetLFGDungeonInfo(id)
+		if name ~= nil and name ~= "" and (needle == nil or strfind(strlower(name), needle, 1, true) ~= nil) then
+			hits = hits + 1
+			local text = format("lfg %d | %s | lvl %s - %s | rec %s (%s - %s) | instance %s", id, name, tostring(minLevel), tostring(maxLevel), tostring(recLevel), tostring(minRecLevel), tostring(maxRecLevel), tostring(lfgMapID))
+			tinsert(list, text)
+			MapUtils:INFO(text)
+		end
+	end
+
+	MapUtils:INFO(format("%d LFG entries found, also saved to SavedVariables - /mapdocks clear empties the list again", hits))
+end
+
 MapUtils:AddSlash(
 	"mapdocks",
 	function(args)
@@ -569,6 +767,8 @@ MapUtils:AddSlash(
 			ListCaptures()
 		elseif sub == "clear" then
 			ClearCaptures()
+		elseif sub == "lfg" then
+			ReportLFG(rest)
 		elseif sub == "icon" then
 			if rest == "" then
 				ReportIcons()

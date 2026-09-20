@@ -50,9 +50,9 @@ local function AddCategory(key, level)
 	})
 end
 
-local function AddCheckbox(key, default, func)
+local function AddCheckbox(key, default, func, label)
 	maset:AddCheckbox({
-		["label"] = "LID_" .. key,
+		["label"] = label or ("LID_" .. key),
 		["search"] = key,
 		["value"] = MapUtils:GetConfig(key, default),
 		["func"] = function(value)
@@ -104,8 +104,11 @@ function MapUtils:InitSetting()
 	end)
 
 	AddCategory("PIERS")
-	AddCheckbox("WORLDMAPPINS", true, function() MapUtils:RefreshPiers() end)
-	AddCheckbox("MINIMAPPINS", true, function() MapUtils:RefreshPiers() end)
+	AddCheckbox("WORLDMAPPINS", true, function() MapUtils:RefreshPins() end)
+	AddCheckbox("MINIMAPPINS", true, function() MapUtils:RefreshPins() end)
+	AddCategory("DUNGEONS")
+	AddCheckbox("DUNGEONWORLDMAPPINS", true, function() MapUtils:RefreshPins() end, "LID_WORLDMAPPINS")
+	AddCheckbox("DUNGEONMINIMAPPINS", true, function() MapUtils:RefreshPins() end, "LID_MINIMAPPINS")
 	maset:ResumeLayout()
 	MapUtils:CreateMinimapButton({
 		["name"] = "MapUtils",
