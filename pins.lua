@@ -165,6 +165,7 @@ AddDungeon(
 	{
 		["name"] = "Ruins of Lordaeron",
 		["lfg"] = 3272,
+		["instance"] = 2999,
 		["minLevel"] = 11,
 		["maxLevel"] = 24,
 	},
@@ -460,13 +461,22 @@ local function OnPinLeave()
 	GameTooltip:Hide()
 end
 
-local function CreatePin(parent, levelOffset)
+local function OnPinMouseUp(pin, button)
+	if button ~= "LeftButton" then return end
+	local entry = pin.entry
+	if entry == nil or entry.kind ~= "dungeon" then return end
+	if entry.instance == nil or MapUtils.ShowInstanceMap == nil then return end
+	MapUtils:ShowInstanceMap(entry.instance)
+end
+
+local function CreatePin(parent, levelOffset, clickable)
 	local pin = CreateFrame("FRAME", nil, parent)
 	pin:SetSize(ICON_SIZE, ICON_SIZE)
 	pin:SetFrameLevel(parent:GetFrameLevel() + levelOffset)
 	pin:EnableMouse(true)
 	pin:SetScript("OnEnter", OnPinEnter)
 	pin:SetScript("OnLeave", OnPinLeave)
+	if clickable then pin:SetScript("OnMouseUp", OnPinMouseUp) end
 	pin.texture = pin:CreateTexture(nil, "OVERLAY")
 	pin.texture:SetAllPoints(pin)
 
@@ -537,7 +547,7 @@ local function UpdateWorldPins()
 	for i, entry in ipairs(list) do
 		local pin = worldPins[i]
 		if pin == nil then
-			pin = CreatePin(child, WORLD_PIN_LEVEL)
+			pin = CreatePin(child, WORLD_PIN_LEVEL, true)
 			worldPins[i] = pin
 		end
 

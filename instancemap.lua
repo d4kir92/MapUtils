@@ -82,7 +82,13 @@ local function CreateOverlay()
 	overlay.art:SetPoint("CENTER", overlay, "CENTER", 0, 0)
 	overlay:Hide()
 	WorldMapFrame.ScrollContainer:HookScript("OnMouseUp", OnCanvasMouseUp)
-	WorldMapFrame:HookScript("OnShow", function() hiddenFor = nil end)
+	WorldMapFrame:HookScript(
+		"OnShow",
+		function()
+			hiddenFor = nil
+			ClearForced()
+		end
+	)
 
 	return overlay
 end
@@ -116,7 +122,6 @@ local function GetVisibleArt()
 	local info, instanceMapID = GetInstanceArt()
 	if info == nil then return nil end
 	if hiddenFor == instanceMapID then return nil end
-	if WorldMapFrame == nil or WorldMapFrame.GetMapID == nil then return nil end
 	local playerMapID = GetPlayerMapID()
 	if playerMapID ~= nil and WorldMapFrame:GetMapID() ~= playerMapID then return nil end
 
@@ -144,8 +149,22 @@ Refresh = function()
 	if not overlay:IsShown() then overlay:Show() end
 end
 
+function MapUtils:ShowInstanceMap(instanceMapID)
+	if instanceMapID == nil then return false end
+	local info = art[instanceMapID]
+	if info == nil then return false end
+	if WorldMapFrame == nil or WorldMapFrame.GetMapID == nil then return false end
+	if WorldMapFrame:IsShown() ~= true then return false end
+	forced = info
+	forcedMapID = WorldMapFrame:GetMapID()
+	hiddenFor = nil
+	Refresh()
+
+	return true
+end
+
 function MapUtils:ToggleInstanceMap()
-	if GetInstanceArt() == nil then
+	if forced == nil and GetInstanceArt() == nil then
 		MapUtils:INFO("No own map for this instance")
 
 		return
