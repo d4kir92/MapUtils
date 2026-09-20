@@ -8,7 +8,8 @@ local DEFAULT_FACTION = "Alliance"
 local FACTION_ICONS = {}
 FACTION_ICONS["Alliance"] = "TaxiNode_Continent_Alliance"
 FACTION_ICONS["Horde"] = "TaxiNode_Continent_Horde"
-local FACTION_ORDER = {"Alliance", "Horde"}
+FACTION_ICONS["Neutral"] = "TaxiNode_Continent_Neutral"
+local FACTION_ORDER = {"Alliance", "Horde", "Neutral"}
 local ICON_CANDIDATES = {"TaxiNode_Continent", "MagePortalAlliance", "MagePortalHorde", "Portal", "Ferry", "TransportShip", "Vehicle-Temporary-Zone-Boat", "FlightMaster_Neutral"}
 local MINIMAP_YARDS = {}
 MINIMAP_YARDS["outdoor"] = {[0] = 466.66666, 400, 333.33333, 266.66666, 200, 133.33333}
