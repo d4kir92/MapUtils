@@ -4,7 +4,12 @@ local UPDATE_INTERVAL = 0.05
 local WORLD_PIN_LEVEL = 2000
 local MINIMAP_PIN_LEVEL = 10
 local DEFAULT_ICON = "Interface\\Icons\\Spell_Arcane_PortalStormwind"
-local ICON_CANDIDATES = {"MagePortalAlliance", "MagePortalHorde", "Portal", "Ferry", "TransportShip", "Vehicle-Temporary-Zone-Boat", "TaxiNode_Continent", "FlightMaster_Neutral"}
+local DEFAULT_FACTION = "Alliance"
+local FACTION_ICONS = {}
+FACTION_ICONS["Alliance"] = "TaxiNode_Continent_Alliance"
+FACTION_ICONS["Horde"] = "TaxiNode_Continent_Horde"
+local FACTION_ORDER = {"Alliance", "Horde"}
+local ICON_CANDIDATES = {"TaxiNode_Continent", "MagePortalAlliance", "MagePortalHorde", "Portal", "Ferry", "TransportShip", "Vehicle-Temporary-Zone-Boat", "FlightMaster_Neutral"}
 local MINIMAP_YARDS = {}
 MINIMAP_YARDS["outdoor"] = {[0] = 466.66666, 400, 333.33333, 266.66666, 200, 133.33333}
 MINIMAP_YARDS["indoor"] = {[0] = 300, 240, 180, 120, 80, 50}
@@ -186,26 +191,33 @@ local function IsAtlas(icon)
 	return MapUtils:AtlasExists(icon) == true
 end
 
-local resolvedIcon = nil
-local function GetIcon()
-	if resolvedIcon ~= nil then return resolvedIcon end
+local resolvedIcons = {}
+local function GetIcon(faction)
+	if faction == nil or FACTION_ICONS[faction] == nil then faction = DEFAULT_FACTION end
+	if resolvedIcons[faction] ~= nil then return resolvedIcons[faction] end
 	if MAUTTAB ~= nil and MAUTTAB["icon"] ~= nil and MAUTTAB["icon"] ~= "" then
-		resolvedIcon = MAUTTAB["icon"]
+		resolvedIcons[faction] = MAUTTAB["icon"]
 
-		return resolvedIcon
+		return resolvedIcons[faction]
+	end
+
+	if IsAtlas(FACTION_ICONS[faction]) then
+		resolvedIcons[faction] = FACTION_ICONS[faction]
+
+		return resolvedIcons[faction]
 	end
 
 	for _, atlas in ipairs(ICON_CANDIDATES) do
 		if IsAtlas(atlas) then
-			resolvedIcon = atlas
+			resolvedIcons[faction] = atlas
 
-			return resolvedIcon
+			return resolvedIcons[faction]
 		end
 	end
 
-	resolvedIcon = DEFAULT_ICON
+	resolvedIcons[faction] = DEFAULT_ICON
 
-	return resolvedIcon
+	return resolvedIcons[faction]
 end
 
 local function ApplyIcon(pin, icon)
@@ -292,7 +304,7 @@ local function UpdateWorldPins()
 		end
 
 		pin.pier = pier
-		ApplyIcon(pin, pier.icon or GetIcon())
+		ApplyIcon(pin, pier.icon or GetIcon(pier.faction))
 		pin:SetSize(size, size)
 		pin:ClearAllPoints()
 		pin:SetPoint("CENTER", child, "TOPLEFT", w * pier.x, -h * pier.y)
@@ -346,7 +358,7 @@ local function UpdateMinimapPins()
 		end
 
 		pin.pier = pier
-		ApplyIcon(pin, pier.icon or GetIcon())
+		ApplyIcon(pin, pier.icon or GetIcon(pier.faction))
 		local pos = GetPierWorldPos(mapID, pier)
 		if pos == nil then
 			pin:Hide()
@@ -463,15 +475,17 @@ local function SetIcon(value)
 	MAUTTAB = MAUTTAB or {}
 	if value == "reset" then
 		MAUTTAB["icon"] = nil
-		resolvedIcon = nil
+		wipe(resolvedIcons)
 		RefreshIcons()
-		MapUtils:INFO("Icon reset to:", GetIcon())
+		for _, faction in ipairs(FACTION_ORDER) do
+			MapUtils:INFO("Icon reset to:", GetIcon(faction), "-", faction)
+		end
 
 		return
 	end
 
 	MAUTTAB["icon"] = value
-	resolvedIcon = value
+	wipe(resolvedIcons)
 	RefreshIcons()
 	if IsAtlas(value) then
 		MapUtils:INFO("Icon set as atlas:", value)
@@ -481,7 +495,11 @@ local function SetIcon(value)
 end
 
 local function ReportIcons()
-	MapUtils:INFO("current icon:", GetIcon(), "- is atlas:", IsAtlas(GetIcon()))
+	for _, faction in ipairs(FACTION_ORDER) do
+		MapUtils:INFO("current icon", faction, "-", GetIcon(faction), "- is atlas:", IsAtlas(GetIcon(faction)))
+		MapUtils:INFO("atlas", FACTION_ICONS[faction], "exists:", IsAtlas(FACTION_ICONS[faction]))
+	end
+
 	for _, atlas in ipairs(ICON_CANDIDATES) do
 		MapUtils:INFO("atlas", atlas, "exists:", IsAtlas(atlas))
 	end
@@ -501,7 +519,7 @@ local function ReportState()
 	MapUtils:INFO("world updater:", worldUpdater ~= nil, "minimap updater:", minimapUpdater ~= nil, "map open:", mapOpen)
 	MapUtils:INFO("player uiMapID:", tostring(playerMapID), "-", GetMapName(playerMapID), "- piers:", CountPiers(playerMapID))
 	MapUtils:INFO("canvas uiMapID:", tostring(canvasMapID), "-", GetMapName(canvasMapID), "- piers:", CountPiers(canvasMapID))
-	MapUtils:INFO("world pins:", #worldPins, "minimap pins:", #minimapPins, "icon:", GetIcon(), "is atlas:", IsAtlas(GetIcon()))
+	MapUtils:INFO("world pins:", #worldPins, "minimap pins:", #minimapPins, "icon:", GetIcon(DEFAULT_FACTION), "is atlas:", IsAtlas(GetIcon(DEFAULT_FACTION)))
 	for i, pin in ipairs(worldPins) do
 		local ox, oy = 0, 0
 		if pin:GetNumPoints() > 0 then
