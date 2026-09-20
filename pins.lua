@@ -911,6 +911,42 @@ local function ReportMaps(filter)
 	end
 end
 
+local function GetEntranceXY(entrance)
+	local pos = entrance.position
+	if pos == nil then return nil end
+	if pos.GetXY ~= nil then return pos:GetXY() end
+
+	return pos.x, pos.y
+end
+
+local function ReportEntrances()
+	if C_EncounterJournal == nil or C_EncounterJournal.GetDungeonEntrancesForMap == nil then
+		MapUtils:INFO("C_EncounterJournal.GetDungeonEntrancesForMap does not exist on this client")
+
+		return
+	end
+
+	local list = GetCaptures()
+	local hits = 0
+	for id = 1, MAP_SCAN_MAX do
+		local info = C_Map.GetMapInfo(id)
+		if info ~= nil then
+			local ok, entrances = pcall(C_EncounterJournal.GetDungeonEntrancesForMap, id)
+			if ok and type(entrances) == "table" then
+				for _, entrance in ipairs(entrances) do
+					local x, y = GetEntranceXY(entrance)
+					hits = hits + 1
+					local text = format("entrance | uiMap %d %s | %s | %.4f %.4f | journal %s | atlas %s", id, info.name or "", entrance.name or "", x or 0, y or 0, tostring(entrance.journalInstanceID), tostring(entrance.atlasName))
+					tinsert(list, text)
+					MapUtils:INFO(text)
+				end
+			end
+		end
+	end
+
+	MapUtils:INFO(format("%d dungeon entrances found, also saved to SavedVariables", hits))
+end
+
 local function HandleSlash(args)
 	local label = strtrim(args or "")
 	local sub, rest = strsplit(" ", label, 2)
@@ -928,6 +964,8 @@ local function HandleSlash(args)
 		ReportActivities(rest)
 	elseif sub == "maps" then
 		ReportMaps(rest)
+	elseif sub == "entrances" then
+		ReportEntrances()
 	elseif sub == "icon" then
 		if rest == "" then
 			ReportIcons()
