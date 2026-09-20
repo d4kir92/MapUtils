@@ -12,6 +12,8 @@ FACTION_ICONS["Neutral"] = "TaxiNode_Continent_Neutral"
 local FACTION_ORDER = {"Alliance", "Horde", "Neutral"}
 local ICON_CANDIDATES = {"TaxiNode_Continent", "MagePortalAlliance", "MagePortalHorde", "Portal", "Ferry", "TransportShip", "Vehicle-Temporary-Zone-Boat", "FlightMaster_Neutral"}
 local LFG_SCAN_MAX = 4000
+local MAP_SCAN_MAX = 5000
+local MAP_PRINT_LIMIT = 80
 local DEFAULT_DUNGEON_ICON = "Interface\\Icons\\INV_Misc_Bone_Skull_02"
 local DUNGEON_ICON_CANDIDATES = {"Dungeon", "DungeonSkull", "Dungeon-Normal"}
 local MINIMAP_YARDS = {}
@@ -796,7 +798,9 @@ local function ReportState()
 
 	local playerPiers, playerDungeons = CountPins(playerMapID)
 	local canvasPiers, canvasDungeons = CountPins(canvasMapID)
+	local zone, _, _, _, _, _, _, instanceMapID = GetInstanceInfo()
 	MapUtils:INFO("world updater:", worldUpdater ~= nil, "minimap updater:", minimapUpdater ~= nil, "map open:", mapOpen)
+	MapUtils:INFO("instance:", tostring(zone), "- instanceMapID:", tostring(instanceMapID))
 	MapUtils:INFO("player uiMapID:", tostring(playerMapID), "-", GetMapName(playerMapID), "- piers:", playerPiers, "- dungeons:", playerDungeons)
 	MapUtils:INFO("canvas uiMapID:", tostring(canvasMapID), "-", GetMapName(canvasMapID), "- piers:", canvasPiers, "- dungeons:", canvasDungeons)
 	MapUtils:INFO("world pins:", #worldPins, "minimap pins:", #minimapPins, "icon:", GetIcon(DEFAULT_FACTION), "is atlas:", IsAtlas(GetIcon(DEFAULT_FACTION)))
@@ -866,6 +870,37 @@ local function ReportActivities(filter)
 	MapUtils:INFO(format("%d activities found, also saved to SavedVariables", hits))
 end
 
+local function ReportMaps(filter)
+	if C_Map == nil or C_Map.GetMapInfo == nil then
+		MapUtils:INFO("C_Map.GetMapInfo does not exist on this client")
+
+		return
+	end
+
+	local needle = nil
+	if filter ~= nil and filter ~= "" then needle = strlower(filter) end
+	local texts = {}
+	for id = 1, MAP_SCAN_MAX do
+		local info = C_Map.GetMapInfo(id)
+		if info ~= nil then
+			local name = info.name or ""
+			if needle == nil or strfind(strlower(name), needle, 1, true) ~= nil then tinsert(texts, format("uiMap %d | %s | type %s | parent %s", id, name, tostring(info.mapType), tostring(info.parentMapID))) end
+		end
+	end
+
+	local list = GetCaptures()
+	for _, text in ipairs(texts) do
+		tinsert(list, text)
+		if #texts <= MAP_PRINT_LIMIT then MapUtils:INFO(text) end
+	end
+
+	if #texts > MAP_PRINT_LIMIT then
+		MapUtils:INFO(format("%d maps saved to SavedVariables, too many to print - use /mappins maps <text> to filter by name", #texts))
+	else
+		MapUtils:INFO(format("%d maps found, also saved to SavedVariables", #texts))
+	end
+end
+
 local function HandleSlash(args)
 	local label = strtrim(args or "")
 	local sub, rest = strsplit(" ", label, 2)
@@ -881,6 +916,8 @@ local function HandleSlash(args)
 		ReportLFG(rest)
 	elseif sub == "activities" then
 		ReportActivities(rest)
+	elseif sub == "maps" then
+		ReportMaps(rest)
 	elseif sub == "icon" then
 		if rest == "" then
 			ReportIcons()

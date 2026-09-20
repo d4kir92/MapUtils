@@ -337,6 +337,11 @@ dungeonMaps[347] = {
 	"Interface\\AddOns\\MapUtils\\media\\347" -- Höllenfeuerbollwerk
 }
 
+-- WoW Forever Dungeons:
+dungeonMaps[947] = {
+	"Interface\\AddOns\\MapUtils\\media\\947" -- Ruins of Lordaeron
+}
+
 -- TBC Raids:
 raidMaps[330] = {
 	"Interface\\AddOns\\MapUtils\\media\\330" -- Gruul's Lair
@@ -458,6 +463,23 @@ instanceToMap[560] = 274 -- Old Hillsbrad Foothills
 instanceToMap[565] = 330 -- Gruul's Lair
 instanceToMap[544] = 331 -- Magtheridon's Lair
 instanceToMap[532] = 350 -- Karazhan
+local MAX_WORLD_MAP_TYPE = 2
+local artTypes = {}
+local function HasOwnArt(mapID)
+	if mapID == nil then return false end
+	if dungeonMaps[mapID] == nil and raidMaps[mapID] == nil then return false end
+	if artTypes[mapID] == nil then
+		local info = C_Map.GetMapInfo(mapID)
+		if info == nil then return false end
+		if info.mapType ~= nil and info.mapType <= MAX_WORLD_MAP_TYPE then
+			artTypes[mapID] = false
+		else
+			artTypes[mapID] = true
+		end
+	end
+	return artTypes[mapID]
+end
+
 local missingMaps = {}
 hooksecurefunc(WorldMapFrame, "Show", function()
 	local mapID = C_Map.GetBestMapForUnit("player")
@@ -480,13 +502,13 @@ hooksecurefunc(WorldMapFrame, "Show", function()
 		return
 	end
 
-	if C_Map.GetMapInfo(mapID) == nil then return end
+	if not HasOwnArt(mapID) then return end
 	if WorldMapFrame:GetMapID() ~= mapID then WorldMapFrame:SetMapID(mapID) end
 end)
 
 local oldGetMapArtLayers = C_Map.GetMapArtLayers
 local function GetMapArtLayers(mapID)
-	if mapID == nil then return oldGetMapArtLayers(mapID) end
+	if not HasOwnArt(mapID) then return oldGetMapArtLayers(mapID) end
 	if dungeonMaps[mapID] then
 		local num = dungeonMaps[mapID] and #dungeonMaps[mapID] or 1
 		local result = {}
@@ -524,6 +546,7 @@ end
 local oldGetMapArtLayerTextures = C_Map.GetMapArtLayerTextures
 local function GetMapArtLayerTextures(uiMapID, layerIndex)
 	local textures = oldGetMapArtLayerTextures(uiMapID, layerIndex)
+	if not HasOwnArt(uiMapID) then return textures end
 	if dungeonMaps[uiMapID] then
 		textures = {}
 		for i, map in pairs(dungeonMaps[uiMapID]) do
@@ -541,13 +564,12 @@ end
 local function ClientHasOwnMaps()
 	if C_Map.GetMapInfo(947) == nil then return true end
 	for mapID in pairs(dungeonMaps) do
-		if C_Map.GetMapInfo(mapID) ~= nil then return true end
+		if HasOwnArt(mapID) then return true end
 	end
 
 	for mapID in pairs(raidMaps) do
-		if C_Map.GetMapInfo(mapID) ~= nil then return true end
+		if HasOwnArt(mapID) then return true end
 	end
-
 	return false
 end
 
