@@ -144,22 +144,33 @@ piers[1453] = {
 }
 
 local dungeons = {}
-dungeons[1458] = {
+local function AddDungeon(info, positions)
+	for mapID, pos in pairs(positions) do
+		local entry = {}
+		for key, value in pairs(info) do
+			entry[key] = value
+		end
+
+		entry.kind = "dungeon"
+		entry.x = pos[1]
+		entry.y = pos[2]
+		dungeons[mapID] = dungeons[mapID] or {}
+		tinsert(dungeons[mapID], entry)
+	end
+end
+
+AddDungeon(
 	{
 		["name"] = "Ruins of Lordaeron",
-		["x"] = 0.7220,
-		["y"] = 0.1147,
 		["lfg"] = 3272,
 		["minLevel"] = 11,
 		["maxLevel"] = 24,
 	},
-}
-
-for _, list in pairs(dungeons) do
-	for _, entry in ipairs(list) do
-		entry.kind = "dungeon"
-	end
-end
+	{
+		[1420] = {0.6336, 0.6738},
+		[1458] = {0.7220, 0.1147},
+	}
+)
 
 local mapRects = {}
 local function GetMapRect(mapID)
