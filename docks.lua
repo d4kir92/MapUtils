@@ -316,14 +316,86 @@ local function IsRange(min, max)
 	return min ~= nil and max ~= nil and min > 0 and max > min
 end
 
+local function HasActivityAPI()
+	if C_LFGList == nil then return false end
+	if C_LFGList.GetActivityInfoTable == nil then return false end
+	if C_LFGList.GetAvailableActivities == nil then return false end
+	if C_LFGList.GetAvailableCategories == nil then return false end
+
+	return true
+end
+
+local function ForEachActivity(callback)
+	if not HasActivityAPI() then return end
+	for _, categoryID in ipairs(C_LFGList.GetAvailableCategories() or {}) do
+		local groups = {0}
+		if C_LFGList.GetAvailableActivityGroups ~= nil then
+			for _, groupID in ipairs(C_LFGList.GetAvailableActivityGroups(categoryID) or {}) do
+				tinsert(groups, groupID)
+			end
+		end
+
+		for _, groupID in ipairs(groups) do
+			for _, activityID in ipairs(C_LFGList.GetAvailableActivities(categoryID, groupID) or {}) do
+				local info = C_LFGList.GetActivityInfoTable(activityID)
+				if info ~= nil then callback(activityID, info) end
+			end
+		end
+	end
+end
+
+local activityLevels = nil
+local function GetActivityLevels()
+	if activityLevels ~= nil then return activityLevels end
+	local map = {}
+	if not HasActivityAPI() then
+		activityLevels = map
+
+		return map
+	end
+
+	local count = 0
+	ForEachActivity(
+		function(_, info)
+			local min = info.minLevelSuggestion or 0
+			local max = info.maxLevelSuggestion or 0
+			if IsRange(min, max) then
+				local levels = {min, max}
+				if info.shortName ~= nil and info.shortName ~= "" and map[info.shortName] == nil then map[info.shortName] = levels end
+				if info.fullName ~= nil and info.fullName ~= "" and map[info.fullName] == nil then map[info.fullName] = levels end
+				count = count + 1
+			end
+		end
+	)
+
+	if count == 0 then return map end
+	activityLevels = map
+
+	return map
+end
+
 local function GetDungeonInfo(entry)
-	local minLevel = entry.minLevel
-	local maxLevel = entry.maxLevel
 	local id = entry.lfg
 	if id == nil and entry.instance ~= nil then id = GetLFGIndex()[entry.instance] end
-	if id == nil or GetLFGDungeonInfo == nil then return nil, minLevel, maxLevel end
-	local lfgName, _, _, apiMin, apiMax, _, apiRecMin, apiRecMax = GetLFGDungeonInfo(id)
-	if lfgName == "" then lfgName = nil end
+	local lfgName, apiMin, apiMax, apiRecMin, apiRecMax = nil, nil, nil, nil, nil
+	if id ~= nil and GetLFGDungeonInfo ~= nil then
+		local name, _, _, min, max, _, recMin, recMax = GetLFGDungeonInfo(id)
+		if name ~= nil and name ~= "" then lfgName = name end
+		apiMin = min
+		apiMax = max
+		apiRecMin = recMin
+		apiRecMax = recMax
+	end
+
+	local minLevel, maxLevel = nil, nil
+	if lfgName ~= nil then
+		local levels = GetActivityLevels()[lfgName]
+		if levels ~= nil then
+			minLevel = levels[1]
+			maxLevel = levels[2]
+		end
+	end
+
 	if minLevel == nil then
 		if IsRange(apiRecMin, apiRecMax) then
 			minLevel = apiRecMin
@@ -331,6 +403,9 @@ local function GetDungeonInfo(entry)
 		elseif IsRange(apiMin, apiMax) then
 			minLevel = apiMin
 			maxLevel = apiMax
+		else
+			minLevel = entry.minLevel
+			maxLevel = entry.maxLevel
 		end
 	end
 
@@ -754,6 +829,32 @@ local function ReportLFG(filter)
 	MapUtils:INFO(format("%d LFG entries found, also saved to SavedVariables - /mapdocks clear empties the list again", hits))
 end
 
+local function ReportActivities(filter)
+	if not HasActivityAPI() then
+		MapUtils:INFO("C_LFGList activities do not exist on this client")
+
+		return
+	end
+
+	local needle = nil
+	if filter ~= nil and filter ~= "" then needle = strlower(filter) end
+	local list = GetCaptures()
+	local hits = 0
+	ForEachActivity(
+		function(activityID, info)
+			local short = info.shortName or ""
+			local full = info.fullName or ""
+			if needle ~= nil and strfind(strlower(short), needle, 1, true) == nil and strfind(strlower(full), needle, 1, true) == nil then return end
+			hits = hits + 1
+			local text = format("activity %d | %s | %s | %s - %s", activityID, short, full, tostring(info.minLevelSuggestion), tostring(info.maxLevelSuggestion))
+			tinsert(list, text)
+			MapUtils:INFO(text)
+		end
+	)
+
+	MapUtils:INFO(format("%d activities found, also saved to SavedVariables", hits))
+end
+
 MapUtils:AddSlash(
 	"mapdocks",
 	function(args)
@@ -769,6 +870,8 @@ MapUtils:AddSlash(
 			ClearCaptures()
 		elseif sub == "lfg" then
 			ReportLFG(rest)
+		elseif sub == "activities" then
+			ReportActivities(rest)
 		elseif sub == "icon" then
 			if rest == "" then
 				ReportIcons()
