@@ -466,6 +466,12 @@ local function GetDungeonLabel(entry)
 	return name, description
 end
 
+local function IsPinMouseOver(pin)
+	local extend = pin.hitExtend or 0
+
+	return pin:IsMouseOver(extend, -extend, -extend, extend)
+end
+
 local areaLabel = nil
 local function GetAreaLabel()
 	if areaLabel ~= nil then return areaLabel end
@@ -491,7 +497,7 @@ local function GetAreaLabel()
 		"OnUpdate",
 		function(self)
 			local owner = self.owner
-			if owner == nil or not owner:IsVisible() or not owner:IsMouseOver() then self:Hide() end
+			if owner == nil or not owner:IsVisible() or not IsPinMouseOver(owner) then self:Hide() end
 		end
 	)
 
@@ -667,13 +673,23 @@ local function UpdatePinStyle(pin)
 	UpdatePinLevel(pin, isWaypoint)
 	local tracked = isWaypoint and IsWaypointTracked()
 	local atlas = GetCircleAtlas(tracked, pin.pushed)
-	local size = pin:GetWidth()
+	local pinSize = pin:GetWidth()
+	local size = pinSize
+	local extend = 0
 	if atlas ~= nil then
+		local circleSize = math.max(pinSize, pin.minCircleSize or pinSize)
 		pin.circle:SetAtlas(atlas)
+		pin.circle:SetSize(circleSize, circleSize)
 		pin.circle:Show()
-		size = size * TRACKED_ICON_SCALE
+		size = math.min(pinSize, circleSize * TRACKED_ICON_SCALE)
+		extend = (circleSize - pinSize) / 2
 	else
 		pin.circle:Hide()
+	end
+
+	if pin.hitExtend ~= extend then
+		pin.hitExtend = extend
+		pin:SetHitRectInsets(-extend, -extend, -extend, -extend)
 	end
 
 	local offset = 0
@@ -706,7 +722,7 @@ end
 local function OnPinMouseUp(pin, button)
 	pin.pushed = false
 	local entry = pin.entry
-	if entry ~= nil and pin:IsMouseOver() then
+	if entry ~= nil and IsPinMouseOver(pin) then
 		if IsCovered() then
 			if button == "RightButton" then MapUtils:ToggleInstanceMap() end
 		elseif button == "LeftButton" then
@@ -731,7 +747,7 @@ local function CreatePin(parent, levelOffset, clickable)
 	pin.texture:SetAllPoints(pin)
 	if clickable then
 		pin.circle = pin:CreateTexture(nil, "ARTWORK")
-		pin.circle:SetAllPoints(pin)
+		pin.circle:SetPoint("CENTER", pin, "CENTER", 0, 0)
 		pin.circle:Hide()
 		pin:SetScript("OnMouseDown", OnPinMouseDown)
 		pin:SetScript("OnMouseUp", OnPinMouseUp)
@@ -823,6 +839,7 @@ local function UpdateWorldPins()
 		pin.entry = entry
 		pin.mapID = mapID
 		pin.pixel = 1 / scale
+		pin.minCircleSize = dungeonSize
 		ApplyIcon(pin, GetEntryIcon(entry))
 		if entry.kind == "dungeon" then
 			pin:SetSize(dungeonSize, dungeonSize)
