@@ -3,6 +3,7 @@ local ICON_SIZE = 20
 local DUNGEON_ICON_SIZE = 32
 local POI_START_SCALE = 1
 local POI_END_SCALE = 1.2
+local WAYPOINT_TOLERANCE = 0.001
 local UPDATE_INTERVAL = 0.05
 local WORLD_PIN_LEVEL = 2000
 local MINIMAP_PIN_LEVEL = 10
@@ -540,12 +541,69 @@ local function OnPinLeave(pin)
 	if GameTooltip:GetOwner() == pin then GameTooltip:Hide() end
 end
 
+local function PlayWaypointSound(key)
+	if SOUNDKIT ~= nil and SOUNDKIT[key] ~= nil then PlaySound(SOUNDKIT[key]) end
+end
+
+local function IsWaypointTracked()
+	if C_SuperTrack == nil or C_SuperTrack.IsSuperTrackingUserWaypoint == nil then return true end
+
+	return C_SuperTrack.IsSuperTrackingUserWaypoint()
+end
+
+local function SetWaypointTracked(tracked)
+	if C_SuperTrack ~= nil and C_SuperTrack.SetSuperTrackedUserWaypoint ~= nil then C_SuperTrack.SetSuperTrackedUserWaypoint(tracked) end
+end
+
+local function IsEntryWaypoint(mapID, entry)
+	if C_Map.GetUserWaypointPositionForMap == nil then return false end
+	local pos = C_Map.GetUserWaypointPositionForMap(mapID)
+	if pos == nil then return false end
+	local x, y = pos:GetXY()
+
+	return math.abs(x - entry.x) < WAYPOINT_TOLERANCE and math.abs(y - entry.y) < WAYPOINT_TOLERANCE
+end
+
+local function ToggleWaypoint(mapID, entry)
+	if mapID == nil or C_Map.SetUserWaypoint == nil or UiMapPoint == nil then return end
+	if IsEntryWaypoint(mapID, entry) then
+		if IsWaypointTracked() then
+			C_Map.ClearUserWaypoint()
+			SetWaypointTracked(false)
+			PlayWaypointSound("UI_MAP_WAYPOINT_REMOVE")
+		else
+			SetWaypointTracked(true)
+			PlayWaypointSound("UI_MAP_WAYPOINT_SUPER_TRACK_ON")
+		end
+
+		return
+	end
+
+	if C_Map.CanSetUserWaypointOnMap ~= nil and not C_Map.CanSetUserWaypointOnMap(mapID) then
+		if UIErrorsFrame ~= nil and MAP_PIN_INVALID_MAP ~= nil then UIErrorsFrame:AddMessage(MAP_PIN_INVALID_MAP, 1, 0.1, 0.1) end
+
+		return
+	end
+
+	C_Map.SetUserWaypoint(UiMapPoint.CreateFromCoordinates(mapID, entry.x, entry.y))
+	SetWaypointTracked(true)
+	PlayWaypointSound("UI_MAP_WAYPOINT_SUPER_TRACK_ON")
+end
+
 local function OnPinMouseUp(pin, button)
-	if button ~= "LeftButton" then return end
 	local entry = pin.entry
-	if entry == nil or entry.kind ~= "dungeon" then return end
-	if entry.instance == nil or MapUtils.ShowInstanceMap == nil then return end
-	MapUtils:ShowInstanceMap(entry.instance)
+	if entry == nil then return end
+	if MapUtils.IsInstanceMapShown ~= nil and MapUtils:IsInstanceMapShown() then
+		if button == "RightButton" then MapUtils:ToggleInstanceMap() end
+
+		return
+	end
+
+	if button == "LeftButton" then
+		ToggleWaypoint(pin.mapID, entry)
+	elseif button == "RightButton" and entry.kind == "dungeon" and entry.instance ~= nil and MapUtils.ShowInstanceMap ~= nil then
+		MapUtils:ShowInstanceMap(entry.instance)
+	end
 end
 
 local function CreatePin(parent, levelOffset, clickable)
@@ -643,6 +701,7 @@ local function UpdateWorldPins()
 		end
 
 		pin.entry = entry
+		pin.mapID = mapID
 		ApplyIcon(pin, GetEntryIcon(entry))
 		if entry.kind == "dungeon" then
 			pin:SetSize(dungeonSize, dungeonSize)

@@ -168,6 +168,10 @@ function MapUtils:ShowInstanceMap(instanceMapID)
 	return true
 end
 
+function MapUtils:IsInstanceMapShown()
+	return overlay ~= nil and overlay:IsShown()
+end
+
 function MapUtils:ToggleInstanceMap()
 	if forced == nil and GetInstanceArt() == nil then
 		MapUtils:INFO("No own map for this instance")
