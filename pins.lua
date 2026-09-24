@@ -1,5 +1,8 @@
 local _, MapUtils = ...
 local ICON_SIZE = 20
+local DUNGEON_ICON_SIZE = 32
+local POI_START_SCALE = 1
+local POI_END_SCALE = 1.2
 local UPDATE_INTERVAL = 0.05
 local WORLD_PIN_LEVEL = 2000
 local MINIMAP_PIN_LEVEL = 10
@@ -429,9 +432,84 @@ local function GetDungeonInfo(entry)
 	return lfgName, minLevel, maxLevel, recLevel
 end
 
+local function GetLevelColorCode(minLevel, maxLevel)
+	local playerLevel = UnitLevel("player")
+	local color = QuestDifficultyColors["difficult"]
+	if playerLevel < minLevel then
+		color = GetQuestDifficultyColor(minLevel)
+	elseif playerLevel > maxLevel then
+		color = GetQuestDifficultyColor(maxLevel - 2)
+	end
+
+	return format("|cff%02x%02x%02x", color.r * 255, color.g * 255, color.b * 255)
+end
+
+local function GetDungeonLabel(entry)
+	local name, minLevel, maxLevel, recLevel = GetDungeonInfo(entry)
+	name = name or entry.name
+	if minLevel ~= nil and minLevel > 0 then
+		if maxLevel == nil or maxLevel < minLevel then maxLevel = minLevel end
+		local range = tostring(minLevel)
+		if maxLevel > minLevel then range = format("%d-%d", minLevel, maxLevel) end
+		name = format("%s%s (%s)|r", name, GetLevelColorCode(minLevel, maxLevel), range)
+	end
+
+	local description = MapUtils:Trans("LID_DUNGEONENTRANCE")
+	if recLevel ~= nil then description = description .. "\n" .. MapUtils:Trans("LID_RECOMMENDEDLEVEL", nil, recLevel) end
+
+	return name, description
+end
+
+local areaLabel = nil
+local function GetAreaLabel()
+	if areaLabel ~= nil then return areaLabel end
+	if WorldMapFrame.dataProviders == nil then return nil end
+	local parent = nil
+	for provider in pairs(WorldMapFrame.dataProviders) do
+		if provider.Label ~= nil then
+			parent = provider.Label
+			break
+		end
+	end
+
+	if parent == nil then return nil end
+	areaLabel = CreateFrame("FRAME", nil, parent)
+	areaLabel:SetAllPoints(parent)
+	areaLabel.name = areaLabel:CreateFontString(nil, "OVERLAY", "WorldMapTextFont")
+	areaLabel.name:SetPoint("TOP", areaLabel, "TOP", 0, -20)
+	areaLabel.description = areaLabel:CreateFontString(nil, "OVERLAY", "SubZoneTextFont")
+	areaLabel.description:SetPoint("TOP", areaLabel.name, "BOTTOM", 0, -10)
+	if AREA_NAME_FONT_COLOR ~= nil then areaLabel.name:SetVertexColor(AREA_NAME_FONT_COLOR:GetRGB()) end
+	if AREA_DESCRIPTION_FONT_COLOR ~= nil then areaLabel.description:SetVertexColor(AREA_DESCRIPTION_FONT_COLOR:GetRGB()) end
+	areaLabel:SetScript(
+		"OnUpdate",
+		function(self)
+			local owner = self.owner
+			if owner == nil or not owner:IsVisible() or not owner:IsMouseOver() then self:Hide() end
+		end
+	)
+
+	areaLabel:Hide()
+
+	return areaLabel
+end
+
+local function ShowAreaLabel(pin)
+	local label = GetAreaLabel()
+	if label == nil then return false end
+	local name, description = GetDungeonLabel(pin.entry)
+	label.name:SetText(name)
+	label.description:SetText(description)
+	label.owner = pin
+	label:Show()
+
+	return true
+end
+
 local function OnPinEnter(pin)
 	local entry = pin.entry
 	if entry == nil then return end
+	if entry.kind == "dungeon" and pin.worldMap and ShowAreaLabel(pin) then return end
 	GameTooltip:SetOwner(pin, "ANCHOR_RIGHT")
 	if entry.kind == "dungeon" then
 		local name, minLevel, maxLevel, recLevel = GetDungeonInfo(entry)
@@ -457,8 +535,9 @@ local function OnPinEnter(pin)
 	GameTooltip:Show()
 end
 
-local function OnPinLeave()
-	GameTooltip:Hide()
+local function OnPinLeave(pin)
+	if areaLabel ~= nil and areaLabel.owner == pin then areaLabel:Hide() end
+	if GameTooltip:GetOwner() == pin then GameTooltip:Hide() end
 end
 
 local function OnPinMouseUp(pin, button)
@@ -521,6 +600,16 @@ local function BuildList(mapID, piersOn, dungeonsOn)
 	return list
 end
 
+local function GetPoiScale()
+	local zoom = 0
+	if WorldMapFrame.GetCanvasZoomPercent ~= nil then zoom = WorldMapFrame:GetCanvasZoomPercent() or 0 end
+	zoom = math.min(math.max(zoom, 0), 1)
+	local scale = POI_START_SCALE + (POI_END_SCALE - POI_START_SCALE) * zoom
+	if WorldMapFrame.GetGlobalPinScale ~= nil then scale = scale * (WorldMapFrame:GetGlobalPinScale() or 1) end
+
+	return scale
+end
+
 local worldPins = {}
 local worldMapID = nil
 local worldScale = nil
@@ -544,16 +633,22 @@ local function UpdateWorldPins()
 	local w = child:GetWidth()
 	local h = child:GetHeight()
 	local size = ICON_SIZE / scale
+	local dungeonSize = DUNGEON_ICON_SIZE * GetPoiScale() / scale
 	for i, entry in ipairs(list) do
 		local pin = worldPins[i]
 		if pin == nil then
 			pin = CreatePin(child, WORLD_PIN_LEVEL, true)
+			pin.worldMap = true
 			worldPins[i] = pin
 		end
 
 		pin.entry = entry
 		ApplyIcon(pin, GetEntryIcon(entry))
-		pin:SetSize(size, size)
+		if entry.kind == "dungeon" then
+			pin:SetSize(dungeonSize, dungeonSize)
+		else
+			pin:SetSize(size, size)
+		end
 		pin:ClearAllPoints()
 		pin:SetPoint("CENTER", child, "TOPLEFT", w * entry.x, -h * entry.y)
 		pin:Show()
