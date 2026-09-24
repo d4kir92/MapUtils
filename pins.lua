@@ -4,6 +4,11 @@ local DUNGEON_ICON_SIZE = 32
 local POI_START_SCALE = 1
 local POI_END_SCALE = 1.2
 local WAYPOINT_TOLERANCE = 0.001
+local TRACKED_ICON_SCALE = 0.72
+local PUSHED_OFFSET = 1
+local CIRCLE_TRACKED = "UI-QuestPoi-QuestNumber-SuperTracked"
+local CIRCLE_TRACKED_PUSHED = "UI-QuestPoi-QuestNumber-Pressed-SuperTracked"
+local CIRCLE_PUSHED = "UI-QuestPoi-QuestNumber-Pressed"
 local UPDATE_INTERVAL = 0.05
 local WORLD_PIN_LEVEL = 2000
 local MINIMAP_PIN_LEVEL = 10
@@ -495,10 +500,25 @@ local function GetAreaLabel()
 	return areaLabel
 end
 
+local function GetPierLabel(entry)
+	local lines = {MapUtils:Trans("LID_SHIPTO")}
+	for i, route in ipairs(entry.routes) do
+		tinsert(lines, format("|cffffd100%s|r", GetRouteText(route, i)))
+	end
+
+	return entry.name, table.concat(lines, "\n")
+end
+
 local function ShowAreaLabel(pin)
 	local label = GetAreaLabel()
 	if label == nil then return false end
-	local name, description = GetDungeonLabel(pin.entry)
+	local name, description = nil, nil
+	if pin.entry.kind == "dungeon" then
+		name, description = GetDungeonLabel(pin.entry)
+	else
+		name, description = GetPierLabel(pin.entry)
+	end
+
 	label.name:SetText(name)
 	label.description:SetText(description)
 	label.owner = pin
@@ -510,7 +530,7 @@ end
 local function OnPinEnter(pin)
 	local entry = pin.entry
 	if entry == nil then return end
-	if entry.kind == "dungeon" and pin.worldMap and ShowAreaLabel(pin) then return end
+	if pin.worldMap and ShowAreaLabel(pin) then return end
 	GameTooltip:SetOwner(pin, "ANCHOR_RIGHT")
 	if entry.kind == "dungeon" then
 		local name, minLevel, maxLevel, recLevel = GetDungeonInfo(entry)
@@ -534,11 +554,6 @@ local function OnPinEnter(pin)
 	end
 
 	GameTooltip:Show()
-end
-
-local function OnPinLeave(pin)
-	if areaLabel ~= nil and areaLabel.owner == pin then areaLabel:Hide() end
-	if GameTooltip:GetOwner() == pin then GameTooltip:Hide() end
 end
 
 local function PlayWaypointSound(key)
@@ -590,20 +605,75 @@ local function ToggleWaypoint(mapID, entry)
 	PlayWaypointSound("UI_MAP_WAYPOINT_SUPER_TRACK_ON")
 end
 
+local function GetCircleAtlas(tracked, pushed)
+	local atlas = nil
+	if tracked and pushed then
+		atlas = CIRCLE_TRACKED_PUSHED
+	elseif tracked then
+		atlas = CIRCLE_TRACKED
+	elseif pushed then
+		atlas = CIRCLE_PUSHED
+	end
+
+	if atlas ~= nil and IsAtlas(atlas) then return atlas end
+
+	return nil
+end
+
+local function UpdatePinStyle(pin)
+	if pin.circle == nil then return end
+	local tracked = pin.entry ~= nil and IsEntryWaypoint(pin.mapID, pin.entry) and IsWaypointTracked()
+	local atlas = GetCircleAtlas(tracked, pin.pushed)
+	local size = pin:GetWidth()
+	if atlas ~= nil then
+		pin.circle:SetAtlas(atlas)
+		pin.circle:Show()
+		size = size * TRACKED_ICON_SCALE
+	else
+		pin.circle:Hide()
+	end
+
+	local offset = 0
+	if pin.pushed then offset = PUSHED_OFFSET * (pin.pixel or 1) end
+	pin.texture:ClearAllPoints()
+	pin.texture:SetPoint("CENTER", pin, "CENTER", offset, -offset)
+	pin.texture:SetSize(size, size)
+end
+
+local function IsCovered()
+	return MapUtils.IsInstanceMapShown ~= nil and MapUtils:IsInstanceMapShown()
+end
+
+local function OnPinLeave(pin)
+	if pin.pushed then
+		pin.pushed = false
+		UpdatePinStyle(pin)
+	end
+
+	if areaLabel ~= nil and areaLabel.owner == pin then areaLabel:Hide() end
+	if GameTooltip:GetOwner() == pin then GameTooltip:Hide() end
+end
+
+local function OnPinMouseDown(pin, button)
+	if button ~= "LeftButton" or IsCovered() then return end
+	pin.pushed = true
+	UpdatePinStyle(pin)
+end
+
 local function OnPinMouseUp(pin, button)
+	pin.pushed = false
 	local entry = pin.entry
-	if entry == nil then return end
-	if MapUtils.IsInstanceMapShown ~= nil and MapUtils:IsInstanceMapShown() then
-		if button == "RightButton" then MapUtils:ToggleInstanceMap() end
-
-		return
+	if entry ~= nil and pin:IsMouseOver() then
+		if IsCovered() then
+			if button == "RightButton" then MapUtils:ToggleInstanceMap() end
+		elseif button == "LeftButton" then
+			ToggleWaypoint(pin.mapID, entry)
+		elseif button == "RightButton" and entry.kind == "dungeon" and entry.instance ~= nil and MapUtils.ShowInstanceMap ~= nil then
+			MapUtils:ShowInstanceMap(entry.instance)
+		end
 	end
 
-	if button == "LeftButton" then
-		ToggleWaypoint(pin.mapID, entry)
-	elseif button == "RightButton" and entry.kind == "dungeon" and entry.instance ~= nil and MapUtils.ShowInstanceMap ~= nil then
-		MapUtils:ShowInstanceMap(entry.instance)
-	end
+	UpdatePinStyle(pin)
 end
 
 local function CreatePin(parent, levelOffset, clickable)
@@ -613,9 +683,15 @@ local function CreatePin(parent, levelOffset, clickable)
 	pin:EnableMouse(true)
 	pin:SetScript("OnEnter", OnPinEnter)
 	pin:SetScript("OnLeave", OnPinLeave)
-	if clickable then pin:SetScript("OnMouseUp", OnPinMouseUp) end
 	pin.texture = pin:CreateTexture(nil, "OVERLAY")
 	pin.texture:SetAllPoints(pin)
+	if clickable then
+		pin.circle = pin:CreateTexture(nil, "ARTWORK")
+		pin.circle:SetAllPoints(pin)
+		pin.circle:Hide()
+		pin:SetScript("OnMouseDown", OnPinMouseDown)
+		pin:SetScript("OnMouseUp", OnPinMouseUp)
+	end
 
 	return pin
 end
@@ -702,12 +778,15 @@ local function UpdateWorldPins()
 
 		pin.entry = entry
 		pin.mapID = mapID
+		pin.pixel = 1 / scale
 		ApplyIcon(pin, GetEntryIcon(entry))
 		if entry.kind == "dungeon" then
 			pin:SetSize(dungeonSize, dungeonSize)
 		else
 			pin:SetSize(size, size)
 		end
+
+		UpdatePinStyle(pin)
 		pin:ClearAllPoints()
 		pin:SetPoint("CENTER", child, "TOPLEFT", w * entry.x, -h * entry.y)
 		pin:Show()
@@ -820,6 +899,18 @@ if WorldMapFrame ~= nil and WorldMapFrame.ScrollContainer ~= nil and WorldMapFra
 end
 
 if Minimap ~= nil then minimapUpdater = CreateUpdater(Minimap, UpdateMinimapPins) end
+local function UpdatePinStyles()
+	for _, pin in ipairs(worldPins) do
+		if pin:IsShown() then UpdatePinStyle(pin) end
+	end
+end
+
+if C_Map.SetUserWaypoint ~= nil then
+	local styleFrame = CreateFrame("FRAME")
+	styleFrame:RegisterEvent("USER_WAYPOINT_UPDATED")
+	if C_SuperTrack ~= nil then styleFrame:RegisterEvent("SUPER_TRACKING_CHANGED") end
+	styleFrame:SetScript("OnEvent", UpdatePinStyles)
+end
 local function CountPins(mapID)
 	if mapID == nil then return 0, 0 end
 	local pierCount = 0
