@@ -570,7 +570,26 @@ local function SetWaypointTracked(tracked)
 	if C_SuperTrack ~= nil and C_SuperTrack.SetSuperTrackedUserWaypoint ~= nil then C_SuperTrack.SetSuperTrackedUserWaypoint(tracked) end
 end
 
+local waypointEntry = nil
+local waypointKey = nil
+local function GetWaypointKey()
+	if C_Map.HasUserWaypoint == nil or C_Map.GetUserWaypoint == nil or not C_Map.HasUserWaypoint() then return nil end
+	local point = C_Map.GetUserWaypoint()
+	if point == nil or point.position == nil then return nil end
+
+	return format("%s|%s|%s", tostring(point.uiMapID), tostring(point.position.x), tostring(point.position.y))
+end
+
+local function IsSameEntry(a, b)
+	if a == b then return true end
+
+	return a.kind == "dungeon" and a.instance ~= nil and a.instance == b.instance
+end
+
 local function IsEntryWaypoint(mapID, entry)
+	local key = GetWaypointKey()
+	if key == nil then return false end
+	if waypointEntry ~= nil and key == waypointKey then return IsSameEntry(entry, waypointEntry) end
 	if C_Map.GetUserWaypointPositionForMap == nil then return false end
 	local pos = C_Map.GetUserWaypointPositionForMap(mapID)
 	if pos == nil then return false end
@@ -584,6 +603,8 @@ local function ToggleWaypoint(mapID, entry)
 	if IsEntryWaypoint(mapID, entry) then
 		if IsWaypointTracked() then
 			C_Map.ClearUserWaypoint()
+			waypointEntry = nil
+			waypointKey = nil
 			SetWaypointTracked(false)
 			PlayWaypointSound("UI_MAP_WAYPOINT_REMOVE")
 		else
@@ -601,6 +622,8 @@ local function ToggleWaypoint(mapID, entry)
 	end
 
 	C_Map.SetUserWaypoint(UiMapPoint.CreateFromCoordinates(mapID, entry.x, entry.y))
+	waypointEntry = entry
+	waypointKey = GetWaypointKey()
 	SetWaypointTracked(true)
 	PlayWaypointSound("UI_MAP_WAYPOINT_SUPER_TRACK_ON")
 end
@@ -620,9 +643,29 @@ local function GetCircleAtlas(tracked, pushed)
 	return nil
 end
 
+local function GetWaypointPinLevel()
+	if WorldMapFrame.GetPinFrameLevelsManager == nil then return nil end
+	local manager = WorldMapFrame:GetPinFrameLevelsManager()
+	if manager == nil or manager.GetValidFrameLevel == nil then return nil end
+
+	return manager:GetValidFrameLevel("PIN_FRAME_LEVEL_WAYPOINT_LOCATION")
+end
+
+local function UpdatePinLevel(pin, isWaypoint)
+	local level = pin.baseLevel
+	if isWaypoint then
+		local waypointLevel = GetWaypointPinLevel()
+		if waypointLevel ~= nil and waypointLevel >= level then level = waypointLevel + 1 end
+	end
+
+	if pin:GetFrameLevel() ~= level then pin:SetFrameLevel(level) end
+end
+
 local function UpdatePinStyle(pin)
 	if pin.circle == nil then return end
-	local tracked = pin.entry ~= nil and IsEntryWaypoint(pin.mapID, pin.entry) and IsWaypointTracked()
+	local isWaypoint = pin.entry ~= nil and IsEntryWaypoint(pin.mapID, pin.entry)
+	UpdatePinLevel(pin, isWaypoint)
+	local tracked = isWaypoint and IsWaypointTracked()
 	local atlas = GetCircleAtlas(tracked, pin.pushed)
 	local size = pin:GetWidth()
 	if atlas ~= nil then
@@ -679,7 +722,8 @@ end
 local function CreatePin(parent, levelOffset, clickable)
 	local pin = CreateFrame("FRAME", nil, parent)
 	pin:SetSize(ICON_SIZE, ICON_SIZE)
-	pin:SetFrameLevel(parent:GetFrameLevel() + levelOffset)
+	pin.baseLevel = parent:GetFrameLevel() + levelOffset
+	pin:SetFrameLevel(pin.baseLevel)
 	pin:EnableMouse(true)
 	pin:SetScript("OnEnter", OnPinEnter)
 	pin:SetScript("OnLeave", OnPinLeave)
@@ -1059,6 +1103,12 @@ local function ReportState()
 	MapUtils:INFO("player uiMapID:", tostring(playerMapID), "-", GetMapName(playerMapID), "- piers:", playerPiers, "- dungeons:", playerDungeons)
 	MapUtils:INFO("canvas uiMapID:", tostring(canvasMapID), "-", GetMapName(canvasMapID), "- piers:", canvasPiers, "- dungeons:", canvasDungeons)
 	MapUtils:INFO("world pins:", #worldPins, "minimap pins:", #minimapPins, "icon:", GetIcon(DEFAULT_FACTION), "is atlas:", IsAtlas(GetIcon(DEFAULT_FACTION)))
+	MapUtils:INFO("user waypoint:", tostring(GetWaypointKey()), "- set by pin:", tostring(waypointKey), "- tracked:", tostring(IsWaypointTracked()))
+	if canvasMapID ~= nil and C_Map.GetUserWaypointPositionForMap ~= nil then
+		local pos = C_Map.GetUserWaypointPositionForMap(canvasMapID)
+		if pos ~= nil then MapUtils:INFO(format("user waypoint on canvas map: %.5f / %.5f", pos:GetXY())) end
+	end
+
 	for i, pin in ipairs(worldPins) do
 		local ox, oy = 0, 0
 		if pin:GetNumPoints() > 0 then
@@ -1068,6 +1118,7 @@ local function ReportState()
 		end
 
 		MapUtils:INFO(format("world pin %d shown = %s offset = %.1f / %.1f size = %.1f level = %d strata = %s", i, tostring(pin:IsShown()), ox, oy, pin:GetWidth(), pin:GetFrameLevel(), tostring(pin:GetFrameStrata())))
+		if pin.entry ~= nil then MapUtils:INFO(format("  %s %s %.4f / %.4f waypoint = %s", tostring(pin.entry.kind or "pier"), tostring(pin.entry.name), pin.entry.x, pin.entry.y, tostring(IsEntryWaypoint(pin.mapID, pin.entry)))) end
 	end
 
 	for i, pin in ipairs(minimapPins) do
