@@ -337,6 +337,7 @@ piers[1453] = {
 		["name"] = "Dwarven District",
 		["x"] = 0.666,
 		["y"] = 0.347,
+		["forever"] = {0.6901, 0.3071},
 		["transport"] = "tram",
 		["routes"] = {
 			{
@@ -350,8 +351,8 @@ piers[1453] = {
 piers[1455] = {
 	{
 		["name"] = "Tinker Town",
-		["x"] = 0.73,
-		["y"] = 0.502,
+		["x"] = 0.76676,
+		["y"] = 0.51133,
 		["transport"] = "tram",
 		["routes"] = {
 			{
@@ -364,6 +365,7 @@ piers[1455] = {
 
 for _, list in pairs(piers) do
 	for _, pier in ipairs(list) do
+		if pier.forever ~= nil and MapUtils:IsForever() then pier.x, pier.y = pier.forever[1], pier.forever[2] end
 		pier.name = MapUtils:TransName(pier.name)
 		local info = pier.nameMapID and C_Map.GetMapInfo(pier.nameMapID)
 		if info and info.name and info.name ~= "" then pier.name = info.name end
@@ -408,6 +410,16 @@ AddDungeon(
 	{
 		[1420] = {0.6336, 0.6738},
 		[1458] = {0.7220, 0.1147},
+	}
+)
+
+AddDungeon(
+	{
+		["name"] = "Hall of the Thanes",
+		["minLevel"] = 10,
+	},
+	{
+		[1455] = {0.27864, 0.47695},
 	}
 )
 

@@ -66,6 +66,8 @@ local function HandleSlash(args)
 	local sub = strlower(strtrim(args or ""))
 	if sub == "debug" then
 		MapUtils:ToggleDebug()
+	elseif sub == "pos" then
+		MapUtils:PrintPlayerPosition()
 	elseif sub == "map" then
 		MapUtils:ToggleInstanceMap()
 	else

@@ -72,6 +72,24 @@ local function GetUpdater()
 	return updater
 end
 
+function MapUtils:PrintPlayerPosition()
+	local mapID = C_Map.GetBestMapForUnit("player")
+	local pos = mapID and C_Map.GetPlayerMapPosition(mapID, "player")
+	if pos ~= nil then
+		local x, y = pos:GetXY()
+		MapUtils:INFO(format("uiMapID: %s  %.3f, %.3f", tostring(mapID), x * 100, y * 100))
+	else
+		MapUtils:INFO(format("uiMapID: %s  no map position", tostring(mapID)))
+	end
+
+	local wy, wx, wz, instanceID = UnitPosition("player")
+	if wx ~= nil then
+		MapUtils:INFO(format("World: x %.2f, y %.2f, z %.2f, instanceID %s", wx, wy, wz or 0, tostring(instanceID)))
+	else
+		MapUtils:INFO("World position not available here")
+	end
+end
+
 function MapUtils:IsDebug()
 	return debugging
 end
