@@ -291,6 +291,36 @@ piers[1445] = {
 	},
 }
 
+piers[1446] = {
+	{
+		["name"] = "Tanaris",
+		["nameMapID"] = 1446,
+		["x"] = 0.6813,
+		["y"] = 0.2254,
+		["faction"] = "Neutral",
+		["routes"] = {
+			{
+				["mapID"] = 2548,
+			},
+		},
+	},
+}
+
+piers[2548] = {
+	{
+		["name"] = "Riverglades",
+		["nameMapID"] = 2548,
+		["x"] = 0.8024,
+		["y"] = 0.5408,
+		["faction"] = "Neutral",
+		["routes"] = {
+			{
+				["mapID"] = 1446,
+			},
+		},
+	},
+}
+
 piers[1453] = {
 	{
 		["name"] = "Stormwind Harbor",
@@ -332,6 +362,17 @@ piers[1455] = {
 	},
 }
 
+for _, list in pairs(piers) do
+	for _, pier in ipairs(list) do
+		pier.name = MapUtils:TransName(pier.name)
+		local info = pier.nameMapID and C_Map.GetMapInfo(pier.nameMapID)
+		if info and info.name and info.name ~= "" then pier.name = info.name end
+		for _, route in ipairs(pier.routes or {}) do
+			route.dest = MapUtils:TransName(route.dest)
+		end
+	end
+end
+
 local dungeons = {}
 local function AddDungeon(info, positions)
 	for mapID, pos in pairs(positions) do
@@ -341,6 +382,14 @@ local function AddDungeon(info, positions)
 		end
 
 		entry.kind = "dungeon"
+		entry.name = MapUtils:TransName(entry.name)
+		if entry.contains ~= nil then
+			entry.contains = {}
+			for i, instance in ipairs(info.contains) do
+				entry.contains[i] = MapUtils:TransName(instance)
+			end
+		end
+
 		entry.x = pos[1]
 		entry.y = pos[2]
 		dungeons[mapID] = dungeons[mapID] or {}
@@ -781,7 +830,7 @@ local function GetFlights(mapID)
 					local entry = {}
 					entry.kind = "flight"
 					entry.nodeID = node.nodeID
-					entry.name = node.name
+					entry.name = MapUtils:TransName(node.name)
 					entry.faction = faction
 					entry.undiscovered = node.isUndiscovered == true
 					entry.icon = GetFlightIcon(node, faction)
@@ -815,7 +864,13 @@ local function GetRouteText(route, index)
 	local text = route.dest or ""
 	if route.mapID ~= nil then
 		local info = C_Map.GetMapInfo(route.mapID)
-		if info ~= nil and info.name ~= nil and info.name ~= "" and info.name ~= text then text = text .. ", " .. info.name end
+		if info ~= nil and info.name ~= nil and info.name ~= "" and info.name ~= text then
+			if text == "" then
+				text = info.name
+			else
+				text = text .. ", " .. info.name
+			end
+		end
 	end
 
 	if index > 1 then text = MapUtils:Trans("LID_THEN") .. " " .. text end
