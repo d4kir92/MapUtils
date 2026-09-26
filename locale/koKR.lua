@@ -1,6 +1,7 @@
 -- koKR Korean
 local _, MapUtils = ...
 MapUtils:AddTrans("koKR", "LID_DUNGEONENTRANCE", "던전 입구")
+MapUtils:AddTrans("koKR", "LID_DUNGEONPATH", "던전 가는 길")
 MapUtils:AddTrans("koKR", "LID_DUNGEONRAIDENTRANCE", "던전 및 공격대 입구")
 MapUtils:AddTrans("koKR", "LID_DUNGEONS", "던전 및 공격대 입구")
 MapUtils:AddTrans("koKR", "LID_FISHINGLEVEL", "낚시: %s")

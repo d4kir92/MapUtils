@@ -1,6 +1,7 @@
 -- deDE German Deutsch
 local _, MapUtils = ...
 MapUtils:AddTrans("deDE", "LID_DUNGEONENTRANCE", "Dungeon-Eingang")
+MapUtils:AddTrans("deDE", "LID_DUNGEONPATH", "Weg zum Dungeon")
 MapUtils:AddTrans("deDE", "LID_DUNGEONRAIDENTRANCE", "Dungeon- & Raid-Eingang")
 MapUtils:AddTrans("deDE", "LID_DUNGEONS", "Dungeon- & Raid-Eingänge")
 MapUtils:AddTrans("deDE", "LID_FISHINGLEVEL", "Angeln: %s")

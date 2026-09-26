@@ -1,6 +1,7 @@
 -- enUS English
 local _, MapUtils = ...
 MapUtils:AddTrans("enUS", "LID_DUNGEONENTRANCE", "Dungeon entrance")
+MapUtils:AddTrans("enUS", "LID_DUNGEONPATH", "Path to dungeon")
 MapUtils:AddTrans("enUS", "LID_DUNGEONRAIDENTRANCE", "Dungeon & raid entrance")
 MapUtils:AddTrans("enUS", "LID_DUNGEONS", "Dungeon & raid entrances")
 MapUtils:AddTrans("enUS", "LID_FISHINGLEVEL", "Fishing: %s")

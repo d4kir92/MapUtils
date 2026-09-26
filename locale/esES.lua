@@ -1,6 +1,7 @@
 -- esES Spanish
 local _, MapUtils = ...
 MapUtils:AddTrans("esES", "LID_DUNGEONENTRANCE", "Entrada de mazmorra")
+MapUtils:AddTrans("esES", "LID_DUNGEONPATH", "Camino a la mazmorra")
 MapUtils:AddTrans("esES", "LID_DUNGEONRAIDENTRANCE", "Entrada de mazmorras y bandas")
 MapUtils:AddTrans("esES", "LID_DUNGEONS", "Entradas de mazmorras y bandas")
 MapUtils:AddTrans("esES", "LID_FISHINGLEVEL", "Pesca: %s")

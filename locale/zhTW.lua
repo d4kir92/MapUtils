@@ -1,6 +1,7 @@
 -- zhTW Traditional Chinese
 local _, MapUtils = ...
 MapUtils:AddTrans("zhTW", "LID_DUNGEONENTRANCE", "地城入口")
+MapUtils:AddTrans("zhTW", "LID_DUNGEONPATH", "地城路徑")
 MapUtils:AddTrans("zhTW", "LID_DUNGEONRAIDENTRANCE", "地城和團隊副本入口")
 MapUtils:AddTrans("zhTW", "LID_DUNGEONS", "地城和團隊副本入口")
 MapUtils:AddTrans("zhTW", "LID_FISHINGLEVEL", "釣魚：%s")

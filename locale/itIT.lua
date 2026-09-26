@@ -1,6 +1,7 @@
 -- itIT Italien
 local _, MapUtils = ...
 MapUtils:AddTrans("itIT", "LID_DUNGEONENTRANCE", "Ingresso del dungeon")
+MapUtils:AddTrans("itIT", "LID_DUNGEONPATH", "Percorso per il dungeon")
 MapUtils:AddTrans("itIT", "LID_DUNGEONRAIDENTRANCE", "Ingresso di dungeon e incursioni")
 MapUtils:AddTrans("itIT", "LID_DUNGEONS", "Ingressi di dungeon e incursioni")
 MapUtils:AddTrans("itIT", "LID_FISHINGLEVEL", "Pesca: %s")

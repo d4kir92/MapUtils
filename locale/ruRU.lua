@@ -1,6 +1,7 @@
 -- ruRU Russian
 local _, MapUtils = ...
 MapUtils:AddTrans("ruRU", "LID_DUNGEONENTRANCE", "Вход в подземелье")
+MapUtils:AddTrans("ruRU", "LID_DUNGEONPATH", "Путь к подземелью")
 MapUtils:AddTrans("ruRU", "LID_DUNGEONRAIDENTRANCE", "Вход в подземелья и рейды")
 MapUtils:AddTrans("ruRU", "LID_DUNGEONS", "Входы в подземелья и рейды")
 MapUtils:AddTrans("ruRU", "LID_FISHINGLEVEL", "Рыбная ловля: %s")

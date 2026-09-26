@@ -1,6 +1,7 @@
 -- esMX Mexican Spanish
 local _, MapUtils = ...
 MapUtils:AddTrans("esMX", "LID_DUNGEONENTRANCE", "Entrada de mazmorra")
+MapUtils:AddTrans("esMX", "LID_DUNGEONPATH", "Camino a la mazmorra")
 MapUtils:AddTrans("esMX", "LID_DUNGEONRAIDENTRANCE", "Entrada de mazmorras y bandas")
 MapUtils:AddTrans("esMX", "LID_DUNGEONS", "Entradas de mazmorras y bandas")
 MapUtils:AddTrans("esMX", "LID_FISHINGLEVEL", "Pesca: %s")

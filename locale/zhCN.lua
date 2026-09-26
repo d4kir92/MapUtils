@@ -1,6 +1,7 @@
 -- zhCN Simplified Chinese
 local _, MapUtils = ...
 MapUtils:AddTrans("zhCN", "LID_DUNGEONENTRANCE", "地下城入口")
+MapUtils:AddTrans("zhCN", "LID_DUNGEONPATH", "地下城路径")
 MapUtils:AddTrans("zhCN", "LID_DUNGEONRAIDENTRANCE", "地下城和团队副本入口")
 MapUtils:AddTrans("zhCN", "LID_DUNGEONS", "地下城和团队副本入口")
 MapUtils:AddTrans("zhCN", "LID_FISHINGLEVEL", "钓鱼：%s")

@@ -25,6 +25,7 @@ local MAP_SCAN_MAX = 5000
 local MAP_PRINT_LIMIT = 80
 local DEFAULT_DUNGEON_ICON = "Interface\\Icons\\INV_Misc_Bone_Skull_02"
 local DUNGEON_ICON_CANDIDATES = {"Dungeon", "DungeonSkull", "Dungeon-Normal"}
+local PATH_ICON_CANDIDATES = {"CaveUnderground-Down", "CaveUnderground-Up"}
 local RAID_ICON_CANDIDATES = {"Raid"}
 local DEFAULT_FLIGHT_ICON = "Interface\\TaxiFrame\\UI-Taxi-Icon-Green"
 local FLIGHT_ICONS = {}
@@ -425,6 +426,17 @@ AddDungeon(
 
 AddDungeon(
 	{
+		["name"] = "Hall of the Thanes",
+		["entrance"] = "path",
+		["minLevel"] = 10,
+	},
+	{
+		[1455] = {0.43965, 0.51762},
+	}
+)
+
+AddDungeon(
+	{
 		["name"] = "Ragefire Chasm",
 		["lfg"] = 3,
 		["minLevel"] = 13,
@@ -789,8 +801,27 @@ local function GetRaidIcon()
 	return resolvedRaidIcon
 end
 
+local resolvedPathIcon = nil
+local function GetPathIcon()
+	if resolvedPathIcon ~= nil then return resolvedPathIcon or nil end
+	resolvedPathIcon = false
+	for _, atlas in ipairs(PATH_ICON_CANDIDATES) do
+		if IsAtlas(atlas) then
+			resolvedPathIcon = atlas
+			break
+		end
+	end
+
+	return resolvedPathIcon or nil
+end
+
+local function IsDesaturatedEntry(entry)
+	return entry.kind == "dungeon" and entry.entrance == "path" and entry.icon == nil and GetPathIcon() == nil
+end
+
 local function GetEntryIcon(entry)
 	if entry.icon ~= nil then return entry.icon end
+	if entry.kind == "dungeon" and entry.entrance == "path" and GetPathIcon() ~= nil then return GetPathIcon() end
 	if entry.kind == "dungeon" and entry.entrance == "raid" then return GetRaidIcon() end
 	if entry.kind == "dungeon" then return GetDungeonIcon() end
 
@@ -1021,6 +1052,7 @@ end
 local function GetEntranceText(entry)
 	if entry.entrance == "raid" then return MapUtils:Trans("LID_RAIDENTRANCE") end
 	if entry.entrance == "both" then return MapUtils:Trans("LID_DUNGEONRAIDENTRANCE") end
+	if entry.entrance == "path" then return MapUtils:Trans("LID_DUNGEONPATH") end
 
 	return MapUtils:Trans("LID_DUNGEONENTRANCE")
 end
@@ -1487,7 +1519,10 @@ local function UpdateWorldPins()
 		pin.minCircleSize = dungeonSize
 		pin.baseLevel = baseLevel
 		ApplyIcon(pin, GetEntryIcon(entry))
-		if entry.kind == "dungeon" then
+		pin.texture:SetDesaturated(IsDesaturatedEntry(entry))
+		if entry.kind == "dungeon" and entry.entrance == "path" then
+			pin:SetSize(dungeonSize * 0.7, dungeonSize * 0.7)
+		elseif entry.kind == "dungeon" then
 			pin:SetSize(dungeonSize, dungeonSize)
 		elseif entry.kind == "flight" then
 			local flightSize = (GetAtlasWidth(entry.icon) or ICON_SIZE) * poiScale / scale
@@ -1565,6 +1600,7 @@ local function UpdateMinimapPins()
 
 		pin.entry = entry
 		ApplyIcon(pin, GetEntryIcon(entry))
+		pin.texture:SetDesaturated(IsDesaturatedEntry(entry))
 		local pos = GetEntryWorldPos(mapID, entry)
 		if pos == nil then
 			pin:Hide()

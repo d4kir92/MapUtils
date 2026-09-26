@@ -1,6 +1,7 @@
 -- frFR French
 local _, MapUtils = ...
 MapUtils:AddTrans("frFR", "LID_DUNGEONENTRANCE", "Entrée du donjon")
+MapUtils:AddTrans("frFR", "LID_DUNGEONPATH", "Chemin vers le donjon")
 MapUtils:AddTrans("frFR", "LID_DUNGEONRAIDENTRANCE", "Entrée de donjons et de raids")
 MapUtils:AddTrans("frFR", "LID_DUNGEONS", "Entrées de donjons et de raids")
 MapUtils:AddTrans("frFR", "LID_FISHINGLEVEL", "Pêche : %s")

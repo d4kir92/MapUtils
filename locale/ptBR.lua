@@ -1,6 +1,7 @@
 -- ptBR Brazilian Portuguese
 local _, MapUtils = ...
 MapUtils:AddTrans("ptBR", "LID_DUNGEONENTRANCE", "Entrada da masmorra")
+MapUtils:AddTrans("ptBR", "LID_DUNGEONPATH", "Caminho para a masmorra")
 MapUtils:AddTrans("ptBR", "LID_DUNGEONRAIDENTRANCE", "Entrada de masmorras e raides")
 MapUtils:AddTrans("ptBR", "LID_DUNGEONS", "Entradas de masmorras e raides")
 MapUtils:AddTrans("ptBR", "LID_FISHINGLEVEL", "Pesca: %s")
