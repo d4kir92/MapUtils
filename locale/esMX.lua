@@ -2,6 +2,8 @@
 local _, MapUtils = ...
 MapUtils:AddTrans("esMX", "LID_DUNGEONENTRANCE", "Entrada de mazmorra")
 MapUtils:AddTrans("esMX", "LID_DUNGEONS", "Entradas de mazmorra")
+MapUtils:AddTrans("esMX", "LID_FLIGHTPOINT", "Punto de vuelo")
+MapUtils:AddTrans("esMX", "LID_FLIGHTPOINTS", "Puntos de vuelo")
 MapUtils:AddTrans("esMX", "LID_GENERAL", "General")
 MapUtils:AddTrans("esMX", "LID_INSTANCEMAP", "Mostrar el mapa de mazmorra en el mapa del mundo")
 MapUtils:AddTrans("esMX", "LID_MINIMAPPINS", "Mostrar iconos en el minimapa")

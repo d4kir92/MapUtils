@@ -112,6 +112,9 @@ function MapUtils:InitSetting()
 	AddCategory("DUNGEONS")
 	AddCheckbox("DUNGEONWORLDMAPPINS", true, function() MapUtils:RefreshPins() end, "LID_WORLDMAPPINS")
 	AddCheckbox("DUNGEONMINIMAPPINS", true, function() MapUtils:RefreshPins() end, "LID_MINIMAPPINS")
+	AddCategory("FLIGHTPOINTS")
+	AddCheckbox("FLIGHTWORLDMAPPINS", true, function() MapUtils:RefreshPins() end, "LID_WORLDMAPPINS")
+	AddCheckbox("FLIGHTMINIMAPPINS", true, function() MapUtils:RefreshPins() end, "LID_MINIMAPPINS")
 	maset:ResumeLayout()
 	MapUtils:CreateMinimapButton({
 		["name"] = "MapUtils",

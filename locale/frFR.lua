@@ -2,6 +2,8 @@
 local _, MapUtils = ...
 MapUtils:AddTrans("frFR", "LID_DUNGEONENTRANCE", "Entrée du donjon")
 MapUtils:AddTrans("frFR", "LID_DUNGEONS", "Entrées de donjon")
+MapUtils:AddTrans("frFR", "LID_FLIGHTPOINT", "Point de vol")
+MapUtils:AddTrans("frFR", "LID_FLIGHTPOINTS", "Points de vol")
 MapUtils:AddTrans("frFR", "LID_GENERAL", "Général")
 MapUtils:AddTrans("frFR", "LID_INSTANCEMAP", "Afficher la carte du donjon sur la carte du monde")
 MapUtils:AddTrans("frFR", "LID_MINIMAPPINS", "Afficher les icônes sur la minicarte")
