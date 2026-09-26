@@ -107,6 +107,7 @@ function MapUtils:InitSetting()
 
 	AddCheckbox("INSTANCEMAP", true)
 	AddCheckbox("ZONELEVELS", true)
+	AddCheckbox("FISHINGLEVELS", true)
 	AddCategory("PIERS")
 	AddCheckbox("WORLDMAPPINS", true, function() MapUtils:RefreshPins() end)
 	AddCheckbox("MINIMAPPINS", true, function() MapUtils:RefreshPins() end)

@@ -25,6 +25,7 @@ local MAP_SCAN_MAX = 5000
 local MAP_PRINT_LIMIT = 80
 local DEFAULT_DUNGEON_ICON = "Interface\\Icons\\INV_Misc_Bone_Skull_02"
 local DUNGEON_ICON_CANDIDATES = {"Dungeon", "DungeonSkull", "Dungeon-Normal"}
+local RAID_ICON_CANDIDATES = {"Raid"}
 local DEFAULT_FLIGHT_ICON = "Interface\\TaxiFrame\\UI-Taxi-Icon-Green"
 local FLIGHT_ICONS = {}
 FLIGHT_ICONS["Alliance"] = "TaxiNode_Alliance"
@@ -63,6 +64,21 @@ piers[1411] = {
 		["routes"] = {
 			{
 				["dest"] = "Grom'gol Base Camp",
+				["mapID"] = 1434,
+			},
+		},
+	},
+}
+
+piers[1413] = {
+	{
+		["name"] = "Ratchet",
+		["x"] = 0.6367,
+		["y"] = 0.3843,
+		["faction"] = "Neutral",
+		["routes"] = {
+			{
+				["dest"] = "Booty Bay",
 				["mapID"] = 1434,
 			},
 		},
@@ -236,6 +252,31 @@ piers[1439] = {
 	},
 }
 
+piers[1444] = {
+	{
+		["name"] = "The Forgotten Coast",
+		["x"] = 0.433,
+		["y"] = 0.428,
+		["routes"] = {
+			{
+				["dest"] = "Feathermoon Stronghold",
+				["mapID"] = 1444,
+			},
+		},
+	},
+	{
+		["name"] = "Feathermoon Stronghold",
+		["x"] = 0.31,
+		["y"] = 0.398,
+		["routes"] = {
+			{
+				["dest"] = "The Forgotten Coast",
+				["mapID"] = 1444,
+			},
+		},
+	},
+}
+
 piers[1445] = {
 	{
 		["name"] = "Theramore Isle",
@@ -259,6 +300,33 @@ piers[1453] = {
 			{
 				["dest"] = "Auberdine",
 				["mapID"] = 1439,
+			},
+		},
+	},
+	{
+		["name"] = "Dwarven District",
+		["x"] = 0.666,
+		["y"] = 0.347,
+		["transport"] = "tram",
+		["routes"] = {
+			{
+				["dest"] = "Tinker Town",
+				["mapID"] = 1455,
+			},
+		},
+	},
+}
+
+piers[1455] = {
+	{
+		["name"] = "Tinker Town",
+		["x"] = 0.73,
+		["y"] = 0.502,
+		["transport"] = "tram",
+		["routes"] = {
+			{
+				["dest"] = "Dwarven District",
+				["mapID"] = 1453,
 			},
 		},
 	},
@@ -291,6 +359,259 @@ AddDungeon(
 	{
 		[1420] = {0.6336, 0.6738},
 		[1458] = {0.7220, 0.1147},
+	}
+)
+
+AddDungeon(
+	{
+		["name"] = "Ragefire Chasm",
+		["lfg"] = 3,
+		["minLevel"] = 13,
+		["maxLevel"] = 18,
+	},
+	{
+		[1454] = {0.526, 0.49},
+	}
+)
+
+AddDungeon(
+	{
+		["name"] = "The Deadmines",
+		["lfg"] = 5,
+		["minLevel"] = 17,
+		["maxLevel"] = 26,
+	},
+	{
+		[1436] = {0.425, 0.717},
+	}
+)
+
+AddDungeon(
+	{
+		["name"] = "Wailing Caverns",
+		["minLevel"] = 17,
+		["maxLevel"] = 24,
+	},
+	{
+		[1413] = {0.46, 0.364},
+	}
+)
+
+AddDungeon(
+	{
+		["name"] = "Shadowfang Keep",
+		["minLevel"] = 22,
+		["maxLevel"] = 30,
+	},
+	{
+		[1421] = {0.448, 0.678},
+	}
+)
+
+AddDungeon(
+	{
+		["name"] = "The Stockade",
+		["lfg"] = 11,
+		["minLevel"] = 22,
+		["maxLevel"] = 30,
+	},
+	{
+		[1453] = {0.524, 0.7},
+	}
+)
+
+AddDungeon(
+	{
+		["name"] = "Blackfathom Deeps",
+		["lfg"] = 9,
+		["minLevel"] = 24,
+		["maxLevel"] = 32,
+	},
+	{
+		[1440] = {0.145, 0.142},
+	}
+)
+
+AddDungeon(
+	{
+		["name"] = "Gnomeregan",
+		["minLevel"] = 29,
+		["maxLevel"] = 38,
+	},
+	{
+		[1426] = {0.243, 0.398},
+	}
+)
+
+AddDungeon(
+	{
+		["name"] = "Razorfen Kraul",
+		["minLevel"] = 29,
+		["maxLevel"] = 38,
+	},
+	{
+		[1413] = {0.429, 0.902},
+	}
+)
+
+AddDungeon(
+	{
+		["name"] = "Scarlet Monastery",
+		["minLevel"] = 34,
+		["maxLevel"] = 45,
+	},
+	{
+		[1420] = {0.826, 0.338},
+	}
+)
+
+AddDungeon(
+	{
+		["name"] = "Razorfen Downs",
+		["minLevel"] = 37,
+		["maxLevel"] = 46,
+	},
+	{
+		[1413] = {0.49, 0.939},
+	}
+)
+
+AddDungeon(
+	{
+		["name"] = "Uldaman",
+		["minLevel"] = 41,
+		["maxLevel"] = 51,
+	},
+	{
+		[1418] = {0.446, 0.121},
+	}
+)
+
+AddDungeon(
+	{
+		["name"] = "Zul'Farrak",
+		["minLevel"] = 44,
+		["maxLevel"] = 54,
+	},
+	{
+		[1446] = {0.387, 0.2},
+	}
+)
+
+AddDungeon(
+	{
+		["name"] = "Maraudon",
+		["minLevel"] = 46,
+		["maxLevel"] = 55,
+	},
+	{
+		[1443] = {0.291, 0.625},
+	}
+)
+
+AddDungeon(
+	{
+		["name"] = "Temple of Atal'Hakkar",
+		["minLevel"] = 50,
+		["maxLevel"] = 60,
+	},
+	{
+		[1435] = {0.699, 0.536},
+	}
+)
+
+AddDungeon(
+	{
+		["name"] = "Blackrock Mountain",
+		["entrance"] = "both",
+		["contains"] = {"Blackrock Depths", "Lower Blackrock Spire", "Upper Blackrock Spire", "Molten Core", "Blackwing Lair"},
+		["minLevel"] = 52,
+		["maxLevel"] = 60,
+	},
+	{
+		[1427] = {0.348, 0.853},
+		[1428] = {0.294, 0.383},
+	}
+)
+
+AddDungeon(
+	{
+		["name"] = "Dire Maul (North)",
+		["minLevel"] = 56,
+		["maxLevel"] = 60,
+	},
+	{
+		[1444] = {0.625, 0.249},
+	}
+)
+
+AddDungeon(
+	{
+		["name"] = "Dire Maul (West)",
+		["minLevel"] = 56,
+		["maxLevel"] = 60,
+	},
+	{
+		[1444] = {0.603, 0.302},
+	}
+)
+
+AddDungeon(
+	{
+		["name"] = "Dire Maul (East)",
+		["minLevel"] = 56,
+		["maxLevel"] = 60,
+	},
+	{
+		[1444] = {0.648, 0.302},
+	}
+)
+
+AddDungeon(
+	{
+		["name"] = "Scholomance",
+		["minLevel"] = 58,
+		["maxLevel"] = 60,
+	},
+	{
+		[1422] = {0.697, 0.732},
+	}
+)
+
+AddDungeon(
+	{
+		["name"] = "Zul'Gurub",
+		["entrance"] = "raid",
+		["minLevel"] = 60,
+		["maxLevel"] = 60,
+	},
+	{
+		[1434] = {0.539, 0.176},
+	}
+)
+
+AddDungeon(
+	{
+		["name"] = "Onyxia's Lair",
+		["entrance"] = "raid",
+		["minLevel"] = 60,
+		["maxLevel"] = 60,
+	},
+	{
+		[1445] = {0.526, 0.768},
+	}
+)
+
+AddDungeon(
+	{
+		["name"] = "Ahn'Qiraj",
+		["entrance"] = "raid",
+		["contains"] = {"Ruins of Ahn'Qiraj", "Temple of Ahn'Qiraj"},
+		["minLevel"] = 60,
+		["maxLevel"] = 60,
+	},
+	{
+		[1451] = {0.286, 0.924},
 	}
 )
 
@@ -391,8 +712,25 @@ local function GetDungeonIcon()
 	return resolvedDungeonIcon
 end
 
+local resolvedRaidIcon = nil
+local function GetRaidIcon()
+	if resolvedRaidIcon ~= nil then return resolvedRaidIcon end
+	for _, atlas in ipairs(RAID_ICON_CANDIDATES) do
+		if IsAtlas(atlas) then
+			resolvedRaidIcon = atlas
+
+			return resolvedRaidIcon
+		end
+	end
+
+	resolvedRaidIcon = GetDungeonIcon()
+
+	return resolvedRaidIcon
+end
+
 local function GetEntryIcon(entry)
 	if entry.icon ~= nil then return entry.icon end
+	if entry.kind == "dungeon" and entry.entrance == "raid" then return GetRaidIcon() end
 	if entry.kind == "dungeon" then return GetDungeonIcon() end
 
 	return GetIcon(entry.faction)
@@ -613,6 +951,13 @@ local function GetDungeonInfo(entry)
 	return lfgName, minLevel, maxLevel, recLevel
 end
 
+local function GetEntranceText(entry)
+	if entry.entrance == "raid" then return MapUtils:Trans("LID_RAIDENTRANCE") end
+	if entry.entrance == "both" then return MapUtils:Trans("LID_DUNGEONRAIDENTRANCE") end
+
+	return MapUtils:Trans("LID_DUNGEONENTRANCE")
+end
+
 function MapUtils:GetLevelColorCode(minLevel, maxLevel)
 	local playerLevel = UnitLevel("player")
 	local color = QuestDifficultyColors["difficult"]
@@ -635,10 +980,14 @@ local function GetDungeonLabel(entry)
 		name = format("%s%s (%s)|r", name, MapUtils:GetLevelColorCode(minLevel, maxLevel), range)
 	end
 
-	local description = MapUtils:Trans("LID_DUNGEONENTRANCE")
-	if recLevel ~= nil then description = description .. "\n" .. MapUtils:Trans("LID_RECOMMENDEDLEVEL", nil, recLevel) end
+	local lines = {GetEntranceText(entry)}
+	for _, instance in ipairs(entry.contains or {}) do
+		tinsert(lines, format("|cffffd100%s|r", instance))
+	end
 
-	return name, description
+	if recLevel ~= nil then tinsert(lines, MapUtils:Trans("LID_RECOMMENDEDLEVEL", nil, recLevel)) end
+
+	return name, table.concat(lines, "\n")
 end
 
 local function IsPinMouseOver(pin)
@@ -683,6 +1032,7 @@ end
 
 local function GetRouteHeader(entry)
 	if entry.transport == "zeppelin" then return MapUtils:Trans("LID_ZEPPELINTO") end
+	if entry.transport == "tram" then return MapUtils:Trans("LID_TRAMTO") end
 
 	return MapUtils:Trans("LID_SHIPTO")
 end
@@ -724,7 +1074,10 @@ local function OnPinEnter(pin)
 	if entry.kind == "dungeon" then
 		local name, minLevel, maxLevel, recLevel = GetDungeonInfo(entry)
 		GameTooltip:AddLine(name or entry.name, 1, 1, 1)
-		GameTooltip:AddLine(MapUtils:Trans("LID_DUNGEONENTRANCE"), 0.6, 0.6, 0.6)
+		GameTooltip:AddLine(GetEntranceText(entry), 0.6, 0.6, 0.6)
+		for _, instance in ipairs(entry.contains or {}) do
+			GameTooltip:AddLine(instance, 1, 0.82, 0)
+		end
 		if minLevel ~= nil and minLevel > 0 then
 			if maxLevel ~= nil and maxLevel > minLevel then
 				GameTooltip:AddLine(format("%s %d - %d", LEVEL or "Level", minLevel, maxLevel), 1, 0.82, 0)
@@ -1295,6 +1648,7 @@ local function RefreshIcons()
 	worldDungeons = nil
 	worldFlights = nil
 	resolvedDungeonIcon = nil
+	resolvedRaidIcon = nil
 end
 
 function MapUtils:RefreshPins()
@@ -1349,6 +1703,8 @@ local function ReportIcons()
 	for _, atlas in ipairs(DUNGEON_ICON_CANDIDATES) do
 		MapUtils:INFO("atlas", atlas, "exists:", IsAtlas(atlas))
 	end
+
+	MapUtils:INFO("current raid icon:", GetRaidIcon(), "- is atlas:", IsAtlas(GetRaidIcon()))
 
 	MapUtils:INFO("Use /mappins icon <atlas or texture path> to try one, /mappins icon reset to go back")
 end
