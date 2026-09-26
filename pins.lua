@@ -139,6 +139,18 @@ piers[1434] = {
 			},
 		},
 	},
+	{
+		["name"] = "Booty Bay",
+		["x"] = 0.2586,
+		["y"] = 0.7299,
+		["faction"] = "Neutral",
+		["routes"] = {
+			{
+				["dest"] = "Ratchet",
+				["mapID"] = 1413,
+			},
+		},
+	},
 }
 
 piers[1437] = {
@@ -601,7 +613,7 @@ local function GetDungeonInfo(entry)
 	return lfgName, minLevel, maxLevel, recLevel
 end
 
-local function GetLevelColorCode(minLevel, maxLevel)
+function MapUtils:GetLevelColorCode(minLevel, maxLevel)
 	local playerLevel = UnitLevel("player")
 	local color = QuestDifficultyColors["difficult"]
 	if playerLevel < minLevel then
@@ -620,7 +632,7 @@ local function GetDungeonLabel(entry)
 		if maxLevel == nil or maxLevel < minLevel then maxLevel = minLevel end
 		local range = tostring(minLevel)
 		if maxLevel > minLevel then range = format("%d-%d", minLevel, maxLevel) end
-		name = format("%s%s (%s)|r", name, GetLevelColorCode(minLevel, maxLevel), range)
+		name = format("%s%s (%s)|r", name, MapUtils:GetLevelColorCode(minLevel, maxLevel), range)
 	end
 
 	local description = MapUtils:Trans("LID_DUNGEONENTRANCE")

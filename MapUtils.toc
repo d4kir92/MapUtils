@@ -49,6 +49,7 @@ locale\zhTW.lua
 
 core.lua
 pins.lua
+zonelevels.lua
 instancemap.lua
 debug.lua
 settings.lua
