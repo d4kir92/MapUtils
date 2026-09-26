@@ -40,6 +40,64 @@ local MINIMAP_YARDS = {}
 MINIMAP_YARDS["outdoor"] = {[0] = 466.66666, 400, 333.33333, 266.66666, 200, 133.33333}
 MINIMAP_YARDS["indoor"] = {[0] = 300, 240, 180, 120, 80, 50}
 local piers = {}
+piers[1411] = {
+	{
+		["name"] = "Orgrimmar",
+		["x"] = 0.509,
+		["y"] = 0.139,
+		["faction"] = "Horde",
+		["transport"] = "zeppelin",
+		["routes"] = {
+			{
+				["dest"] = "Undercity",
+				["mapID"] = 1420,
+			},
+		},
+	},
+	{
+		["name"] = "Orgrimmar",
+		["x"] = 0.506,
+		["y"] = 0.126,
+		["faction"] = "Horde",
+		["transport"] = "zeppelin",
+		["routes"] = {
+			{
+				["dest"] = "Grom'gol Base Camp",
+				["mapID"] = 1434,
+			},
+		},
+	},
+}
+
+piers[1420] = {
+	{
+		["name"] = "Undercity",
+		["x"] = 0.607,
+		["y"] = 0.588,
+		["faction"] = "Horde",
+		["transport"] = "zeppelin",
+		["routes"] = {
+			{
+				["dest"] = "Orgrimmar",
+				["mapID"] = 1411,
+			},
+		},
+	},
+	{
+		["name"] = "Undercity",
+		["x"] = 0.619,
+		["y"] = 0.591,
+		["faction"] = "Horde",
+		["transport"] = "zeppelin",
+		["routes"] = {
+			{
+				["dest"] = "Grom'gol Base Camp",
+				["mapID"] = 1434,
+			},
+		},
+	},
+}
+
 piers[1424] = {
 	{
 		["name"] = "Southshore",
@@ -49,6 +107,35 @@ piers[1424] = {
 			{
 				["dest"] = "Auberdine",
 				["mapID"] = 1439,
+			},
+		},
+	},
+}
+
+piers[1434] = {
+	{
+		["name"] = "Grom'gol Base Camp",
+		["x"] = 0.314,
+		["y"] = 0.302,
+		["faction"] = "Horde",
+		["transport"] = "zeppelin",
+		["routes"] = {
+			{
+				["dest"] = "Orgrimmar",
+				["mapID"] = 1411,
+			},
+		},
+	},
+	{
+		["name"] = "Grom'gol Base Camp",
+		["x"] = 0.316,
+		["y"] = 0.291,
+		["faction"] = "Horde",
+		["transport"] = "zeppelin",
+		["routes"] = {
+			{
+				["dest"] = "Undercity",
+				["mapID"] = 1420,
 			},
 		},
 	},
@@ -582,8 +669,14 @@ local function GetAreaLabel()
 	return areaLabel
 end
 
+local function GetRouteHeader(entry)
+	if entry.transport == "zeppelin" then return MapUtils:Trans("LID_ZEPPELINTO") end
+
+	return MapUtils:Trans("LID_SHIPTO")
+end
+
 local function GetPierLabel(entry)
-	local lines = {MapUtils:Trans("LID_SHIPTO")}
+	local lines = {GetRouteHeader(entry)}
 	for i, route in ipairs(entry.routes) do
 		tinsert(lines, format("|cffffd100%s|r", GetRouteText(route, i)))
 	end
@@ -634,7 +727,7 @@ local function OnPinEnter(pin)
 		GameTooltip:AddLine(GetFlightDescription(entry), 0.6, 0.6, 0.6)
 	else
 		GameTooltip:AddLine(entry.name, 1, 1, 1)
-		GameTooltip:AddLine(MapUtils:Trans("LID_SHIPTO"), 0.6, 0.6, 0.6)
+		GameTooltip:AddLine(GetRouteHeader(entry), 0.6, 0.6, 0.6)
 		for i, route in ipairs(entry.routes) do
 			GameTooltip:AddLine(GetRouteText(route, i), 1, 0.82, 0)
 		end
