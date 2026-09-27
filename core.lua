@@ -475,6 +475,20 @@ local function HasOwnArt(mapID)
 	return artTypes[mapID]
 end
 
+local function IsOptionEnabled(key)
+	if type(MAUTTAB) ~= "table" then return true end
+
+	return MAUTTAB[key] ~= false
+end
+
+local function IsArtEnabled(mapID)
+	if not HasOwnArt(mapID) then return false end
+	if dungeonMaps[mapID] then return IsOptionEnabled("DUNGEONMAPS") end
+	if raidMaps[mapID] then return IsOptionEnabled("RAIDMAPS") end
+
+	return false
+end
+
 local missingMaps = {}
 hooksecurefunc(WorldMapFrame, "Show", function()
 	local mapID = C_Map.GetBestMapForUnit("player")
@@ -497,13 +511,13 @@ hooksecurefunc(WorldMapFrame, "Show", function()
 		return
 	end
 
-	if not HasOwnArt(mapID) then return end
+	if not IsArtEnabled(mapID) then return end
 	if WorldMapFrame:GetMapID() ~= mapID then WorldMapFrame:SetMapID(mapID) end
 end)
 
 local oldGetMapArtLayers = C_Map.GetMapArtLayers
 local function GetMapArtLayers(mapID)
-	if not HasOwnArt(mapID) then return oldGetMapArtLayers(mapID) end
+	if not IsArtEnabled(mapID) then return oldGetMapArtLayers(mapID) end
 	if dungeonMaps[mapID] then
 		local num = dungeonMaps[mapID] and #dungeonMaps[mapID] or 1
 		local result = {}
@@ -541,7 +555,7 @@ end
 local oldGetMapArtLayerTextures = C_Map.GetMapArtLayerTextures
 local function GetMapArtLayerTextures(uiMapID, layerIndex)
 	local textures = oldGetMapArtLayerTextures(uiMapID, layerIndex)
-	if not HasOwnArt(uiMapID) then return textures end
+	if not IsArtEnabled(uiMapID) then return textures end
 	if dungeonMaps[uiMapID] then
 		textures = {}
 		for i, map in pairs(dungeonMaps[uiMapID]) do

@@ -108,6 +108,8 @@ function MapUtils:InitSetting()
 	end)
 
 	AddCheckbox("INSTANCEMAP", true)
+	AddCheckbox("DUNGEONMAPS", true)
+	AddCheckbox("RAIDMAPS", true)
 	AddCheckbox("ZONELEVELS", true)
 	AddCheckbox("FISHINGLEVELS", true)
 	AddCategory("PIERS")
