@@ -9,7 +9,6 @@ MapUtils:AddTrans("ptBR", "LID_FISHINGLEVELS", "Mostrar a perícia mínima de pe
 MapUtils:AddTrans("ptBR", "LID_FLIGHTPOINT", "Ponto de voo")
 MapUtils:AddTrans("ptBR", "LID_FLIGHTPOINTS", "Pontos de voo")
 MapUtils:AddTrans("ptBR", "LID_GENERAL", "Geral")
-MapUtils:AddTrans("ptBR", "LID_INSTANCEMAP", "Mostrar o mapa da masmorra no mapa mundial")
 MapUtils:AddTrans("ptBR", "LID_DUNGEONMAPS", "Mostrar mapas de masmorras")
 MapUtils:AddTrans("ptBR", "LID_RAIDMAPS", "Mostrar mapas de raides")
 MapUtils:AddTrans("ptBR", "LID_MINIMAPPINS", "Mostrar ícones no minimapa")

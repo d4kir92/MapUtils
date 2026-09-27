@@ -9,7 +9,6 @@ MapUtils:AddTrans("koKR", "LID_FISHINGLEVELS", "월드맵에 지역별 최소 �
 MapUtils:AddTrans("koKR", "LID_FLIGHTPOINT", "비행 지점")
 MapUtils:AddTrans("koKR", "LID_FLIGHTPOINTS", "비행 지점")
 MapUtils:AddTrans("koKR", "LID_GENERAL", "일반")
-MapUtils:AddTrans("koKR", "LID_INSTANCEMAP", "월드맵에 던전 지도 표시")
 MapUtils:AddTrans("koKR", "LID_DUNGEONMAPS", "던전 지도 표시")
 MapUtils:AddTrans("koKR", "LID_RAIDMAPS", "공격대 지도 표시")
 MapUtils:AddTrans("koKR", "LID_MINIMAPPINS", "미니맵에 아이콘 표시")

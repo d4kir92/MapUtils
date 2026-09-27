@@ -395,7 +395,6 @@ local function Layout(info)
 end
 
 local function GetVisibleLevels()
-	if MapUtils:GetConfig("INSTANCEMAP", true) ~= true then return nil end
 	if WorldMapFrame == nil or WorldMapFrame.GetMapID == nil then return nil end
 	if forced ~= nil then
 		if WorldMapFrame:GetMapID() == forcedMapID then return forced, forcedIndex, nil end

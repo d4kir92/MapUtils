@@ -9,7 +9,6 @@ MapUtils:AddTrans("itIT", "LID_FISHINGLEVELS", "Mostra l'abilità di pesca minim
 MapUtils:AddTrans("itIT", "LID_FLIGHTPOINT", "Punto di volo")
 MapUtils:AddTrans("itIT", "LID_FLIGHTPOINTS", "Punti di volo")
 MapUtils:AddTrans("itIT", "LID_GENERAL", "Generale")
-MapUtils:AddTrans("itIT", "LID_INSTANCEMAP", "Mostra la mappa del dungeon sulla mappa del mondo")
 MapUtils:AddTrans("itIT", "LID_DUNGEONMAPS", "Mostra le mappe dei dungeon")
 MapUtils:AddTrans("itIT", "LID_RAIDMAPS", "Mostra le mappe delle incursioni")
 MapUtils:AddTrans("itIT", "LID_MINIMAPPINS", "Mostra icone sulla minimappa")

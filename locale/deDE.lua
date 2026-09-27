@@ -9,7 +9,6 @@ MapUtils:AddTrans("deDE", "LID_FISHINGLEVELS", "Mindest-Angelfertigkeit der Gebi
 MapUtils:AddTrans("deDE", "LID_FLIGHTPOINT", "Flugpunkt")
 MapUtils:AddTrans("deDE", "LID_FLIGHTPOINTS", "Flugpunkte")
 MapUtils:AddTrans("deDE", "LID_GENERAL", "Allgemein")
-MapUtils:AddTrans("deDE", "LID_INSTANCEMAP", "Dungeon-Karte auf der Weltkarte anzeigen")
 MapUtils:AddTrans("deDE", "LID_DUNGEONMAPS", "Dungeon-Karten anzeigen")
 MapUtils:AddTrans("deDE", "LID_RAIDMAPS", "Raid-Karten anzeigen")
 MapUtils:AddTrans("deDE", "LID_MINIMAPPINS", "Symbole auf der Minikarte anzeigen")

@@ -9,7 +9,6 @@ MapUtils:AddTrans("esES", "LID_FISHINGLEVELS", "Mostrar la habilidad mínima de 
 MapUtils:AddTrans("esES", "LID_FLIGHTPOINT", "Punto de vuelo")
 MapUtils:AddTrans("esES", "LID_FLIGHTPOINTS", "Puntos de vuelo")
 MapUtils:AddTrans("esES", "LID_GENERAL", "General")
-MapUtils:AddTrans("esES", "LID_INSTANCEMAP", "Mostrar el mapa de mazmorra en el mapa del mundo")
 MapUtils:AddTrans("esES", "LID_DUNGEONMAPS", "Mostrar mapas de mazmorras")
 MapUtils:AddTrans("esES", "LID_RAIDMAPS", "Mostrar mapas de bandas")
 MapUtils:AddTrans("esES", "LID_MINIMAPPINS", "Mostrar iconos en el minimapa")

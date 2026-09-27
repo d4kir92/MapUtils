@@ -9,7 +9,6 @@ MapUtils:AddTrans("zhCN", "LID_FISHINGLEVELS", "在世界地图上显示区域�
 MapUtils:AddTrans("zhCN", "LID_FLIGHTPOINT", "飞行点")
 MapUtils:AddTrans("zhCN", "LID_FLIGHTPOINTS", "飞行点")
 MapUtils:AddTrans("zhCN", "LID_GENERAL", "常规")
-MapUtils:AddTrans("zhCN", "LID_INSTANCEMAP", "在世界地图上显示地下城地图")
 MapUtils:AddTrans("zhCN", "LID_DUNGEONMAPS", "显示地下城地图")
 MapUtils:AddTrans("zhCN", "LID_RAIDMAPS", "显示团队副本地图")
 MapUtils:AddTrans("zhCN", "LID_MINIMAPPINS", "在小地图上显示图标")

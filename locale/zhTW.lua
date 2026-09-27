@@ -9,7 +9,6 @@ MapUtils:AddTrans("zhTW", "LID_FISHINGLEVELS", "在世界地圖上顯示區域�
 MapUtils:AddTrans("zhTW", "LID_FLIGHTPOINT", "飛行點")
 MapUtils:AddTrans("zhTW", "LID_FLIGHTPOINTS", "飛行點")
 MapUtils:AddTrans("zhTW", "LID_GENERAL", "一般")
-MapUtils:AddTrans("zhTW", "LID_INSTANCEMAP", "在世界地圖上顯示地城地圖")
 MapUtils:AddTrans("zhTW", "LID_DUNGEONMAPS", "顯示地城地圖")
 MapUtils:AddTrans("zhTW", "LID_RAIDMAPS", "顯示團隊副本地圖")
 MapUtils:AddTrans("zhTW", "LID_MINIMAPPINS", "在小地圖上顯示圖示")
