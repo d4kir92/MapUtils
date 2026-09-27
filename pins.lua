@@ -1181,6 +1181,8 @@ local function GetAreaLabel()
 	areaLabel.name:SetPoint("TOP", areaLabel, "TOP", 0, -20)
 	areaLabel.description = areaLabel:CreateFontString(nil, "OVERLAY", "SubZoneTextFont")
 	areaLabel.description:SetPoint("TOP", areaLabel.name, "BOTTOM", 0, -10)
+	areaLabel.hint = areaLabel:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+	areaLabel.hint:SetPoint("TOP", areaLabel.description, "BOTTOM", 0, -8)
 	if AREA_NAME_FONT_COLOR ~= nil then areaLabel.name:SetVertexColor(AREA_NAME_FONT_COLOR:GetRGB()) end
 	if AREA_DESCRIPTION_FONT_COLOR ~= nil then areaLabel.description:SetVertexColor(AREA_DESCRIPTION_FONT_COLOR:GetRGB()) end
 	areaLabel:SetScript(
@@ -1212,6 +1214,38 @@ local function GetPierLabel(entry)
 	return entry.name, table.concat(lines, "\n")
 end
 
+local function GetDestinationMapID(entry)
+	local route = entry.routes ~= nil and entry.routes[1]
+
+	return route ~= nil and route.mapID or nil
+end
+
+local function GetClickHints(pin)
+	local hints = {}
+	if not pin.clickable then return hints end
+	local entry = pin.entry
+	if entry.kind == "dungeon" then return hints end
+	tinsert(
+		hints,
+		{
+			MapUtils:Trans("LID_LEFTCLICK"),
+			MapUtils:Trans("LID_SETWAYPOINT")
+		}
+	)
+
+	if entry.kind ~= "flight" and GetDestinationMapID(entry) ~= nil then
+		tinsert(
+			hints,
+			{
+				MapUtils:Trans("LID_RIGHTCLICK"),
+				MapUtils:Trans("LID_SHOWDESTMAP")
+			}
+		)
+	end
+
+	return hints
+end
+
 local function ShowAreaLabel(pin)
 	local label = GetAreaLabel()
 	if label == nil then return false end
@@ -1226,6 +1260,12 @@ local function ShowAreaLabel(pin)
 
 	label.name:SetText(name)
 	label.description:SetText(description)
+	local hintLines = {}
+	for _, hint in ipairs(GetClickHints(pin)) do
+		tinsert(hintLines, format("|cffffd100%s|r  %s", hint[1], hint[2]))
+	end
+
+	label.hint:SetText(table.concat(hintLines, "\n"))
 	label.owner = pin
 	label:Show()
 
@@ -1262,6 +1302,12 @@ local function OnPinEnter(pin)
 		for i, route in ipairs(entry.routes) do
 			GameTooltip:AddLine(GetRouteText(route, i), 1, 0.82, 0)
 		end
+	end
+
+	local hints = GetClickHints(pin)
+	if #hints > 0 then GameTooltip:AddLine(" ") end
+	for _, hint in ipairs(hints) do
+		GameTooltip:AddDoubleLine(hint[1], hint[2], 1, 0.82, 0, 1, 1, 1)
 	end
 
 	GameTooltip:Show()
@@ -1451,6 +1497,9 @@ local function OnPinMouseUp(pin, button)
 			if button == "RightButton" then MapUtils:ToggleInstanceMap() end
 		elseif button == "LeftButton" then
 			ToggleWaypoint(pin.mapID, entry)
+		elseif button == "RightButton" and entry.kind ~= "dungeon" and entry.kind ~= "flight" and GetDestinationMapID(entry) ~= nil then
+			OnPinLeave(pin)
+			WorldMapFrame:SetMapID(GetDestinationMapID(entry))
 		elseif button == "RightButton" and entry.kind == "dungeon" and (entry.instanceMap or entry.instance) ~= nil and MapUtils.ShowInstanceMap ~= nil then
 			MapUtils:ShowInstanceMap(entry.instanceMap or entry.instance, entry.instanceMapLevel)
 		end
@@ -1462,6 +1511,7 @@ end
 local function CreatePin(parent, levelOffset, clickable)
 	local pin = CreateFrame("FRAME", nil, parent)
 	pin:SetSize(ICON_SIZE, ICON_SIZE)
+	pin.clickable = clickable
 	pin.baseLevel = parent:GetFrameLevel() + levelOffset
 	pin:SetFrameLevel(pin.baseLevel)
 	pin:EnableMouse(true)

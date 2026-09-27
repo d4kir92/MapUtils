@@ -4,17 +4,17 @@
 
 ## Version: 1.2.5
 ## Title: MapUtils by |cff55d2ffD4KiR |T132115:16:16:0:0|t 
-## Notes: Adds Dungeon/Raid Maps to the WorldMap
-## Notes-deDE: Fügt Dungeon-/Raidmaps zu der Weltkarte hinzu
-## Notes-esES: Añade mapas de mazmorras y bandas al mapa del mundo
-## Notes-esMX: Añade mapas de mazmorras y bandas al mapa del mundo
-## Notes-frFR: Ajoute des cartes de donjon et de raid à la carte du monde
-## Notes-itIT: Aggiunge mappe dei dungeon e delle incursioni alla mappa del mondo
-## Notes-koKR: 월드맵에 던전/공격대 지도를 추가합니다
-## Notes-ptBR: Adiciona mapas de masmorras e raides ao mapa mundial
-## Notes-ruRU: Добавляет карты подземелий и рейдов на карту мира
-## Notes-zhCN: 在世界地图上添加地下城/团队副本地图
-## Notes-zhTW: 在世界地圖上新增地城/團隊副本地圖
+## Notes: Better world map: boats, zeppelins, flight points and dungeon entrances as clickable waypoints, dungeon & raid maps, unexplored areas, zone levels and a movable, scalable map
+## Notes-deDE: Bessere Weltkarte: Schiffe, Zeppeline, Flugpunkte und Dungeon-Eingänge als anklickbare Wegpunkte, Dungeon- & Raidkarten, unerforschte Gebiete, Zonenlevel und eine verschieb- und skalierbare Karte
+## Notes-esES: Mejor mapa del mundo: barcos, zepelines, puntos de vuelo y entradas de mazmorras como puntos de ruta, mapas de mazmorras y bandas, zonas inexploradas, niveles de zona y un mapa movible y escalable
+## Notes-esMX: Mejor mapa del mundo: barcos, zepelines, puntos de vuelo y entradas de mazmorras como puntos de ruta, mapas de mazmorras y bandas, zonas inexploradas, niveles de zona y un mapa movible y escalable
+## Notes-frFR: Meilleure carte du monde : bateaux, zeppelins, points de vol et entrées de donjon comme points de passage, cartes de donjon et de raid, zones inexplorées, niveaux de zone et carte déplaçable et redimensionnable
+## Notes-itIT: Mappa del mondo migliorata: navi, zeppelin, punti di volo e ingressi dei dungeon come punti di riferimento, mappe di dungeon e incursioni, aree inesplorate, livelli delle zone e mappa spostabile e scalabile
+## Notes-koKR: 더 나은 월드맵: 배, 비행선, 비행 지점, 던전 입구를 클릭 가능한 경유지로 표시, 던전 및 공격대 지도, 미탐험 지역, 지역 레벨, 이동 및 크기 조절 가능한 지도
+## Notes-ptBR: Mapa mundial melhorado: navios, zepelins, pontos de voo e entradas de masmorras como pontos de referência, mapas de masmorras e raides, áreas inexploradas, níveis de zona e mapa móvel e redimensionável
+## Notes-ruRU: Улучшенная карта мира: корабли, дирижабли, точки полета и входы в подземелья как путевые точки, карты подземелий и рейдов, неисследованные области, уровни зон и перемещаемая масштабируемая карта
+## Notes-zhCN: 更好的世界地图：船只、飞艇、飞行点和副本入口可点击设为路径点，地下城与团队副本地图，未探索区域，区域等级，可移动和缩放的地图
+## Notes-zhTW: 更好的世界地圖：船隻、飛艇、飛行點和副本入口可點擊設為路徑點，地城與團隊副本地圖，未探索區域，區域等級，可移動和縮放的地圖
 ## Author: D4KiR |T132115:16:16:0:0|t
 ## Category: Map
 ## Category-deDE: Karte
