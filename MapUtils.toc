@@ -54,5 +54,6 @@ pins.lua
 zonelevels.lua
 instancemap.lua
 mapframe.lua
+battlefieldmap.lua
 debug.lua
 settings.lua

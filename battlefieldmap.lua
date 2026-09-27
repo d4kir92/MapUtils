@@ -71,7 +71,7 @@ end
 local function Apply()
 	if frame == nil or sizing ~= nil or CheckForeign() then return end
 	local scale = 1
-	if Enabled() then scale = ClampScale(MAUTTAB["BATTLEFIELDMAPSCALEVALUE"]) end
+	if Enabled() then scale = ClampScale(type(MAUTTAB) == "table" and MAUTTAB["BATTLEFIELDMAPSCALEVALUE"] or 1) end
 	SetScale(scale)
 	UpdateGrip()
 end
@@ -89,6 +89,7 @@ local function StopSizing()
 	sizing = nil
 	grip:SetScript("OnUpdate", nil)
 	grip:SetButtonState("NORMAL")
+	MAUTTAB = MAUTTAB or {}
 	MapUtils:SV(MAUTTAB, "BATTLEFIELDMAPSCALEVALUE", lastScale)
 	Apply()
 end
@@ -112,7 +113,7 @@ end
 
 local function Init()
 	if frame ~= nil then return true end
-	if BattlefieldMapFrame == nil or MAUTTAB == nil then return false end
+	if BattlefieldMapFrame == nil then return false end
 	frame = BattlefieldMapFrame
 	grip = MapUtils:CreateSizeGrip(frame, GRIP_SIZE)
 	grip:SetScript("OnMouseDown", StartSizing)
