@@ -2,6 +2,7 @@ local _, MapUtils = ...
 local ICON = 134269
 local DEFAULT_WIDTH = 420
 local DEFAULT_HEIGHT = 300
+local REVEAL_ADDED = "2026-09-28"
 local maset = nil
 local function GetTocVersion()
 	if C_AddOns and C_AddOns.GetAddOnMetadata then return C_AddOns.GetAddOnMetadata("MapUtils", "Version") end
@@ -41,20 +42,64 @@ local function SetCollapsed(key, collapsed)
 	end
 end
 
-local function AddCategory(key, level, label)
+local function AddCategory(key, level, label, added)
 	maset:AddCategory({
 		["label"] = label or ("LID_" .. key),
 		["key"] = key,
 		["search"] = key,
-		["level"] = level
+		["level"] = level,
+		["added"] = added
 	})
 end
 
-local function AddCheckbox(key, default, func, label)
-	maset:AddCheckbox({
+local dependents = {}
+local function UpdateDependents()
+	for _, dep in ipairs(dependents) do
+		local enabled = type(MAUTTAB) == "table" and MAUTTAB[dep.key] == true
+		if dep.control.slider and enabled then
+			dep.control.slider:Enable()
+		elseif dep.control.slider then
+			dep.control.slider:Disable()
+		else
+			dep.control:SetEnabled(enabled)
+		end
+
+		local holder = dep.control.holder or dep.control
+		holder:SetAlpha(enabled and 1 or 0.5)
+	end
+end
+
+local function Requires(control, key)
+	control.uiElement.depth = control.uiElement.depth + 1
+	tinsert(dependents, {
+		["control"] = control,
+		["key"] = key
+	})
+
+	return control
+end
+
+local function AddCheckbox(key, default, func, label, added)
+	return maset:AddCheckbox({
 		["label"] = label or ("LID_" .. key),
 		["search"] = key,
+		["added"] = added,
 		["value"] = MapUtils:GetConfig(key, default),
+		["func"] = function(value)
+			MapUtils:SV(MAUTTAB, key, value)
+			if func then func() end
+			UpdateDependents()
+		end
+	})
+end
+
+local function AddDropdown(key, default, choices, func, label, added)
+	return maset:AddDropdown({
+		["label"] = label or ("LID_" .. key),
+		["search"] = key,
+		["added"] = added,
+		["value"] = MapUtils:GetConfig(key, default),
+		["choices"] = choices,
 		["func"] = function(value)
 			MapUtils:SV(MAUTTAB, key, value)
 			if func then func() end
@@ -63,7 +108,7 @@ local function AddCheckbox(key, default, func, label)
 end
 
 local function AddSlider(key, default, minValue, maxValue, step, func, label)
-	maset:AddSlider({
+	return maset:AddSlider({
 		["label"] = label or ("LID_" .. key),
 		["search"] = key,
 		["value"] = MapUtils:GetConfig(key, default),
@@ -131,19 +176,30 @@ function MapUtils:InitSetting()
 	AddCheckbox("WORLDMAPSCALE", true, function() MapUtils:RefreshWorldMapFrame() end)
 	AddCategory("MAPFADE", 2)
 	AddCheckbox("WORLDMAPFADE", false, function() MapUtils:RefreshWorldMapFrame() end)
-	AddSlider("WORLDMAPFADEOPACITY", 50, 0, 100, 5)
-	AddCategory("INSTANCEMAPS", 2)
-	AddCheckbox("DUNGEONMAPS", true)
-	AddCheckbox("RAIDMAPS", true)
+	Requires(AddSlider("WORLDMAPFADEOPACITY", 50, 0, 100, 5), "WORLDMAPFADE")
+	if MapUtils.nativeInstanceMaps then
+		AddCategory("INSTANCEMAPS", 2)
+		AddCheckbox("DUNGEONMAPS", true)
+		AddCheckbox("RAIDMAPS", true)
+	end
+
 	AddCategory("MAPLABELS", 2)
 	AddCheckbox("ZONELEVELS", true)
 	AddCheckbox("FISHINGLEVELS", true)
+	if MapUtils:HasRevealData() then
+		AddCategory("REVEAL", 2, nil, REVEAL_ADDED)
+		local revealLabel = nil
+		if MapUtils:IsRevealedByLeatrix() then revealLabel = MapUtils:Trans("LID_REVEALMAP") .. " |cffff8000(" .. MapUtils:Trans("LID_REVEALLEATRIX") .. ")|r" end
+		AddCheckbox("REVEALMAP", true, function() MapUtils:RefreshReveal() end, revealLabel, REVEAL_ADDED)
+		Requires(AddDropdown("REVEALTINT", "BLUE", MapUtils:GetRevealTintChoices(), function() MapUtils:RefreshReveal() end, nil, REVEAL_ADDED), "REVEALMAP")
+	end
+
 	AddCategory("BATTLEFIELDMAP")
 	AddCategory("BATTLEFIELDMAPWINDOW", 2, "LID_MAPWINDOW")
 	AddCheckbox("BATTLEFIELDMAPSCALE", true, function() MapUtils:RefreshBattlefieldMap() end)
 	AddCategory("BATTLEFIELDMAPFADECAT", 2, "LID_MAPFADE")
 	AddCheckbox("BATTLEFIELDMAPFADE", false, function() MapUtils:RefreshBattlefieldMap() end)
-	AddSlider("BATTLEFIELDMAPFADEOPACITY", 50, 0, 100, 5, function() MapUtils:RefreshBattlefieldMap() end, "LID_WORLDMAPFADEOPACITY")
+	Requires(AddSlider("BATTLEFIELDMAPFADEOPACITY", 50, 0, 100, 5, function() MapUtils:RefreshBattlefieldMap() end, "LID_WORLDMAPFADEOPACITY"), "BATTLEFIELDMAPFADE")
 	AddCategory("MAPICONS")
 	AddCategory("PIERS", 2)
 	AddCheckbox("WORLDMAPPINS", true, function() MapUtils:RefreshPins() end)
@@ -154,6 +210,7 @@ function MapUtils:InitSetting()
 	AddCategory("FLIGHTPOINTS", 2)
 	AddCheckbox("FLIGHTWORLDMAPPINS", true, function() MapUtils:RefreshPins() end, "LID_WORLDMAPPINS")
 	AddCheckbox("FLIGHTMINIMAPPINS", true, function() MapUtils:RefreshPins() end, "LID_MINIMAPPINS")
+	UpdateDependents()
 	maset:ResumeLayout()
 	MapUtils:CreateMinimapButton({
 		["name"] = "MapUtils",

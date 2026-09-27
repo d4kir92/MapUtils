@@ -54,5 +54,7 @@ instancemap.lua
 fader.lua
 mapframe.lua
 battlefieldmap.lua
+reveal.lua
+revealdata.lua
 debug.lua
 settings.lua
