@@ -438,6 +438,7 @@ AddDungeon(
 AddDungeon(
 	{
 		["name"] = "Ragefire Chasm",
+		["instanceMap"] = 389,
 		["lfg"] = 3,
 		["minLevel"] = 13,
 		["maxLevel"] = 18,
@@ -450,6 +451,7 @@ AddDungeon(
 AddDungeon(
 	{
 		["name"] = "The Deadmines",
+		["instanceMap"] = 36,
 		["lfg"] = 5,
 		["minLevel"] = 17,
 		["maxLevel"] = 26,
@@ -462,6 +464,7 @@ AddDungeon(
 AddDungeon(
 	{
 		["name"] = "Wailing Caverns",
+		["instanceMap"] = 43,
 		["minLevel"] = 17,
 		["maxLevel"] = 24,
 	},
@@ -473,6 +476,7 @@ AddDungeon(
 AddDungeon(
 	{
 		["name"] = "Shadowfang Keep",
+		["instanceMap"] = 33,
 		["minLevel"] = 22,
 		["maxLevel"] = 30,
 	},
@@ -484,6 +488,7 @@ AddDungeon(
 AddDungeon(
 	{
 		["name"] = "The Stockade",
+		["instanceMap"] = 34,
 		["lfg"] = 11,
 		["minLevel"] = 22,
 		["maxLevel"] = 30,
@@ -496,6 +501,7 @@ AddDungeon(
 AddDungeon(
 	{
 		["name"] = "Blackfathom Deeps",
+		["instanceMap"] = 48,
 		["lfg"] = 9,
 		["minLevel"] = 24,
 		["maxLevel"] = 32,
@@ -508,6 +514,7 @@ AddDungeon(
 AddDungeon(
 	{
 		["name"] = "Gnomeregan",
+		["instanceMap"] = 90,
 		["minLevel"] = 29,
 		["maxLevel"] = 38,
 	},
@@ -519,6 +526,7 @@ AddDungeon(
 AddDungeon(
 	{
 		["name"] = "Razorfen Kraul",
+		["instanceMap"] = 47,
 		["minLevel"] = 29,
 		["maxLevel"] = 38,
 	},
@@ -530,6 +538,7 @@ AddDungeon(
 AddDungeon(
 	{
 		["name"] = "Scarlet Monastery",
+		["instanceMap"] = 189,
 		["minLevel"] = 34,
 		["maxLevel"] = 45,
 	},
@@ -541,6 +550,7 @@ AddDungeon(
 AddDungeon(
 	{
 		["name"] = "Razorfen Downs",
+		["instanceMap"] = 129,
 		["minLevel"] = 37,
 		["maxLevel"] = 46,
 	},
@@ -552,6 +562,7 @@ AddDungeon(
 AddDungeon(
 	{
 		["name"] = "Uldaman",
+		["instanceMap"] = 70,
 		["minLevel"] = 41,
 		["maxLevel"] = 51,
 	},
@@ -563,6 +574,7 @@ AddDungeon(
 AddDungeon(
 	{
 		["name"] = "Zul'Farrak",
+		["instanceMap"] = 209,
 		["minLevel"] = 44,
 		["maxLevel"] = 54,
 	},
@@ -574,6 +586,7 @@ AddDungeon(
 AddDungeon(
 	{
 		["name"] = "Maraudon",
+		["instanceMap"] = 349,
 		["minLevel"] = 46,
 		["maxLevel"] = 55,
 	},
@@ -585,6 +598,7 @@ AddDungeon(
 AddDungeon(
 	{
 		["name"] = "Temple of Atal'Hakkar",
+		["instanceMap"] = 109,
 		["minLevel"] = 50,
 		["maxLevel"] = 60,
 	},
@@ -596,6 +610,7 @@ AddDungeon(
 AddDungeon(
 	{
 		["name"] = "Blackrock Mountain",
+		["instanceMap"] = {230, 229, 409, 469},
 		["entrance"] = "both",
 		["contains"] = {"Blackrock Depths", "Lower Blackrock Spire", "Upper Blackrock Spire", "Molten Core", "Blackwing Lair"},
 		["minLevel"] = 52,
@@ -610,6 +625,8 @@ AddDungeon(
 AddDungeon(
 	{
 		["name"] = "Dire Maul (North)",
+		["instanceMap"] = 429,
+		["instanceMapLevel"] = 2,
 		["minLevel"] = 56,
 		["maxLevel"] = 60,
 	},
@@ -621,6 +638,8 @@ AddDungeon(
 AddDungeon(
 	{
 		["name"] = "Dire Maul (West)",
+		["instanceMap"] = 429,
+		["instanceMapLevel"] = 3,
 		["minLevel"] = 56,
 		["maxLevel"] = 60,
 	},
@@ -632,6 +651,8 @@ AddDungeon(
 AddDungeon(
 	{
 		["name"] = "Dire Maul (East)",
+		["instanceMap"] = 429,
+		["instanceMapLevel"] = 6,
 		["minLevel"] = 56,
 		["maxLevel"] = 60,
 	},
@@ -643,6 +664,7 @@ AddDungeon(
 AddDungeon(
 	{
 		["name"] = "Scholomance",
+		["instanceMap"] = 289,
 		["minLevel"] = 58,
 		["maxLevel"] = 60,
 	},
@@ -653,7 +675,33 @@ AddDungeon(
 
 AddDungeon(
 	{
+		["name"] = "Stratholme",
+		["instanceMap"] = 329,
+		["minLevel"] = 58,
+		["maxLevel"] = 60,
+	},
+	{
+		[1423] = {0.313, 0.157},
+	}
+)
+
+AddDungeon(
+	{
+		["name"] = "Stratholme",
+		["instanceMap"] = 329,
+		["instanceMapLevel"] = 2,
+		["minLevel"] = 58,
+		["maxLevel"] = 60,
+	},
+	{
+		[1423] = {0.479, 0.239},
+	}
+)
+
+AddDungeon(
+	{
 		["name"] = "Zul'Gurub",
+		["instanceMap"] = 309,
 		["entrance"] = "raid",
 		["minLevel"] = 60,
 		["maxLevel"] = 60,
@@ -666,6 +714,7 @@ AddDungeon(
 AddDungeon(
 	{
 		["name"] = "Onyxia's Lair",
+		["instanceMap"] = 249,
 		["entrance"] = "raid",
 		["minLevel"] = 60,
 		["maxLevel"] = 60,
@@ -678,6 +727,7 @@ AddDungeon(
 AddDungeon(
 	{
 		["name"] = "Ahn'Qiraj",
+		["instanceMap"] = {509, 531},
 		["entrance"] = "raid",
 		["contains"] = {"Ruins of Ahn'Qiraj", "Temple of Ahn'Qiraj"},
 		["minLevel"] = 60,
@@ -685,6 +735,19 @@ AddDungeon(
 	},
 	{
 		[1451] = {0.286, 0.924},
+	}
+)
+
+AddDungeon(
+	{
+		["name"] = "Naxxramas",
+		["entrance"] = "raid",
+		["instanceMap"] = 533,
+		["minLevel"] = 60,
+		["maxLevel"] = 60,
+	},
+	{
+		[1423] = {0.399, 0.259},
 	}
 )
 
@@ -1384,8 +1447,8 @@ local function OnPinMouseUp(pin, button)
 			if button == "RightButton" then MapUtils:ToggleInstanceMap() end
 		elseif button == "LeftButton" then
 			ToggleWaypoint(pin.mapID, entry)
-		elseif button == "RightButton" and entry.kind == "dungeon" and entry.instance ~= nil and MapUtils.ShowInstanceMap ~= nil then
-			MapUtils:ShowInstanceMap(entry.instance)
+		elseif button == "RightButton" and entry.kind == "dungeon" and (entry.instanceMap or entry.instance) ~= nil and MapUtils.ShowInstanceMap ~= nil then
+			MapUtils:ShowInstanceMap(entry.instanceMap or entry.instance, entry.instanceMapLevel)
 		end
 	end
 

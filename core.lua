@@ -607,7 +607,8 @@ local function ClientHasOwnMaps()
 	return false
 end
 
-if ClientHasOwnMaps() then
+MapUtils.nativeInstanceMaps = ClientHasOwnMaps()
+if MapUtils.nativeInstanceMaps then
 	C_Map.GetMapArtLayers = GetMapArtLayers
 	C_Map.GetMapArtLayerTextures = GetMapArtLayerTextures
 end
