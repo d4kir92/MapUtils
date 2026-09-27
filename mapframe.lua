@@ -2,9 +2,13 @@ local _, MapUtils = ...
 local MIN_SCALE = 0.5
 local MAX_SCALE = 2
 local SCALE_EPSILON = 0.001
-local GRIP_SIZE = 32
-local GRIP_LEVEL = 4000
-local MAX_FRAME_LEVEL = 9000
+local GRIP_SIZE = 26
+local MAX_FRAME_LEVEL = 10000
+local STRATA = {"BACKGROUND", "LOW", "MEDIUM", "HIGH", "DIALOG", "FULLSCREEN", "FULLSCREEN_DIALOG", "TOOLTIP"}
+local STRATA_INDEX = {}
+for i, strata in ipairs(STRATA) do
+	STRATA_INDEX[strata] = i
+end
 local frame = WorldMapFrame
 local ready = false
 local foreign = false
@@ -136,6 +140,22 @@ local function ShiftScrollBars(shifted)
 	end
 end
 
+local function GetStrataIndex(region, index)
+	if region == grip then return index end
+	index = max(index, STRATA_INDEX[region:GetFrameStrata()] or 1)
+	for _, child in ipairs({region:GetChildren()}) do
+		index = GetStrataIndex(child, index)
+	end
+
+	return index
+end
+
+local function GetGripStrata()
+	local index = GetStrataIndex(frame, 1)
+
+	return STRATA[min(index + 1, #STRATA)]
+end
+
 local function UpdateGrip()
 	if grip == nil then return end
 	if foreign or not ScaleEnabled() or IsMaximized() then
@@ -145,7 +165,8 @@ local function UpdateGrip()
 		return
 	end
 
-	grip:SetFrameLevel(min(frame:GetFrameLevel() + GRIP_LEVEL, MAX_FRAME_LEVEL))
+	grip:SetFrameStrata(GetGripStrata())
+	grip:SetFrameLevel(MAX_FRAME_LEVEL)
 	grip:Show()
 	ShiftScrollBars(true)
 end
