@@ -28,8 +28,8 @@ local baseAlpha = 1
 local settingAlpha = false
 local HOVER_MOVE = 2
 local hoverArmed = true
-local openX = 0
-local openY = 0
+local openX = nil
+local openY = nil
 local dragRegions = {"BorderFrame", "TitleCanvasSpacerFrame", "MiniBorderFrame"}
 local function IsEnabled(key)
 	return type(MAUTTAB) ~= "table" or MAUTTAB[key] ~= false
@@ -323,23 +323,32 @@ local function IsMoving()
 	return (GetUnitSpeed("player") or 0) > 0
 end
 
+local function IsMouseLook()
+	return IsMouseLooking ~= nil and IsMouseLooking() == true
+end
+
 local function IsHovered()
-	if IsMouseLooking ~= nil and IsMouseLooking() then return false end
-	if not frame:IsMouseOver() then return false end
+	if IsMouseLook() then
+		openX = nil
+
+		return false
+	end
+
 	if not hoverArmed then
 		local x, y = GetCursorPosition()
+		if openX == nil then openX, openY = x, y end
 		if math.abs(x - openX) + math.abs(y - openY) <= HOVER_MOVE then return false end
 		hoverArmed = true
 	end
 
-	return true
+	return frame:IsMouseOver()
 end
 
 local function GetFadeTarget()
 	if not FadeEnabled() or not IsMoving() or dragging or sizing ~= nil or IsHovered() then return 1 end
-	local percent = tonumber(MAUTTAB["WORLDMAPFADEALPHA"]) or FADE_DEFAULT
+	local percent = tonumber(MAUTTAB["WORLDMAPFADEOPACITY"]) or FADE_DEFAULT
 
-	return 1 - max(0, min(percent, 100)) / 100
+	return max(0, min(percent, 100)) / 100
 end
 
 local function SetMapAlpha()
@@ -356,11 +365,14 @@ end
 
 local function OnFadeUpdate(_, elapsed)
 	local target = GetFadeTarget()
-	if target == fadeAlpha then return end
-	local alpha = fadeAlpha + (target - fadeAlpha) * min(1, elapsed * FADE_SPEED)
-	if math.abs(target - alpha) < FADE_SNAP then alpha = target end
-	fadeAlpha = alpha
-	SetMapAlpha()
+	if target ~= fadeAlpha then
+		local alpha = fadeAlpha + (target - fadeAlpha) * min(1, elapsed * FADE_SPEED)
+		if math.abs(target - alpha) < FADE_SNAP then alpha = target end
+		fadeAlpha = alpha
+		SetMapAlpha()
+	elseif (FadeEnabled() or fadeAlpha < 1) and math.abs(frame:GetAlpha() - baseAlpha * fadeAlpha) > FADE_SNAP then
+		SetMapAlpha()
+	end
 end
 
 local function ResetFade()
@@ -370,9 +382,14 @@ local function ResetFade()
 end
 
 local function OnMapShow()
-	openX, openY = GetCursorPosition()
+	openX = nil
 	hoverArmed = false
 	ResetFade()
+end
+
+function MapUtils:PrintFadeDebug()
+	MapUtils:INFO(format("fade enabled=%s moving=%s mouseOver=%s mouseLook=%s armed=%s dragging=%s sizing=%s", tostring(FadeEnabled()), tostring(IsMoving()), tostring(frame:IsMouseOver()), tostring(IsMouseLook()), tostring(hoverArmed), tostring(dragging), tostring(sizing ~= nil)))
+	MapUtils:INFO(format("fade target=%.2f fade=%.2f base=%.2f alpha=%.2f blizzardFader=%s", GetFadeTarget(), fadeAlpha, baseAlpha, frame:GetAlpha(), tostring(PlayerMovementFrameFader ~= nil)))
 end
 
 function MapUtils:RefreshWorldMapFrame()

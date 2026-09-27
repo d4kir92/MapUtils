@@ -84,6 +84,8 @@ local function HandleSlash(args)
 		MapUtils:ToggleDebug()
 	elseif sub == "pos" then
 		MapUtils:PrintPlayerPosition()
+	elseif sub == "fade" then
+		MapUtils:PrintFadeDebug()
 	elseif sub == "map" then
 		MapUtils:ToggleInstanceMap()
 	else
@@ -129,7 +131,7 @@ function MapUtils:InitSetting()
 	AddCheckbox("WORLDMAPSCALE", true, function() MapUtils:RefreshWorldMapFrame() end)
 	AddCategory("MAPFADE", 2)
 	AddCheckbox("WORLDMAPFADE", false, function() MapUtils:RefreshWorldMapFrame() end)
-	AddSlider("WORLDMAPFADEALPHA", 50, 10, 90, 5)
+	AddSlider("WORLDMAPFADEOPACITY", 50, 0, 100, 5)
 	AddCategory("INSTANCEMAPS", 2)
 	AddCheckbox("DUNGEONMAPS", true)
 	AddCheckbox("RAIDMAPS", true)
