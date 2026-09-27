@@ -51,5 +51,6 @@ core.lua
 pins.lua
 zonelevels.lua
 instancemap.lua
+mapframe.lua
 debug.lua
 settings.lua

@@ -8,6 +8,8 @@ local LEVEL_BUTTON_WIDTH = 260
 local LEVEL_BUTTON_HEIGHT = 22
 local LEVEL_BUTTON_OFFSET = 8
 local LEVEL_STEPPER_PAD = 70
+local NAV_BUTTON_EXTRA = 53
+local NAV_BUTTON_MIN_TEXT = 60
 local art = {}
 local function AddArt(instanceMapID, instanceName, levels)
 	art[instanceMapID] = {}
@@ -226,6 +228,79 @@ local function OpenLevelMenu(owner)
 	ToggleDropDownMenu(1, nil, levelMenu, owner, 0, 0)
 end
 
+local function GetNavBar()
+	if WorldMapFrame == nil then return nil end
+	local navBar = WorldMapFrame.NavBar
+	if navBar == nil or type(navBar.navList) ~= "table" then return nil end
+	if MapUtils.CheckTemplates == nil or not MapUtils:CheckTemplates("NavButtonTemplate") then return nil end
+
+	return navBar
+end
+
+local function SetupLevelMenu(dropdown)
+	if dropdown == nil or dropdown.SetupMenu == nil then return end
+	dropdown:SetupMenu(
+		function(_, root)
+			local levels = shownLevels
+			if levels == nil then return end
+			for i, level in ipairs(levels) do
+				root:CreateRadio(GetLevelLabel(levels, level), function() return shownIndex == i end, function() SelectLevel(i) end)
+			end
+		end
+	)
+end
+
+local function CreateNavButton(navBar)
+	local button = CreateFrame("Button", nil, navBar, "NavButtonTemplate")
+	button.listFunc = function() return nil end
+	local arrow = button.MenuArrowButton
+	button:RegisterForClicks("LeftButtonUp")
+	button:SetScript(
+		"OnClick",
+		function(self)
+			if arrow ~= nil and arrow.OpenMenu ~= nil then
+				arrow:OpenMenu()
+			else
+				OpenLevelMenu(self)
+			end
+		end
+	)
+
+	if NavBar_ButtonOnEnter ~= nil then button:SetScript("OnEnter", NavBar_ButtonOnEnter) end
+	if NavBar_ButtonOnLeave ~= nil then button:SetScript("OnLeave", NavBar_ButtonOnLeave) end
+	button:HookScript("OnShow", function() SetupLevelMenu(arrow) end)
+	SetupLevelMenu(arrow)
+	if arrow ~= nil then arrow:Show() end
+	if button.selected ~= nil then button.selected:Show() end
+	function button:Reanchor()
+		local list = navBar.navList
+		local last = list[#list]
+		if last == nil then return end
+		local space = (navBar:GetRight() or 0) - (last:GetRight() or 0) - NAV_BUTTON_EXTRA
+		local width = min(self.textWidth or 0, max(space, NAV_BUTTON_MIN_TEXT))
+		self.text:SetWidth(width)
+		self:SetWidth(width + NAV_BUTTON_EXTRA)
+		if self.anchor ~= last then
+			self.anchor = last
+			self:ClearAllPoints()
+			self:SetPoint("LEFT", last, "RIGHT", 0, 0)
+		end
+
+		self:SetFrameLevel(last:GetFrameLevel() + 1)
+	end
+
+	function button:SetLabel(text)
+		self.text:SetWidth(0)
+		self:SetText(text)
+		self.textWidth = self.text:GetStringWidth()
+		self:Reanchor()
+	end
+
+	button:Hide()
+
+	return button
+end
+
 local function ToggleOverlay()
 	if forced ~= nil then
 		ClearForced()
@@ -265,7 +340,10 @@ local function CreateOverlay()
 	overlay.art:SetPoint("CENTER", overlay, "CENTER", 0, 0)
 	overlay:Hide()
 	local container = WorldMapFrame.ScrollContainer
-	if MapUtils.CheckTemplates ~= nil and MapUtils:CheckTemplates("SettingsDropdownWithButtonsTemplate") then
+	local navBar = GetNavBar()
+	if navBar ~= nil then
+		levelButton = CreateNavButton(navBar)
+	elseif MapUtils.CheckTemplates ~= nil and MapUtils:CheckTemplates("SettingsDropdownWithButtonsTemplate") then
 		levelButton = CreateStepperControl(container)
 	else
 		levelButton = CreateFrame("Button", nil, container, "UIPanelButtonTemplate")
@@ -274,8 +352,11 @@ local function CreateOverlay()
 		levelButton.SetLabel = levelButton.SetText
 	end
 
-	levelButton:SetPoint("BOTTOMLEFT", container, "BOTTOMLEFT", LEVEL_BUTTON_OFFSET, LEVEL_BUTTON_OFFSET)
-	levelButton:SetFrameLevel(overlay:GetFrameLevel() + 10)
+	if navBar == nil then
+		levelButton:SetPoint("BOTTOMLEFT", container, "BOTTOMLEFT", LEVEL_BUTTON_OFFSET, LEVEL_BUTTON_OFFSET)
+		levelButton:SetFrameLevel(overlay:GetFrameLevel() + 10)
+	end
+
 	levelButton:Hide()
 	container:HookScript("OnMouseUp", OnCanvasMouseUp)
 	WorldMapFrame:HookScript(
@@ -358,6 +439,7 @@ Refresh = function()
 	end
 
 	if #levels > 1 then
+		if levelButton.Reanchor ~= nil then levelButton:Reanchor() end
 		if not levelButton:IsShown() then levelButton:Show() end
 	elseif levelButton:IsShown() then
 		levelButton:Hide()
