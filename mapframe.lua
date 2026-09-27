@@ -2,7 +2,7 @@ local _, MapUtils = ...
 local MIN_SCALE = 0.5
 local MAX_SCALE = 2
 local SCALE_EPSILON = 0.001
-local GRIP_SIZE = 16
+local GRIP_SIZE = 32
 local GRIP_LEVEL = 4000
 local MAX_FRAME_LEVEL = 9000
 local frame = WorldMapFrame
@@ -15,6 +15,7 @@ local sizing = nil
 local lastScale = 1
 local blizzardPoint = nil
 local grip = nil
+local scrollBarsShifted = false
 local dragRegions = {"BorderFrame", "TitleCanvasSpacerFrame", "MiniBorderFrame"}
 local function IsEnabled(key)
 	return type(MAUTTAB) ~= "table" or MAUTTAB[key] ~= false
@@ -109,16 +110,44 @@ local function NormalizePoint(point, relativeTo, relativePoint, x, y)
 	return point, relativeTo or frame:GetParent(), relativePoint or point, x or 0, y or 0
 end
 
+local function GetScrollBars()
+	local bars = {}
+	local frames = {QuestScrollFrame, QuestMapDetailsScrollFrame}
+	if QuestMapFrame ~= nil and QuestMapFrame.MapLegend ~= nil then tinsert(frames, QuestMapFrame.MapLegend.ScrollFrame) end
+	for _, scrollFrame in ipairs(frames) do
+		if scrollFrame ~= nil and scrollFrame.ScrollBar ~= nil then tinsert(bars, scrollFrame.ScrollBar) end
+	end
+
+	return bars
+end
+
+local function ShiftScrollBars(shifted)
+	if shifted == scrollBarsShifted then return end
+	if IsLocked() then return end
+	scrollBarsShifted = shifted
+	local offset = shifted and GRIP_SIZE or -GRIP_SIZE
+	for _, bar in ipairs(GetScrollBars()) do
+		for i = 1, bar:GetNumPoints() do
+			local point, relativeTo, relativePoint, x, y = bar:GetPoint(i)
+			if point ~= nil and string.find(point, "BOTTOM", 1, true) then
+				bar:SetPoint(point, relativeTo, relativePoint, x, y + offset)
+			end
+		end
+	end
+end
+
 local function UpdateGrip()
 	if grip == nil then return end
 	if foreign or not ScaleEnabled() or IsMaximized() then
 		grip:Hide()
+		ShiftScrollBars(false)
 
 		return
 	end
 
 	grip:SetFrameLevel(min(frame:GetFrameLevel() + GRIP_LEVEL, MAX_FRAME_LEVEL))
 	grip:Show()
+	ShiftScrollBars(true)
 end
 
 local function Apply()

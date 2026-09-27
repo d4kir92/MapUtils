@@ -286,7 +286,7 @@ local function CreateNavButton(navBar)
 			self:SetPoint("LEFT", last, "RIGHT", 0, 0)
 		end
 
-		self:SetFrameLevel(last:GetFrameLevel() + 1)
+		self:SetFrameLevel(max(navBar:GetFrameLevel(), last:GetFrameLevel() - 1))
 	end
 
 	function button:SetLabel(text)
