@@ -20,16 +20,7 @@ local lastScale = 1
 local blizzardPoint = nil
 local grip = nil
 local scrollBarsShifted = false
-local FADE_DEFAULT = 50
-local FADE_SPEED = 8
-local FADE_SNAP = 0.01
-local fadeAlpha = 1
-local baseAlpha = 1
-local settingAlpha = false
-local HOVER_MOVE = 2
-local hoverArmed = true
-local openX = nil
-local openY = nil
+local fader = nil
 local dragRegions = {"BorderFrame", "TitleCanvasSpacerFrame", "MiniBorderFrame"}
 local function GetStrataIndex(region, index, skip)
 	if region == skip then return index end
@@ -322,99 +313,30 @@ local function HookDrag(region)
 	region:HookScript("OnDragStop", OnDragStop)
 end
 
-local function FadeEnabled()
-	return ready and type(MAUTTAB) == "table" and MAUTTAB["WORLDMAPFADE"] == true
-end
-
-local function IsMoving()
-	if IsPlayerMoving ~= nil then return IsPlayerMoving() end
-
-	return (GetUnitSpeed("player") or 0) > 0
-end
-
-local function IsMouseLook()
-	return IsMouseLooking ~= nil and IsMouseLooking() == true
-end
-
-local function IsHovered()
-	if IsMouseLook() then
-		openX = nil
-
-		return false
-	end
-
-	if not hoverArmed then
-		local x, y = GetCursorPosition()
-		if openX == nil then openX, openY = x, y end
-		if math.abs(x - openX) + math.abs(y - openY) <= HOVER_MOVE then return false end
-		hoverArmed = true
-	end
-
-	return frame:IsMouseOver()
-end
-
-local function GetFadeTarget()
-	if not FadeEnabled() or not IsMoving() or dragging or sizing ~= nil or IsHovered() then return 1 end
-	local percent = tonumber(MAUTTAB["WORLDMAPFADEOPACITY"]) or FADE_DEFAULT
-
-	return max(0, min(percent, 100)) / 100
-end
-
-local function SetMapAlpha()
-	settingAlpha = true
-	frame:SetAlpha(baseAlpha * fadeAlpha)
-	settingAlpha = false
-end
-
-local function OnBlizzardAlpha()
-	if settingAlpha then return end
-	if PlayerMovementFrameFader == nil then baseAlpha = frame:GetAlpha() end
-	if FadeEnabled() or fadeAlpha < 1 then SetMapAlpha() end
-end
-
-local function OnFadeUpdate(_, elapsed)
-	local target = GetFadeTarget()
-	if target ~= fadeAlpha then
-		local alpha = fadeAlpha + (target - fadeAlpha) * min(1, elapsed * FADE_SPEED)
-		if math.abs(target - alpha) < FADE_SNAP then alpha = target end
-		fadeAlpha = alpha
-		SetMapAlpha()
-	elseif (FadeEnabled() or fadeAlpha < 1) and math.abs(frame:GetAlpha() - baseAlpha * fadeAlpha) > FADE_SNAP then
-		SetMapAlpha()
-	end
-end
-
-local function ResetFade()
-	local faded = fadeAlpha < 1
-	fadeAlpha = GetFadeTarget()
-	if FadeEnabled() or faded then SetMapAlpha() end
-end
-
-local function OnMapShow()
-	openX = nil
-	hoverArmed = false
-	ResetFade()
-end
-
 function MapUtils:PrintFadeDebug()
-	MapUtils:INFO(format("fade enabled=%s moving=%s mouseOver=%s mouseLook=%s armed=%s dragging=%s sizing=%s", tostring(FadeEnabled()), tostring(IsMoving()), tostring(frame:IsMouseOver()), tostring(IsMouseLook()), tostring(hoverArmed), tostring(dragging), tostring(sizing ~= nil)))
-	MapUtils:INFO(format("fade target=%.2f fade=%.2f base=%.2f alpha=%.2f blizzardFader=%s", GetFadeTarget(), fadeAlpha, baseAlpha, frame:GetAlpha(), tostring(PlayerMovementFrameFader ~= nil)))
+	if fader ~= nil then fader:Debug("WorldMap") end
+	if MapUtils.PrintBattlefieldFadeDebug ~= nil then MapUtils:PrintBattlefieldFadeDebug() end
 end
 
 function MapUtils:RefreshWorldMapFrame()
 	Apply()
-	ResetFade()
+	if fader ~= nil then fader:Reset() end
 end
 
 if frame ~= nil then
 	CreateGrip()
 	hooksecurefunc(frame, "SetPoint", OnBlizzardPoint)
-	hooksecurefunc(frame, "SetAlpha", OnBlizzardAlpha)
 	if frame.SynchronizeDisplayState ~= nil then hooksecurefunc(frame, "SynchronizeDisplayState", Apply) end
 	frame:HookScript("OnShow", Apply)
-	frame:HookScript("OnShow", OnMapShow)
-	local fader = CreateFrame("FRAME", nil, frame)
-	fader:SetScript("OnUpdate", OnFadeUpdate)
+	fader = MapUtils:CreateMoveFader(
+		frame,
+		{
+			["enabledKey"] = "WORLDMAPFADE",
+			["opacityKey"] = "WORLDMAPFADEOPACITY",
+			["hookSetAlpha"] = true,
+			["isBusy"] = function() return dragging or sizing ~= nil end
+		}
+	)
 	frame:HookScript("OnHide", OnDragStop)
 	local loader = CreateFrame("FRAME")
 	MapUtils:RegisterEvent(loader, "PLAYER_LOGIN")

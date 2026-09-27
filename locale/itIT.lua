@@ -34,3 +34,4 @@ MapUtils:AddTrans("itIT", "LID_WORLDMAPFADE", "Rendi trasparente la mappa del mo
 MapUtils:AddTrans("itIT", "LID_WORLDMAPFADEOPACITY", "Visibilità: %d%%")
 MapUtils:AddTrans("itIT", "LID_BATTLEFIELDMAP", "Mappa della zona (Maiusc+M)")
 MapUtils:AddTrans("itIT", "LID_BATTLEFIELDMAPSCALE", "Ridimensiona la mappa della zona (maniglia in basso a destra, 50% - 300%, solo se sbloccata)")
+MapUtils:AddTrans("itIT", "LID_BATTLEFIELDMAPFADE", "Rendi trasparente la mappa della zona in movimento (visibile al passaggio del mouse)")

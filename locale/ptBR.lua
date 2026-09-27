@@ -34,3 +34,4 @@ MapUtils:AddTrans("ptBR", "LID_WORLDMAPFADE", "Deixar o mapa mundial transparent
 MapUtils:AddTrans("ptBR", "LID_WORLDMAPFADEOPACITY", "Visibilidade: %d%%")
 MapUtils:AddTrans("ptBR", "LID_BATTLEFIELDMAP", "Mapa da zona (Shift+M)")
 MapUtils:AddTrans("ptBR", "LID_BATTLEFIELDMAPSCALE", "Redimensionar o mapa da zona (alça no canto inferior direito, 50% - 300%, só quando destravado)")
+MapUtils:AddTrans("ptBR", "LID_BATTLEFIELDMAPFADE", "Deixar o mapa da zona transparente ao se mover (visível com o mouse sobre ele)")

@@ -34,3 +34,4 @@ MapUtils:AddTrans("ruRU", "LID_WORLDMAPFADE", "Делать карту мира 
 MapUtils:AddTrans("ruRU", "LID_WORLDMAPFADEOPACITY", "Видимость: %d%%")
 MapUtils:AddTrans("ruRU", "LID_BATTLEFIELDMAP", "Карта зоны (Shift+M)")
 MapUtils:AddTrans("ruRU", "LID_BATTLEFIELDMAPSCALE", "Масштабировать карту зоны (уголок справа внизу, 50% - 300%, только если не закреплена)")
+MapUtils:AddTrans("ruRU", "LID_BATTLEFIELDMAPFADE", "Делать карту зоны прозрачной при движении (видна при наведении мыши)")

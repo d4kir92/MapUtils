@@ -41,9 +41,9 @@ local function SetCollapsed(key, collapsed)
 	end
 end
 
-local function AddCategory(key, level)
+local function AddCategory(key, level, label)
 	maset:AddCategory({
-		["label"] = "LID_" .. key,
+		["label"] = label or ("LID_" .. key),
 		["key"] = key,
 		["search"] = key,
 		["level"] = level
@@ -62,9 +62,9 @@ local function AddCheckbox(key, default, func, label)
 	})
 end
 
-local function AddSlider(key, default, minValue, maxValue, step, func)
+local function AddSlider(key, default, minValue, maxValue, step, func, label)
 	maset:AddSlider({
-		["label"] = "LID_" .. key,
+		["label"] = label or ("LID_" .. key),
 		["search"] = key,
 		["value"] = MapUtils:GetConfig(key, default),
 		["min"] = minValue,
@@ -139,7 +139,11 @@ function MapUtils:InitSetting()
 	AddCheckbox("ZONELEVELS", true)
 	AddCheckbox("FISHINGLEVELS", true)
 	AddCategory("BATTLEFIELDMAP")
+	AddCategory("BATTLEFIELDMAPWINDOW", 2, "LID_MAPWINDOW")
 	AddCheckbox("BATTLEFIELDMAPSCALE", true, function() MapUtils:RefreshBattlefieldMap() end)
+	AddCategory("BATTLEFIELDMAPFADECAT", 2, "LID_MAPFADE")
+	AddCheckbox("BATTLEFIELDMAPFADE", false, function() MapUtils:RefreshBattlefieldMap() end)
+	AddSlider("BATTLEFIELDMAPFADEOPACITY", 50, 0, 100, 5, function() MapUtils:RefreshBattlefieldMap() end, "LID_WORLDMAPFADEOPACITY")
 	AddCategory("MAPICONS")
 	AddCategory("PIERS", 2)
 	AddCheckbox("WORLDMAPPINS", true, function() MapUtils:RefreshPins() end)

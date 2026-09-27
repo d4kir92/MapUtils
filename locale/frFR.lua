@@ -34,3 +34,4 @@ MapUtils:AddTrans("frFR", "LID_WORLDMAPFADE", "Rendre la carte du monde transpar
 MapUtils:AddTrans("frFR", "LID_WORLDMAPFADEOPACITY", "Visibilité : %d%%")
 MapUtils:AddTrans("frFR", "LID_BATTLEFIELDMAP", "Carte de zone (Maj+M)")
 MapUtils:AddTrans("frFR", "LID_BATTLEFIELDMAPSCALE", "Redimensionner la carte de zone (poignée en bas à droite, 50% - 300%, seulement si déverrouillée)")
+MapUtils:AddTrans("frFR", "LID_BATTLEFIELDMAPFADE", "Rendre la carte de zone transparente en mouvement (visible au survol)")

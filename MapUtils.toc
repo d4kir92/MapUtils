@@ -53,6 +53,7 @@ core.lua
 pins.lua
 zonelevels.lua
 instancemap.lua
+fader.lua
 mapframe.lua
 battlefieldmap.lua
 debug.lua

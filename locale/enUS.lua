@@ -34,3 +34,4 @@ MapUtils:AddTrans("enUS", "LID_WORLDMAPFADE", "Fade the world map while moving (
 MapUtils:AddTrans("enUS", "LID_WORLDMAPFADEOPACITY", "Visibility: %d%%")
 MapUtils:AddTrans("enUS", "LID_BATTLEFIELDMAP", "Zone map (Shift+M)")
 MapUtils:AddTrans("enUS", "LID_BATTLEFIELDMAPSCALE", "Scale the zone map (grip bottom right, 50% - 300%, only while unlocked)")
+MapUtils:AddTrans("enUS", "LID_BATTLEFIELDMAPFADE", "Fade the zone map while moving (visible on mouseover)")

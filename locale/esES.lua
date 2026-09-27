@@ -34,3 +34,4 @@ MapUtils:AddTrans("esES", "LID_WORLDMAPFADE", "Hacer transparente el mapa del mu
 MapUtils:AddTrans("esES", "LID_WORLDMAPFADEOPACITY", "Visibilidad: %d%%")
 MapUtils:AddTrans("esES", "LID_BATTLEFIELDMAP", "Mapa de zona (Mayús+M)")
 MapUtils:AddTrans("esES", "LID_BATTLEFIELDMAPSCALE", "Escalar el mapa de zona (asa abajo a la derecha, 50% - 300%, solo si no está bloqueado)")
+MapUtils:AddTrans("esES", "LID_BATTLEFIELDMAPFADE", "Hacer transparente el mapa de zona al moverse (visible al pasar el ratón)")

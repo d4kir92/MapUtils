@@ -34,3 +34,4 @@ MapUtils:AddTrans("koKR", "LID_WORLDMAPFADE", "이동 중 세계 지도를 투�
 MapUtils:AddTrans("koKR", "LID_WORLDMAPFADEOPACITY", "표시 정도: %d%%")
 MapUtils:AddTrans("koKR", "LID_BATTLEFIELDMAP", "지역 지도 (Shift+M)")
 MapUtils:AddTrans("koKR", "LID_BATTLEFIELDMAPSCALE", "지역 지도 크기 조절 (오른쪽 아래 손잡이, 50% - 300%, 잠금 해제 시에만)")
+MapUtils:AddTrans("koKR", "LID_BATTLEFIELDMAPFADE", "이동 중 지역 지도를 투명하게 (마우스를 올리면 표시)")

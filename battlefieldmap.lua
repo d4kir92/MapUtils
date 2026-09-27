@@ -6,6 +6,7 @@ local GRIP_SIZE = 20
 local CHECK_INTERVAL = 0.25
 local frame = nil
 local grip = nil
+local fader = nil
 local foreign = false
 local lastScale = 1
 local sizing = nil
@@ -120,6 +121,15 @@ local function Init()
 	grip:SetScript("OnMouseUp", StopSizing)
 	grip:SetScript("OnHide", StopSizing)
 	frame:HookScript("OnShow", Apply)
+	fader = MapUtils:CreateMoveFader(
+		frame,
+		{
+			["enabledKey"] = "BATTLEFIELDMAPFADE",
+			["opacityKey"] = "BATTLEFIELDMAPFADEOPACITY",
+			["isBusy"] = function() return sizing ~= nil end
+		}
+	)
+
 	local watcher = CreateFrame("FRAME", nil, frame)
 	watcher.elapsed = 0
 	watcher:SetScript(
@@ -138,7 +148,13 @@ local function Init()
 end
 
 function MapUtils:RefreshBattlefieldMap()
-	if frame ~= nil then Apply() end
+	if frame == nil then return end
+	Apply()
+	fader:Reset()
+end
+
+function MapUtils:PrintBattlefieldFadeDebug()
+	if fader ~= nil then fader:Debug("BattlefieldMap") end
 end
 
 local loader = CreateFrame("FRAME")

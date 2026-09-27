@@ -34,3 +34,4 @@ MapUtils:AddTrans("zhCN", "LID_WORLDMAPFADE", "移动时世界地图变透明（
 MapUtils:AddTrans("zhCN", "LID_WORLDMAPFADEOPACITY", "可见度：%d%%")
 MapUtils:AddTrans("zhCN", "LID_BATTLEFIELDMAP", "区域地图（Shift+M）")
 MapUtils:AddTrans("zhCN", "LID_BATTLEFIELDMAPSCALE", "缩放区域地图（右下角拖柄，50% - 300%，仅在未锁定时）")
+MapUtils:AddTrans("zhCN", "LID_BATTLEFIELDMAPFADE", "移动时区域地图变透明（鼠标悬停时显示）")

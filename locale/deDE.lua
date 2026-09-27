@@ -34,3 +34,4 @@ MapUtils:AddTrans("deDE", "LID_WORLDMAPFADE", "Weltkarte beim Laufen transparent
 MapUtils:AddTrans("deDE", "LID_WORLDMAPFADEOPACITY", "Sichtbarkeit: %d%%")
 MapUtils:AddTrans("deDE", "LID_BATTLEFIELDMAP", "Gebietskarte (Umschalt+M)")
 MapUtils:AddTrans("deDE", "LID_BATTLEFIELDMAPSCALE", "Gebietskarte skalieren (Griff unten rechts, 50% - 300%, nur wenn nicht fixiert)")
+MapUtils:AddTrans("deDE", "LID_BATTLEFIELDMAPFADE", "Gebietskarte beim Laufen transparent machen (sichtbar bei Mauszeiger darauf)")
