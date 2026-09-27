@@ -417,6 +417,7 @@ AddDungeon(
 AddDungeon(
 	{
 		["name"] = "Hall of the Thanes",
+		["instance"] = 3065,
 		["minLevel"] = 10,
 	},
 	{
@@ -428,6 +429,7 @@ AddDungeon(
 	{
 		["name"] = "Hall of the Thanes",
 		["entrance"] = "path",
+		["instance"] = 3065,
 		["minLevel"] = 10,
 	},
 	{

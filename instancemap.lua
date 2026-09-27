@@ -9,6 +9,7 @@ local LEVEL_BUTTON_HEIGHT = 22
 local LEVEL_BUTTON_OFFSET = 8
 local LEVEL_STEPPER_PAD = 70
 local NAV_BUTTON_EXTRA = 53
+local NAV_BUTTON_PLAIN = 30
 local NAV_BUTTON_MIN_TEXT = 60
 local art = {}
 local function AddArt(instanceMapID, instanceName, levels)
@@ -28,6 +29,7 @@ local function AddArt(instanceMapID, instanceName, levels)
 end
 
 AddArt(2999, "Ruins of Lordaeron", {{2999}})
+AddArt(3065, "Hall of the Thanes", {{3065}})
 AddArt(389, "Ragefire Chasm", {{213}})
 AddArt(36, "The Deadmines", {{291}, {292, "Ironclad Cove"}})
 AddArt(43, "Wailing Caverns", {{279}})
@@ -270,16 +272,19 @@ local function CreateNavButton(navBar)
 	if NavBar_ButtonOnLeave ~= nil then button:SetScript("OnLeave", NavBar_ButtonOnLeave) end
 	button:HookScript("OnShow", function() SetupLevelMenu(arrow) end)
 	SetupLevelMenu(arrow)
-	if arrow ~= nil then arrow:Show() end
 	if button.selected ~= nil then button.selected:Show() end
 	function button:Reanchor()
 		local list = navBar.navList
 		local last = list[#list]
 		if last == nil then return end
-		local space = (navBar:GetRight() or 0) - (last:GetRight() or 0) - NAV_BUTTON_EXTRA
+		local hasMenu = shownLevels ~= nil and #shownLevels > 1
+		local extra = hasMenu and NAV_BUTTON_EXTRA or NAV_BUTTON_PLAIN
+		if arrow ~= nil then arrow:SetShown(hasMenu) end
+		if self:IsEnabled() ~= hasMenu then self:SetEnabled(hasMenu) end
+		local space = (navBar:GetRight() or 0) - (last:GetRight() or 0) - extra
 		local width = min(self.textWidth or 0, max(space, NAV_BUTTON_MIN_TEXT))
 		self.text:SetWidth(width)
-		self:SetWidth(width + NAV_BUTTON_EXTRA)
+		self:SetWidth(width + extra)
 		if self.anchor ~= last then
 			self.anchor = last
 			self:ClearAllPoints()
@@ -439,8 +444,10 @@ Refresh = function()
 		levelButton:SetLabel(GetLevelLabel(levels, info))
 	end
 
-	if #levels > 1 then
-		if levelButton.Reanchor ~= nil then levelButton:Reanchor() end
+	if levelButton.Reanchor ~= nil then
+		levelButton:Reanchor()
+		if not levelButton:IsShown() then levelButton:Show() end
+	elseif #levels > 1 then
 		if not levelButton:IsShown() then levelButton:Show() end
 	elseif levelButton:IsShown() then
 		levelButton:Hide()
