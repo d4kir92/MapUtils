@@ -2,7 +2,8 @@ local _, MapUtils = ...
 local ICON = 134269
 local DEFAULT_WIDTH = 420
 local DEFAULT_HEIGHT = 300
-local REVEAL_ADDED = "2026-09-28"
+local ADDED_0927 = "2026-09-27"
+local ADDED_0928 = "2026-09-28"
 local maset = nil
 local function GetTocVersion()
 	if C_AddOns and C_AddOns.GetAddOnMetadata then return C_AddOns.GetAddOnMetadata("MapUtils", "Version") end
@@ -107,10 +108,11 @@ local function AddDropdown(key, default, choices, func, label, added)
 	})
 end
 
-local function AddSlider(key, default, minValue, maxValue, step, func, label)
+local function AddSlider(key, default, minValue, maxValue, step, func, label, added)
 	return maset:AddSlider({
 		["label"] = label or ("LID_" .. key),
 		["search"] = key,
+		["added"] = added,
 		["value"] = MapUtils:GetConfig(key, default),
 		["min"] = minValue,
 		["max"] = maxValue,
@@ -170,36 +172,36 @@ function MapUtils:InitSetting()
 		end
 	end)
 
-	AddCategory("WORLDMAP")
-	AddCategory("MAPWINDOW", 2)
-	AddCheckbox("WORLDMAPMOVE", true, function() MapUtils:RefreshWorldMapFrame() end)
-	AddCheckbox("WORLDMAPSCALE", true, function() MapUtils:RefreshWorldMapFrame() end)
-	AddCategory("MAPFADE", 2)
-	AddCheckbox("WORLDMAPFADE", false, function() MapUtils:RefreshWorldMapFrame() end)
-	Requires(AddSlider("WORLDMAPFADEOPACITY", 50, 0, 100, 5), "WORLDMAPFADE")
+	AddCategory("WORLDMAP", nil, nil, ADDED_0927)
+	AddCategory("MAPWINDOW", 2, nil, ADDED_0927)
+	AddCheckbox("WORLDMAPMOVE", true, function() MapUtils:RefreshWorldMapFrame() end, nil, ADDED_0927)
+	AddCheckbox("WORLDMAPSCALE", true, function() MapUtils:RefreshWorldMapFrame() end, nil, ADDED_0927)
+	AddCategory("MAPFADE", 2, nil, ADDED_0927)
+	AddCheckbox("WORLDMAPFADE", false, function() MapUtils:RefreshWorldMapFrame() end, nil, ADDED_0927)
+	Requires(AddSlider("WORLDMAPFADEOPACITY", 50, 0, 100, 5, nil, nil, ADDED_0927), "WORLDMAPFADE")
 	if MapUtils.nativeInstanceMaps then
-		AddCategory("INSTANCEMAPS", 2)
-		AddCheckbox("DUNGEONMAPS", true)
-		AddCheckbox("RAIDMAPS", true)
+		AddCategory("INSTANCEMAPS", 2, nil, ADDED_0927)
+		AddCheckbox("DUNGEONMAPS", true, nil, nil, ADDED_0927)
+		AddCheckbox("RAIDMAPS", true, nil, nil, ADDED_0927)
 	end
 
 	AddCategory("MAPLABELS", 2)
 	AddCheckbox("ZONELEVELS", true)
 	AddCheckbox("FISHINGLEVELS", true)
 	if MapUtils:HasRevealData() then
-		AddCategory("REVEAL", 2, nil, REVEAL_ADDED)
+		AddCategory("REVEAL", 2, nil, ADDED_0928)
 		local revealLabel = nil
 		if MapUtils:IsRevealedByLeatrix() then revealLabel = MapUtils:Trans("LID_REVEALMAP") .. " |cffff8000(" .. MapUtils:Trans("LID_REVEALLEATRIX") .. ")|r" end
-		AddCheckbox("REVEALMAP", true, function() MapUtils:RefreshReveal() end, revealLabel, REVEAL_ADDED)
-		Requires(AddDropdown("REVEALTINT", "BLUE", MapUtils:GetRevealTintChoices(), function() MapUtils:RefreshReveal() end, nil, REVEAL_ADDED), "REVEALMAP")
+		AddCheckbox("REVEALMAP", true, function() MapUtils:RefreshReveal() end, revealLabel, ADDED_0928)
+		Requires(AddDropdown("REVEALTINT", "BLUE", MapUtils:GetRevealTintChoices(), function() MapUtils:RefreshReveal() end, nil, ADDED_0928), "REVEALMAP")
 	end
 
-	AddCategory("BATTLEFIELDMAP")
-	AddCategory("BATTLEFIELDMAPWINDOW", 2, "LID_MAPWINDOW")
-	AddCheckbox("BATTLEFIELDMAPSCALE", true, function() MapUtils:RefreshBattlefieldMap() end)
-	AddCategory("BATTLEFIELDMAPFADECAT", 2, "LID_MAPFADE")
-	AddCheckbox("BATTLEFIELDMAPFADE", false, function() MapUtils:RefreshBattlefieldMap() end)
-	Requires(AddSlider("BATTLEFIELDMAPFADEOPACITY", 50, 0, 100, 5, function() MapUtils:RefreshBattlefieldMap() end, "LID_WORLDMAPFADEOPACITY"), "BATTLEFIELDMAPFADE")
+	AddCategory("BATTLEFIELDMAP", nil, nil, ADDED_0927)
+	AddCategory("BATTLEFIELDMAPWINDOW", 2, "LID_MAPWINDOW", ADDED_0927)
+	AddCheckbox("BATTLEFIELDMAPSCALE", true, function() MapUtils:RefreshBattlefieldMap() end, nil, ADDED_0927)
+	AddCategory("BATTLEFIELDMAPFADECAT", 2, "LID_MAPFADE", ADDED_0927)
+	AddCheckbox("BATTLEFIELDMAPFADE", false, function() MapUtils:RefreshBattlefieldMap() end, nil, ADDED_0927)
+	Requires(AddSlider("BATTLEFIELDMAPFADEOPACITY", 50, 0, 100, 5, function() MapUtils:RefreshBattlefieldMap() end, "LID_WORLDMAPFADEOPACITY", ADDED_0927), "BATTLEFIELDMAPFADE")
 	AddCategory("MAPICONS")
 	AddCategory("PIERS", 2)
 	AddCheckbox("WORLDMAPPINS", true, function() MapUtils:RefreshPins() end)

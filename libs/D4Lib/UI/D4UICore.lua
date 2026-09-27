@@ -69,11 +69,15 @@ end
 
 function UI:AddNewBadge(frame, added)
     if not UI:IsNew(added) then return nil end
-    if frame == nil or frame.Label == nil or type(frame.CreateFontString) ~= "function" then return nil end
+    if frame == nil or frame.Label == nil or type(frame.CreateFontString) ~= "function" or type(frame.Label.GetPoint) ~= "function" then return nil end
+    local point, relativeTo, relativePoint, xOffset, yOffset = frame.Label:GetPoint(1)
+    if point == nil then return nil end
     local badge = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    badge:SetPoint("LEFT", frame.Label, "RIGHT", 4, 0)
+    frame.Label:ClearAllPoints()
+    badge:SetPoint(point, relativeTo, relativePoint, xOffset, yOffset)
+    frame.Label:SetPoint("LEFT", badge, "RIGHT", 4, 0)
     badge:SetWordWrap(false)
-    badge:SetText("|cffffd100[" .. tostring(_G["NEW_CAPS"] or UI:Text("LID_NEW")) .. "]|r")
+    badge:SetText("|cff66ccff[" .. tostring(_G["NEW_CAPS"] or UI:Text("LID_NEW")) .. "]|r")
     frame.NewBadge = badge
     return badge
 end

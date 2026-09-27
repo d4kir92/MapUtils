@@ -154,7 +154,7 @@ does not, because it is a fixed box with a label next to it.
 Every `Add*` also takes `search`: an extra string the search box matches against,
 on top of the translated label. Pass `added = "YYYY-MM-DD"` (or a Unix timestamp)
 for every newly introduced setting. D4UI shows a localized `[NEW]` badge for the
-first 14 days, including the added date. Existing settings without `added` remain
+first 14 days, including the added date, in light blue before the label. Existing settings without `added` remain
 unmarked; invalid and future dates are also ignored.
 
 - `AddCheckbox`: `label`, `value`, `func(value, cb)`, `textFunc(cb)`, `onClick(button, cb)`.
