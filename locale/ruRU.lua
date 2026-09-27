@@ -30,3 +30,6 @@ MapUtils:AddTrans("ruRU", "LID_WORLDMAPSCALE", "Масштабировать к�
 MapUtils:AddTrans("ruRU", "LID_INSTANCEMAPS", "Карты подземелий и рейдов")
 MapUtils:AddTrans("ruRU", "LID_MAPLABELS", "Подписи на карте")
 MapUtils:AddTrans("ruRU", "LID_MAPICONS", "Значки на карте")
+MapUtils:AddTrans("ruRU", "LID_MAPFADE", "Прозрачность при движении")
+MapUtils:AddTrans("ruRU", "LID_WORLDMAPFADE", "Делать карту мира прозрачной при движении (видна при наведении мыши)")
+MapUtils:AddTrans("ruRU", "LID_WORLDMAPFADEALPHA", "Прозрачность: %d%%")

@@ -30,3 +30,6 @@ MapUtils:AddTrans("ptBR", "LID_WORLDMAPSCALE", "Redimensionar o mapa mundial (al
 MapUtils:AddTrans("ptBR", "LID_INSTANCEMAPS", "Mapas de masmorras e raides")
 MapUtils:AddTrans("ptBR", "LID_MAPLABELS", "Rótulos do mapa")
 MapUtils:AddTrans("ptBR", "LID_MAPICONS", "Ícones do mapa")
+MapUtils:AddTrans("ptBR", "LID_MAPFADE", "Transparência ao se mover")
+MapUtils:AddTrans("ptBR", "LID_WORLDMAPFADE", "Deixar o mapa mundial transparente ao se mover (visível com o mouse sobre ele)")
+MapUtils:AddTrans("ptBR", "LID_WORLDMAPFADEALPHA", "Transparência: %d%%")

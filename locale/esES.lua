@@ -30,3 +30,6 @@ MapUtils:AddTrans("esES", "LID_WORLDMAPSCALE", "Escalar el mapa del mundo (asa a
 MapUtils:AddTrans("esES", "LID_INSTANCEMAPS", "Mapas de mazmorras y bandas")
 MapUtils:AddTrans("esES", "LID_MAPLABELS", "Etiquetas del mapa")
 MapUtils:AddTrans("esES", "LID_MAPICONS", "Iconos del mapa")
+MapUtils:AddTrans("esES", "LID_MAPFADE", "Transparencia al moverse")
+MapUtils:AddTrans("esES", "LID_WORLDMAPFADE", "Hacer transparente el mapa del mundo al moverse (visible al pasar el ratón)")
+MapUtils:AddTrans("esES", "LID_WORLDMAPFADEALPHA", "Transparencia: %d%%")

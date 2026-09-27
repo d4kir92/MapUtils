@@ -30,3 +30,6 @@ MapUtils:AddTrans("koKR", "LID_WORLDMAPSCALE", "세계 지도 크기 조절 (오
 MapUtils:AddTrans("koKR", "LID_INSTANCEMAPS", "던전 및 공격대 지도")
 MapUtils:AddTrans("koKR", "LID_MAPLABELS", "지도 표시")
 MapUtils:AddTrans("koKR", "LID_MAPICONS", "지도 아이콘")
+MapUtils:AddTrans("koKR", "LID_MAPFADE", "이동 중 투명도")
+MapUtils:AddTrans("koKR", "LID_WORLDMAPFADE", "이동 중 세계 지도를 투명하게 (마우스를 올리면 표시)")
+MapUtils:AddTrans("koKR", "LID_WORLDMAPFADEALPHA", "투명도: %d%%")

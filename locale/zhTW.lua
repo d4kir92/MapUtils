@@ -30,3 +30,6 @@ MapUtils:AddTrans("zhTW", "LID_WORLDMAPSCALE", "縮放世界地圖（右下角�
 MapUtils:AddTrans("zhTW", "LID_INSTANCEMAPS", "地城和團隊副本地圖")
 MapUtils:AddTrans("zhTW", "LID_MAPLABELS", "地圖標籤")
 MapUtils:AddTrans("zhTW", "LID_MAPICONS", "地圖圖示")
+MapUtils:AddTrans("zhTW", "LID_MAPFADE", "移動時透明")
+MapUtils:AddTrans("zhTW", "LID_WORLDMAPFADE", "移動時世界地圖變透明（滑鼠懸停時顯示）")
+MapUtils:AddTrans("zhTW", "LID_WORLDMAPFADEALPHA", "透明度：%d%%")

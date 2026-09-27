@@ -62,6 +62,22 @@ local function AddCheckbox(key, default, func, label)
 	})
 end
 
+local function AddSlider(key, default, minValue, maxValue, step, func)
+	maset:AddSlider({
+		["label"] = "LID_" .. key,
+		["search"] = key,
+		["value"] = MapUtils:GetConfig(key, default),
+		["min"] = minValue,
+		["max"] = maxValue,
+		["step"] = step,
+		["decimals"] = 0,
+		["func"] = function(value)
+			MapUtils:SV(MAUTTAB, key, value)
+			if func then func() end
+		end
+	})
+end
+
 local function HandleSlash(args)
 	local sub = strlower(strtrim(args or ""))
 	if sub == "debug" then
@@ -111,6 +127,9 @@ function MapUtils:InitSetting()
 	AddCategory("MAPWINDOW", 2)
 	AddCheckbox("WORLDMAPMOVE", true, function() MapUtils:RefreshWorldMapFrame() end)
 	AddCheckbox("WORLDMAPSCALE", true, function() MapUtils:RefreshWorldMapFrame() end)
+	AddCategory("MAPFADE", 2)
+	AddCheckbox("WORLDMAPFADE", false, function() MapUtils:RefreshWorldMapFrame() end)
+	AddSlider("WORLDMAPFADEALPHA", 50, 10, 90, 5)
 	AddCategory("INSTANCEMAPS", 2)
 	AddCheckbox("INSTANCEMAP", true)
 	AddCheckbox("DUNGEONMAPS", true)

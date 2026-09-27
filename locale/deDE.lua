@@ -30,3 +30,6 @@ MapUtils:AddTrans("deDE", "LID_WORLDMAPSCALE", "Weltkarte skalieren (Griff unten
 MapUtils:AddTrans("deDE", "LID_INSTANCEMAPS", "Dungeon- & Raid-Karten")
 MapUtils:AddTrans("deDE", "LID_MAPLABELS", "Kartenbeschriftungen")
 MapUtils:AddTrans("deDE", "LID_MAPICONS", "Kartensymbole")
+MapUtils:AddTrans("deDE", "LID_MAPFADE", "Transparenz beim Laufen")
+MapUtils:AddTrans("deDE", "LID_WORLDMAPFADE", "Weltkarte beim Laufen transparent machen (sichtbar bei Mauszeiger darauf)")
+MapUtils:AddTrans("deDE", "LID_WORLDMAPFADEALPHA", "Transparenz: %d%%")

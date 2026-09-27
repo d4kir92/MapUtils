@@ -30,3 +30,6 @@ MapUtils:AddTrans("frFR", "LID_WORLDMAPSCALE", "Redimensionner la carte du monde
 MapUtils:AddTrans("frFR", "LID_INSTANCEMAPS", "Cartes de donjons et de raids")
 MapUtils:AddTrans("frFR", "LID_MAPLABELS", "Libellés de la carte")
 MapUtils:AddTrans("frFR", "LID_MAPICONS", "Icônes de la carte")
+MapUtils:AddTrans("frFR", "LID_MAPFADE", "Transparence en mouvement")
+MapUtils:AddTrans("frFR", "LID_WORLDMAPFADE", "Rendre la carte du monde transparente en mouvement (visible au survol)")
+MapUtils:AddTrans("frFR", "LID_WORLDMAPFADEALPHA", "Transparence : %d%%")

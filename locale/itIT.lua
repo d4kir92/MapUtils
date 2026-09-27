@@ -30,3 +30,6 @@ MapUtils:AddTrans("itIT", "LID_WORLDMAPSCALE", "Ridimensiona la mappa del mondo 
 MapUtils:AddTrans("itIT", "LID_INSTANCEMAPS", "Mappe di dungeon e incursioni")
 MapUtils:AddTrans("itIT", "LID_MAPLABELS", "Etichette della mappa")
 MapUtils:AddTrans("itIT", "LID_MAPICONS", "Icone della mappa")
+MapUtils:AddTrans("itIT", "LID_MAPFADE", "Trasparenza in movimento")
+MapUtils:AddTrans("itIT", "LID_WORLDMAPFADE", "Rendi trasparente la mappa del mondo in movimento (visibile al passaggio del mouse)")
+MapUtils:AddTrans("itIT", "LID_WORLDMAPFADEALPHA", "Trasparenza: %d%%")
