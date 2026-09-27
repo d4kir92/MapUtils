@@ -31,6 +31,40 @@ local hoverArmed = true
 local openX = nil
 local openY = nil
 local dragRegions = {"BorderFrame", "TitleCanvasSpacerFrame", "MiniBorderFrame"}
+local function GetStrataIndex(region, index, skip)
+	if region == skip then return index end
+	index = max(index, STRATA_INDEX[region:GetFrameStrata()] or 1)
+	for _, child in ipairs({region:GetChildren()}) do
+		index = GetStrataIndex(child, index, skip)
+	end
+
+	return index
+end
+
+function MapUtils:CreateSizeGrip(parent, size)
+	local sizeGrip = CreateFrame("Button", nil, parent)
+	sizeGrip:SetSize(size, size)
+	sizeGrip:SetPoint("BOTTOMRIGHT", parent, "BOTTOMRIGHT", -2, 2)
+	sizeGrip:SetNormalTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Up")
+	sizeGrip:SetPushedTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Down")
+	sizeGrip:SetHighlightTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Highlight")
+	sizeGrip:Hide()
+
+	return sizeGrip
+end
+
+function MapUtils:RaiseSizeGrip(sizeGrip, root)
+	local index = GetStrataIndex(root, 1, sizeGrip)
+	sizeGrip:SetFrameStrata(STRATA[min(index + 1, #STRATA)])
+	sizeGrip:SetFrameLevel(MAX_FRAME_LEVEL)
+end
+
+function MapUtils:GetCursorUi()
+	local x, y = GetCursorPosition()
+	local s = UIParent:GetEffectiveScale()
+
+	return x / s, y / s
+end
 local function IsEnabled(key)
 	return type(MAUTTAB) ~= "table" or MAUTTAB[key] ~= false
 end
@@ -150,22 +184,6 @@ local function ShiftScrollBars(shifted)
 	end
 end
 
-local function GetStrataIndex(region, index)
-	if region == grip then return index end
-	index = max(index, STRATA_INDEX[region:GetFrameStrata()] or 1)
-	for _, child in ipairs({region:GetChildren()}) do
-		index = GetStrataIndex(child, index)
-	end
-
-	return index
-end
-
-local function GetGripStrata()
-	local index = GetStrataIndex(frame, 1)
-
-	return STRATA[min(index + 1, #STRATA)]
-end
-
 local function UpdateGrip()
 	if grip == nil then return end
 	if foreign or not ScaleEnabled() or IsMaximized() then
@@ -175,8 +193,7 @@ local function UpdateGrip()
 		return
 	end
 
-	grip:SetFrameStrata(GetGripStrata())
-	grip:SetFrameLevel(MAX_FRAME_LEVEL)
+	MapUtils:RaiseSizeGrip(grip, frame)
 	grip:Show()
 	ShiftScrollBars(true)
 end
@@ -238,10 +255,7 @@ local function OnDragStop()
 end
 
 local function GetCursorUi()
-	local x, y = GetCursorPosition()
-	local s = UIParent:GetEffectiveScale()
-
-	return x / s, y / s
+	return MapUtils:GetCursorUi()
 end
 
 local function OnSizing()
@@ -294,12 +308,7 @@ local function StartSizing(_, button)
 end
 
 local function CreateGrip()
-	grip = CreateFrame("Button", nil, frame)
-	grip:SetSize(GRIP_SIZE, GRIP_SIZE)
-	grip:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -2, 2)
-	grip:SetNormalTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Up")
-	grip:SetPushedTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Down")
-	grip:SetHighlightTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Highlight")
+	grip = MapUtils:CreateSizeGrip(frame, GRIP_SIZE)
 	grip:SetScript("OnMouseDown", StartSizing)
 	grip:SetScript("OnMouseUp", StopSizing)
 	grip:SetScript("OnHide", StopSizing)

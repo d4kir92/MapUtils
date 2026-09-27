@@ -4,6 +4,8 @@ local DUNGEON_ICON_SIZE = 32
 local POI_START_SCALE = 1
 local POI_END_SCALE = 1.2
 local WAYPOINT_TOLERANCE = 0.001
+local SUPERTRACKED_ALPHA = 0.5
+local SUPERTRACKED_MIN_DISTANCE = 1000
 local TRACKED_ICON_SCALE = 0.72
 local PUSHED_OFFSET = 1
 local CIRCLE_TRACKED = "UI-QuestPoi-QuestNumber-SuperTracked"
@@ -2067,3 +2069,40 @@ end
 
 MapUtils:AddSlash("mappins", HandleSlash)
 MapUtils:AddSlash("mapdocks", HandleSlash)
+local superTrackedFixed = false
+local function FixSuperTrackedFrame()
+	local frame = SuperTrackedFrame
+	if superTrackedFixed or frame == nil then return superTrackedFixed end
+	superTrackedFixed = true
+	local function ShouldForceAlpha()
+		if C_Navigation == nil or C_Navigation.GetDistance == nil then return false end
+		local distance = C_Navigation.GetDistance() or 0
+		if MapUtils:IsForever() then return frame.navFrame ~= nil and distance > 0 end
+
+		return distance >= SUPERTRACKED_MIN_DISTANCE
+	end
+
+	for _, key in ipairs({"GetTargetAlphaBaseValue", "GetTargetAlpha"}) do
+		local original = frame[key]
+		if original ~= nil then
+			frame[key] = function(self, ...)
+				local alpha = original(self, ...)
+				if alpha == 0 and ShouldForceAlpha() then return SUPERTRACKED_ALPHA end
+
+				return alpha
+			end
+		end
+	end
+
+	return true
+end
+
+local superTrackedLoader = CreateFrame("FRAME")
+MapUtils:RegisterEvent(superTrackedLoader, "PLAYER_LOGIN")
+MapUtils:RegisterEvent(superTrackedLoader, "ADDON_LOADED")
+superTrackedLoader:SetScript(
+	"OnEvent",
+	function(self)
+		if FixSuperTrackedFrame() then self:UnregisterAllEvents() end
+	end
+)
