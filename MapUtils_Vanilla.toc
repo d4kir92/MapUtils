@@ -1,6 +1,4 @@
-## Interface-Classic: 11509
-## Interface-Forever: 16001
-## Interface-BCC: 20506
+## Interface: 11509
 
 ## Version: 1.2.0
 ## Title: MapUtils by |cff55d2ffD4KiR |T132115:16:16:0:0|t 
