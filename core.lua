@@ -256,6 +256,30 @@ raidMaps[321] = {
 	"Interface\\AddOns\\MapUtils\\media\\321" -- Ahn'Qiraj - Vault of C'Thun
 }
 
+raidMaps[162] = {
+	"Interface\\AddOns\\MapUtils\\media\\162" -- Naxxramas - The Construct Quarter
+}
+
+raidMaps[163] = {
+	"Interface\\AddOns\\MapUtils\\media\\163" -- Naxxramas - The Arachnid Quarter
+}
+
+raidMaps[164] = {
+	"Interface\\AddOns\\MapUtils\\media\\164" -- Naxxramas - The Military Quarter
+}
+
+raidMaps[165] = {
+	"Interface\\AddOns\\MapUtils\\media\\165" -- Naxxramas - The Plague Quarter
+}
+
+raidMaps[166] = {
+	"Interface\\AddOns\\MapUtils\\media\\166" -- Naxxramas - The Lower Necropolis
+}
+
+raidMaps[167] = {
+	"Interface\\AddOns\\MapUtils\\media\\167" -- Naxxramas - The Upper Necropolis
+}
+
 -- TBC Dungeons:
 dungeonMaps[246] = {
 	"Interface\\AddOns\\MapUtils\\media\\246" -- The Shattered Halls
@@ -440,6 +464,7 @@ instanceToMap[509] = 247 -- Ruins of Ahn'Qiraj
 instanceToMap[249] = 248 -- Onyxia's Lair
 instanceToMap[469] = 287 -- Blackwing Lair
 instanceToMap[531] = 319 -- Temple of Ahn'Qiraj
+instanceToMap[533] = 166 -- Naxxramas
 instanceToMap[540] = 246 -- The Shattered Halls
 instanceToMap[542] = 261 -- The Blood Furnace
 instanceToMap[543] = 347 -- Hellfire Ramparts
