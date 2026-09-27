@@ -2,7 +2,7 @@
 ## Interface-Forever: 16001
 ## Interface-BCC: 20506
 
-## Version: 1.2.0
+## Version: 1.2.1
 ## Title: MapUtils by |cff55d2ffD4KiR |T132115:16:16:0:0|t 
 ## Notes: Adds Dungeon/Raid Maps to the WorldMap
 ## Notes-deDE: Fügt Dungeon-/Raidmaps zu der Weltkarte hinzu
