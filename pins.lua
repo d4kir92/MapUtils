@@ -491,6 +491,20 @@ AddDungeon(
 
 AddDungeon(
 	{
+		["name"] = "City of Dalaran",
+		["lfg"] = 3271,
+		["instance"] = 2959,
+		["minLevel"] = 28,
+		["maxLevel"] = 33,
+	},
+	{
+		[1416] = {0.08509, 0.59261},
+		[1421] = {0.69176, 0.45531},
+	}
+)
+
+AddDungeon(
+	{
 		["name"] = "The Stockade",
 		["instanceMap"] = 34,
 		["lfg"] = 11,
