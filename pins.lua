@@ -1255,9 +1255,11 @@ local function GetPierLabel(entry)
 end
 
 local function GetDestinationMapID(entry)
-	local route = entry.routes ~= nil and entry.routes[1]
+	if type(entry.routes) ~= "table" then return nil end
+	local route = entry.routes[1]
+	if type(route) ~= "table" then return nil end
 
-	return route ~= nil and route.mapID or nil
+	return route.mapID
 end
 
 local function GetClickHints(pin)
