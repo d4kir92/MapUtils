@@ -505,6 +505,17 @@ AddDungeon(
 
 AddDungeon(
 	{
+		["name"] = "Excavation Site: Wetlands",
+		["lfg"] = 3274,
+		["instance"] = 2998,
+	},
+	{
+		[1437] = {0.47705, 0.56244},
+	}
+)
+
+AddDungeon(
+	{
 		["name"] = "The Stockade",
 		["instanceMap"] = 34,
 		["lfg"] = 11,
