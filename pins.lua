@@ -7,6 +7,7 @@ local WAYPOINT_TOLERANCE = 0.001
 local SUPERTRACKED_ALPHA = 0.5
 local SUPERTRACKED_MIN_DISTANCE = 1000
 local TRACKED_ICON_SCALE = 0.72
+local MEETING_STONE_ICON_SCALE = 0.8
 local PUSHED_OFFSET = 1
 local CIRCLE_TRACKED = "UI-QuestPoi-QuestNumber-SuperTracked"
 local CIRCLE_TRACKED_PUSHED = "UI-QuestPoi-QuestNumber-Pressed-SuperTracked"
@@ -29,6 +30,7 @@ local DEFAULT_DUNGEON_ICON = "Interface\\Icons\\INV_Misc_Bone_Skull_02"
 local DUNGEON_ICON_CANDIDATES = {"Dungeon", "DungeonSkull", "Dungeon-Normal"}
 local PATH_ICON_CANDIDATES = {"CaveUnderground-Down", "CaveUnderground-Up"}
 local RAID_ICON_CANDIDATES = {"Raid"}
+local MEETING_STONE_ICON = "Interface\\AddOns\\MapUtils\\media\\meetingstone"
 local DEFAULT_FLIGHT_ICON = "Interface\\TaxiFrame\\UI-Taxi-Icon-Green"
 local FLIGHT_ICONS = {}
 FLIGHT_ICONS["Alliance"] = "TaxiNode_Alliance"
@@ -780,6 +782,18 @@ AddDungeon(
 	}
 )
 
+local meetingStones = {}
+meetingStones[1437] = {
+	{
+		["kind"] = "meetingstone",
+		["name"] = "Excavation Site: Wetlands",
+		["lfg"] = 3274,
+		["instance"] = 2998,
+		["x"] = 0.53788,
+		["y"] = 0.65724,
+	},
+}
+
 local mapRects = {}
 local function GetMapRect(mapID)
 	if mapID == nil then return nil end
@@ -916,6 +930,7 @@ local function GetEntryIcon(entry)
 	if entry.kind == "dungeon" and entry.entrance == "path" and GetPathIcon() ~= nil then return GetPathIcon() end
 	if entry.kind == "dungeon" and entry.entrance == "raid" then return GetRaidIcon() end
 	if entry.kind == "dungeon" then return GetDungeonIcon() end
+	if entry.kind == "meetingstone" then return MEETING_STONE_ICON end
 
 	return GetIcon(entry.faction)
 end
@@ -1277,6 +1292,9 @@ local function ShowAreaLabel(pin)
 	local name, description = nil, nil
 	if pin.entry.kind == "dungeon" then
 		name, description = GetDungeonLabel(pin.entry)
+	elseif pin.entry.kind == "meetingstone" then
+		name = GetDungeonInfo(pin.entry) or pin.entry.name
+		description = MapUtils:Trans("LID_MEETINGSTONE")
 	elseif pin.entry.kind == "flight" then
 		name, description = pin.entry.name, GetFlightDescription(pin.entry)
 	else
@@ -1318,6 +1336,10 @@ local function OnPinEnter(pin)
 		end
 
 		if recLevel ~= nil then GameTooltip:AddLine(MapUtils:Trans("LID_RECOMMENDEDLEVEL", nil, recLevel), 0.6, 0.6, 0.6) end
+	elseif entry.kind == "meetingstone" then
+		local name = GetDungeonInfo(entry)
+		GameTooltip:AddLine(name or entry.name, 1, 1, 1)
+		GameTooltip:AddLine(MapUtils:Trans("LID_MEETINGSTONE"), 0.6, 0.6, 0.6)
 	elseif entry.kind == "flight" then
 		GameTooltip:AddLine(entry.name, 1, 1, 1)
 		GameTooltip:AddLine(GetFlightDescription(entry), 0.6, 0.6, 0.6)
@@ -1462,6 +1484,12 @@ local function UpdatePinLevel(pin, isWaypoint)
 	if pin:GetFrameLevel() ~= level then pin:SetFrameLevel(level) end
 end
 
+local function GetEntryIconScale(entry)
+	if entry ~= nil and entry.kind == "meetingstone" then return MEETING_STONE_ICON_SCALE end
+
+	return 1
+end
+
 local function UpdatePinStyle(pin)
 	if pin.circle == nil then return end
 	local isWaypoint = pin.entry ~= nil and IsEntryWaypoint(pin.mapID, pin.entry)
@@ -1481,6 +1509,7 @@ local function UpdatePinStyle(pin)
 	else
 		pin.circle:Hide()
 	end
+	size = size * GetEntryIconScale(pin.entry)
 
 	if pin.hitExtend ~= extend then
 		pin.hitExtend = extend
@@ -1579,7 +1608,13 @@ local function FlightsEnabled(worldMap)
 	return MapUtils:GetConfig("FLIGHTMINIMAPPINS", true) == true
 end
 
-local function BuildList(mapID, piersOn, dungeonsOn, flightsOn)
+local function MeetingStonesEnabled(worldMap)
+	if worldMap then return MapUtils:GetConfig("MEETINGSTONEWORLDMAPPINS", true) == true end
+
+	return MapUtils:GetConfig("MEETINGSTONEMINIMAPPINS", true) == true
+end
+
+local function BuildList(mapID, piersOn, dungeonsOn, flightsOn, meetingStonesOn)
 	if mapID == nil then return nil end
 	local list = nil
 	if piersOn and piers[mapID] ~= nil then
@@ -1592,6 +1627,13 @@ local function BuildList(mapID, piersOn, dungeonsOn, flightsOn)
 	if dungeonsOn and dungeons[mapID] ~= nil then
 		list = list or {}
 		for _, entry in ipairs(dungeons[mapID]) do
+			tinsert(list, entry)
+		end
+	end
+
+	if meetingStonesOn and meetingStones[mapID] ~= nil then
+		list = list or {}
+		for _, entry in ipairs(meetingStones[mapID]) do
 			tinsert(list, entry)
 		end
 	end
@@ -1624,6 +1666,7 @@ local worldScale = nil
 local worldPiers = nil
 local worldDungeons = nil
 local worldFlights = nil
+local worldMeetingStones = nil
 local function UpdateWorldPins()
 	local child = WorldMapFrame.ScrollContainer.Child
 	local mapID = WorldMapFrame:GetMapID()
@@ -1631,14 +1674,16 @@ local function UpdateWorldPins()
 	local piersOn = PiersEnabled(true)
 	local dungeonsOn = DungeonsEnabled(true)
 	local flightsOn = FlightsEnabled(true)
-	if mapID == worldMapID and scale == worldScale and piersOn == worldPiers and dungeonsOn == worldDungeons and flightsOn == worldFlights then return end
+	local meetingStonesOn = MeetingStonesEnabled(true)
+	if mapID == worldMapID and scale == worldScale and piersOn == worldPiers and dungeonsOn == worldDungeons and flightsOn == worldFlights and meetingStonesOn == worldMeetingStones then return end
 	worldMapID = mapID
 	worldScale = scale
 	worldPiers = piersOn
 	worldDungeons = dungeonsOn
 	worldFlights = flightsOn
+	worldMeetingStones = meetingStonesOn
 	HideAll(worldPins)
-	local list = BuildList(mapID, piersOn, dungeonsOn, flightsOn)
+	local list = BuildList(mapID, piersOn, dungeonsOn, flightsOn, meetingStonesOn)
 	if list == nil then return end
 	if scale == nil or scale <= 0 then return end
 	local w = child:GetWidth()
@@ -1697,21 +1742,23 @@ local minimapMapID = nil
 local minimapPiers = nil
 local minimapDungeons = nil
 local minimapFlights = nil
+local minimapMeetingStones = nil
 local minimapList = nil
-local function GetMinimapList(mapID, piersOn, dungeonsOn, flightsOn)
-	if mapID == minimapMapID and piersOn == minimapPiers and dungeonsOn == minimapDungeons and flightsOn == minimapFlights then return minimapList end
+local function GetMinimapList(mapID, piersOn, dungeonsOn, flightsOn, meetingStonesOn)
+	if mapID == minimapMapID and piersOn == minimapPiers and dungeonsOn == minimapDungeons and flightsOn == minimapFlights and meetingStonesOn == minimapMeetingStones then return minimapList end
 	minimapMapID = mapID
 	minimapPiers = piersOn
 	minimapDungeons = dungeonsOn
 	minimapFlights = flightsOn
-	minimapList = BuildList(mapID, piersOn, dungeonsOn, flightsOn)
+	minimapMeetingStones = meetingStonesOn
+	minimapList = BuildList(mapID, piersOn, dungeonsOn, flightsOn, meetingStonesOn)
 
 	return minimapList
 end
 
 local function UpdateMinimapPins()
 	local mapID = C_Map.GetBestMapForUnit("player")
-	local list = GetMinimapList(mapID, PiersEnabled(false), DungeonsEnabled(false), FlightsEnabled(false))
+	local list = GetMinimapList(mapID, PiersEnabled(false), DungeonsEnabled(false), FlightsEnabled(false), MeetingStonesEnabled(false))
 	if list == nil then
 		HideAll(minimapPins)
 
@@ -1743,6 +1790,10 @@ local function UpdateMinimapPins()
 		pin.entry = entry
 		ApplyIcon(pin, GetEntryIcon(entry))
 		pin.texture:SetDesaturated(IsDesaturatedEntry(entry))
+		pin.texture:ClearAllPoints()
+		pin.texture:SetPoint("CENTER", pin, "CENTER")
+		local textureSize = ICON_SIZE * GetEntryIconScale(entry)
+		pin.texture:SetSize(textureSize, textureSize)
 		local pos = GetEntryWorldPos(mapID, entry)
 		if pos == nil then
 			pin:Hide()
@@ -1815,16 +1866,18 @@ if C_TaxiMap ~= nil and C_TaxiMap.GetTaxiNodesForMap ~= nil then
 end
 
 local function CountPins(mapID)
-	if mapID == nil then return 0, 0, 0 end
+	if mapID == nil then return 0, 0, 0, 0 end
 	local pierCount = 0
 	local dungeonCount = 0
 	local flightCount = 0
+	local meetingStoneCount = 0
 	if piers[mapID] ~= nil then pierCount = #piers[mapID] end
 	if dungeons[mapID] ~= nil then dungeonCount = #dungeons[mapID] end
 	local flightList = GetFlights(mapID)
 	if flightList ~= nil then flightCount = #flightList end
+	if meetingStones[mapID] ~= nil then meetingStoneCount = #meetingStones[mapID] end
 
-	return pierCount, dungeonCount, flightCount
+	return pierCount, dungeonCount, flightCount, meetingStoneCount
 end
 
 local function GetCaptures()
@@ -1892,6 +1945,7 @@ local function RefreshIcons()
 	worldPiers = nil
 	worldDungeons = nil
 	worldFlights = nil
+	worldMeetingStones = nil
 	resolvedDungeonIcon = nil
 	resolvedRaidIcon = nil
 end
@@ -1902,10 +1956,12 @@ function MapUtils:RefreshPins()
 	worldPiers = nil
 	worldDungeons = nil
 	worldFlights = nil
+	worldMeetingStones = nil
 	minimapMapID = nil
 	minimapPiers = nil
 	minimapDungeons = nil
 	minimapFlights = nil
+	minimapMeetingStones = nil
 	minimapList = nil
 	HideAll(worldPins)
 	HideAll(minimapPins)
@@ -1950,6 +2006,7 @@ local function ReportIcons()
 	end
 
 	MapUtils:INFO("current raid icon:", GetRaidIcon(), "- is atlas:", IsAtlas(GetRaidIcon()))
+	MapUtils:INFO("current meeting stone icon:", MEETING_STONE_ICON)
 
 	MapUtils:INFO("Use /mappins icon <atlas or texture path> to try one, /mappins icon reset to go back")
 end
@@ -1963,13 +2020,13 @@ local function ReportState()
 		mapOpen = WorldMapFrame:IsShown() == true
 	end
 
-	local playerPiers, playerDungeons, playerFlights = CountPins(playerMapID)
-	local canvasPiers, canvasDungeons, canvasFlights = CountPins(canvasMapID)
+	local playerPiers, playerDungeons, playerFlights, playerMeetingStones = CountPins(playerMapID)
+	local canvasPiers, canvasDungeons, canvasFlights, canvasMeetingStones = CountPins(canvasMapID)
 	local zone, _, _, _, _, _, _, instanceMapID = GetInstanceInfo()
 	MapUtils:INFO("world updater:", worldUpdater ~= nil, "minimap updater:", minimapUpdater ~= nil, "map open:", mapOpen)
 	MapUtils:INFO("instance:", tostring(zone), "- instanceMapID:", tostring(instanceMapID))
-	MapUtils:INFO("player uiMapID:", tostring(playerMapID), "-", GetMapName(playerMapID), "- piers:", playerPiers, "- dungeons:", playerDungeons, "- flights:", playerFlights)
-	MapUtils:INFO("canvas uiMapID:", tostring(canvasMapID), "-", GetMapName(canvasMapID), "- piers:", canvasPiers, "- dungeons:", canvasDungeons, "- flights:", canvasFlights)
+	MapUtils:INFO("player uiMapID:", tostring(playerMapID), "-", GetMapName(playerMapID), "- piers:", playerPiers, "- dungeons:", playerDungeons, "- flights:", playerFlights, "- meeting stones:", playerMeetingStones)
+	MapUtils:INFO("canvas uiMapID:", tostring(canvasMapID), "-", GetMapName(canvasMapID), "- piers:", canvasPiers, "- dungeons:", canvasDungeons, "- flights:", canvasFlights, "- meeting stones:", canvasMeetingStones)
 	MapUtils:INFO("C_TaxiMap.GetTaxiNodesForMap:", C_TaxiMap ~= nil and C_TaxiMap.GetTaxiNodesForMap ~= nil, "- world pin base level:", worldUpdater ~= nil and GetWorldPinLevel(WorldMapFrame.ScrollContainer.Child) or "?")
 	MapUtils:INFO("world pins:", #worldPins, "minimap pins:", #minimapPins, "icon:", GetIcon(DEFAULT_FACTION), "is atlas:", IsAtlas(GetIcon(DEFAULT_FACTION)))
 	MapUtils:INFO("user waypoint:", tostring(GetWaypointKey()), "- set by pin:", tostring(waypointKey), "- tracked:", tostring(IsWaypointTracked()))

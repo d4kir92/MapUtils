@@ -9,6 +9,8 @@ MapUtils:AddTrans("frFR", "LID_FISHINGLEVELS", "Afficher la compétence de pêch
 MapUtils:AddTrans("frFR", "LID_FLIGHTPOINT", "Point de vol")
 MapUtils:AddTrans("frFR", "LID_FLIGHTPOINTS", "Points de vol")
 MapUtils:AddTrans("frFR", "LID_GENERAL", "Général")
+MapUtils:AddTrans("frFR", "LID_MEETINGSTONE", "Pierre de rencontre")
+MapUtils:AddTrans("frFR", "LID_MEETINGSTONES", "Pierres de rencontre")
 MapUtils:AddTrans("frFR", "LID_DUNGEONMAPS", "Afficher les cartes des donjons")
 MapUtils:AddTrans("frFR", "LID_RAIDMAPS", "Afficher les cartes des raids")
 MapUtils:AddTrans("frFR", "LID_MINIMAPPINS", "Afficher les icônes sur la minicarte")

@@ -9,6 +9,8 @@ MapUtils:AddTrans("ruRU", "LID_FISHINGLEVELS", "Показывать миним�
 MapUtils:AddTrans("ruRU", "LID_FLIGHTPOINT", "Точка полета")
 MapUtils:AddTrans("ruRU", "LID_FLIGHTPOINTS", "Точки полета")
 MapUtils:AddTrans("ruRU", "LID_GENERAL", "Общее")
+MapUtils:AddTrans("ruRU", "LID_MEETINGSTONE", "Камень встреч")
+MapUtils:AddTrans("ruRU", "LID_MEETINGSTONES", "Камни встреч")
 MapUtils:AddTrans("ruRU", "LID_DUNGEONMAPS", "Показывать карты подземелий")
 MapUtils:AddTrans("ruRU", "LID_RAIDMAPS", "Показывать карты рейдов")
 MapUtils:AddTrans("ruRU", "LID_MINIMAPPINS", "Показывать значки на миникарте")

@@ -9,6 +9,8 @@ MapUtils:AddTrans("esMX", "LID_FISHINGLEVELS", "Mostrar la habilidad mínima de 
 MapUtils:AddTrans("esMX", "LID_FLIGHTPOINT", "Punto de vuelo")
 MapUtils:AddTrans("esMX", "LID_FLIGHTPOINTS", "Puntos de vuelo")
 MapUtils:AddTrans("esMX", "LID_GENERAL", "General")
+MapUtils:AddTrans("esMX", "LID_MEETINGSTONE", "Piedra de encuentro")
+MapUtils:AddTrans("esMX", "LID_MEETINGSTONES", "Piedras de encuentro")
 MapUtils:AddTrans("esMX", "LID_DUNGEONMAPS", "Mostrar mapas de calabozos")
 MapUtils:AddTrans("esMX", "LID_RAIDMAPS", "Mostrar mapas de bandas")
 MapUtils:AddTrans("esMX", "LID_MINIMAPPINS", "Mostrar iconos en el minimapa")

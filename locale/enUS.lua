@@ -9,6 +9,8 @@ MapUtils:AddTrans("enUS", "LID_FISHINGLEVELS", "Show minimum fishing skill on th
 MapUtils:AddTrans("enUS", "LID_FLIGHTPOINT", "Flight point")
 MapUtils:AddTrans("enUS", "LID_FLIGHTPOINTS", "Flight points")
 MapUtils:AddTrans("enUS", "LID_GENERAL", "General")
+MapUtils:AddTrans("enUS", "LID_MEETINGSTONE", "Meeting stone")
+MapUtils:AddTrans("enUS", "LID_MEETINGSTONES", "Meeting stones")
 MapUtils:AddTrans("enUS", "LID_DUNGEONMAPS", "Show dungeon maps")
 MapUtils:AddTrans("enUS", "LID_RAIDMAPS", "Show raid maps")
 MapUtils:AddTrans("enUS", "LID_MINIMAPPINS", "Show icons on the minimap")
