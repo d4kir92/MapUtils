@@ -1388,9 +1388,11 @@ end
 
 local function IsSameEntry(a, b)
 	if a == b then return true end
-	if a.kind == "flight" then return b.kind == "flight" and a.nodeID ~= nil and a.nodeID == b.nodeID end
+	if a.kind ~= b.kind then return false end
+	if a.kind == "flight" then return a.nodeID ~= nil and a.nodeID == b.nodeID end
+	if a.kind == "dungeon" or a.kind == "meetingstone" then return a.instance ~= nil and a.instance == b.instance end
 
-	return a.kind == "dungeon" and a.instance ~= nil and a.instance == b.instance
+	return false
 end
 
 local function IsEntryWaypoint(mapID, entry)
