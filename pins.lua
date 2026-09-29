@@ -604,6 +604,17 @@ AddDungeon(
 
 AddDungeon(
 	{
+		["name"] = "The Drowned City",
+		["minLevel"] = 35,
+		["maxLevel"] = 40,
+	},
+	{
+		[1434] = {0.21317, 0.27817},
+	}
+)
+
+AddDungeon(
+	{
 		["name"] = "Zul'Farrak",
 		["instanceMap"] = 209,
 		["minLevel"] = 44,
@@ -783,6 +794,14 @@ AddDungeon(
 )
 
 local meetingStones = {}
+meetingStones[1434] = {
+	{
+		["kind"] = "meetingstone",
+		["name"] = "The Drowned City",
+		["x"] = 0.21756,
+		["y"] = 0.27748,
+	},
+}
 meetingStones[1437] = {
 	{
 		["kind"] = "meetingstone",
