@@ -1405,10 +1405,6 @@ local function GetWaypointKey()
 	return format("%s|%s|%s", tostring(point.uiMapID), tostring(point.position.x), tostring(point.position.y))
 end
 
-local function IsMapUtilsWaypointTracked()
-	return waypointKey ~= nil and waypointKey == GetWaypointKey() and IsWaypointTracked()
-end
-
 local function IsSameEntry(a, b)
 	if a == b then return true end
 	if a.kind ~= b.kind then return false end
@@ -2234,7 +2230,7 @@ local function FixSuperTrackedFrame()
 	if superTrackedFixed or frame == nil then return superTrackedFixed end
 	superTrackedFixed = true
 	local function ShouldForceAlpha()
-		if not IsMapUtilsWaypointTracked() and not MapUtils:GetConfig("ALWAYSSHOWWAYPOINT", true) then return false end
+		if not IsWaypointTracked() and not MapUtils:GetConfig("ALWAYSSHOWWAYPOINT", false) then return false end
 		if C_Navigation == nil or C_Navigation.GetDistance == nil then return false end
 		local distance = C_Navigation.GetDistance() or 0
 		if MapUtils:IsForever() then return frame.navFrame ~= nil and distance > 0 end
