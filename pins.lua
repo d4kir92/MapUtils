@@ -1568,6 +1568,10 @@ end
 
 local function OnPinMouseUp(pin, button)
 	pin.pushed = false
+	UpdatePinStyle(pin)
+end
+
+local function OnPinClick(pin, button)
 	local entry = pin.entry
 	if entry ~= nil and IsPinMouseOver(pin) then
 		if IsCovered() then
@@ -1585,8 +1589,7 @@ local function OnPinMouseUp(pin, button)
 	UpdatePinStyle(pin)
 end
 
-local function CreatePin(parent, levelOffset, clickable)
-	local pin = CreateFrame("FRAME", nil, parent)
+local function SetupPin(pin, parent, levelOffset, clickable)
 	pin:SetSize(ICON_SIZE, ICON_SIZE)
 	pin.clickable = clickable
 	pin.baseLevel = parent:GetFrameLevel() + levelOffset
@@ -1594,17 +1597,32 @@ local function CreatePin(parent, levelOffset, clickable)
 	pin:EnableMouse(true)
 	pin:SetScript("OnEnter", OnPinEnter)
 	pin:SetScript("OnLeave", OnPinLeave)
-	pin.texture = pin:CreateTexture(nil, "OVERLAY")
-	pin.texture:SetAllPoints(pin)
+	if pin.texture == nil then
+		pin.texture = pin:CreateTexture(nil, "OVERLAY")
+		pin.texture:SetAllPoints(pin)
+	end
+
 	if clickable then
-		pin.circle = pin:CreateTexture(nil, "ARTWORK")
-		pin.circle:SetPoint("CENTER", pin, "CENTER", 0, 0)
+		if pin.circle == nil then
+			pin.circle = pin:CreateTexture(nil, "ARTWORK")
+			pin.circle:SetPoint("CENTER", pin, "CENTER", 0, 0)
+		end
+
 		pin.circle:Hide()
+		pin:RegisterForClicks("LeftButtonUp", "RightButtonUp")
 		pin:SetScript("OnMouseDown", OnPinMouseDown)
 		pin:SetScript("OnMouseUp", OnPinMouseUp)
+		pin:SetScript("OnClick", OnPinClick)
 	end
 
 	return pin
+end
+
+local function CreatePin(parent, levelOffset, clickable)
+	local frameType = clickable and "BUTTON" or "FRAME"
+	local pin = CreateFrame(frameType, nil, parent)
+
+	return SetupPin(pin, parent, levelOffset, clickable)
 end
 
 local function HideAll(pins)
@@ -1683,7 +1701,16 @@ local function GetPoiScale()
 	return scale
 end
 
+local function GetWorldCanvas()
+	if WorldMapFrame == nil then return nil end
+	if WorldMapFrame.GetCanvas ~= nil then return WorldMapFrame:GetCanvas() end
+	if WorldMapFrame.ScrollContainer == nil then return nil end
+
+	return WorldMapFrame.ScrollContainer.Child
+end
+
 local worldPins = {}
+local worldPinPool = nil
 local worldMapID = nil
 local worldScale = nil
 local worldPiers = nil
@@ -1691,7 +1718,8 @@ local worldDungeons = nil
 local worldFlights = nil
 local worldMeetingStones = nil
 local function UpdateWorldPins()
-	local child = WorldMapFrame.ScrollContainer.Child
+	local child = GetWorldCanvas()
+	if child == nil or worldPinPool == nil then return end
 	local mapID = WorldMapFrame:GetMapID()
 	local scale = child:GetScale()
 	local piersOn = PiersEnabled(true)
@@ -1705,7 +1733,8 @@ local function UpdateWorldPins()
 	worldDungeons = dungeonsOn
 	worldFlights = flightsOn
 	worldMeetingStones = meetingStonesOn
-	HideAll(worldPins)
+	worldPinPool:ReleaseAll()
+	wipe(worldPins)
 	local list = BuildList(mapID, piersOn, dungeonsOn, flightsOn, meetingStonesOn)
 	if list == nil then return end
 	if scale == nil or scale <= 0 then return end
@@ -1716,12 +1745,10 @@ local function UpdateWorldPins()
 	local dungeonSize = DUNGEON_ICON_SIZE * poiScale / scale
 	local baseLevel = GetWorldPinLevel(child)
 	for i, entry in ipairs(list) do
-		local pin = worldPins[i]
-		if pin == nil then
-			pin = CreatePin(child, WORLD_PIN_LEVEL, true)
-			pin.worldMap = true
-			worldPins[i] = pin
-		end
+		local pin = worldPinPool:Acquire()
+		SetupPin(pin, child, WORLD_PIN_LEVEL, true)
+		pin.worldMap = true
+		worldPins[i] = pin
 
 		pin.entry = entry
 		pin.mapID = mapID
@@ -1858,8 +1885,32 @@ end
 
 local worldUpdater = nil
 local minimapUpdater = nil
-if WorldMapFrame ~= nil and WorldMapFrame.ScrollContainer ~= nil and WorldMapFrame.ScrollContainer.Child ~= nil then
+local worldCanvas = GetWorldCanvas()
+if worldCanvas ~= nil and CreateFramePool ~= nil then
+	worldPinPool = CreateFramePool(
+		"BUTTON",
+		worldCanvas,
+		nil,
+		function(_, pin)
+			OnPinLeave(pin)
+			pin:Hide()
+			pin:ClearAllPoints()
+			pin.entry = nil
+			pin.mapID = nil
+			pin.pushed = false
+			pin.hitExtend = nil
+			pin.icon = nil
+		end
+	)
 	worldUpdater = CreateUpdater(WorldMapFrame, UpdateWorldPins)
+	WorldMapFrame:HookScript(
+		"OnHide",
+		function()
+			worldPinPool:ReleaseAll()
+			wipe(worldPins)
+			worldMapID = nil
+		end
+	)
 end
 
 if Minimap ~= nil then minimapUpdater = CreateUpdater(Minimap, UpdateMinimapPins) end
@@ -1986,7 +2037,8 @@ function MapUtils:RefreshPins()
 	minimapFlights = nil
 	minimapMeetingStones = nil
 	minimapList = nil
-	HideAll(worldPins)
+	if worldPinPool ~= nil then worldPinPool:ReleaseAll() end
+	wipe(worldPins)
 	HideAll(minimapPins)
 end
 
@@ -2050,7 +2102,7 @@ local function ReportState()
 	MapUtils:INFO("instance:", tostring(zone), "- instanceMapID:", tostring(instanceMapID))
 	MapUtils:INFO("player uiMapID:", tostring(playerMapID), "-", GetMapName(playerMapID), "- piers:", playerPiers, "- dungeons:", playerDungeons, "- flights:", playerFlights, "- meeting stones:", playerMeetingStones)
 	MapUtils:INFO("canvas uiMapID:", tostring(canvasMapID), "-", GetMapName(canvasMapID), "- piers:", canvasPiers, "- dungeons:", canvasDungeons, "- flights:", canvasFlights, "- meeting stones:", canvasMeetingStones)
-	MapUtils:INFO("C_TaxiMap.GetTaxiNodesForMap:", C_TaxiMap ~= nil and C_TaxiMap.GetTaxiNodesForMap ~= nil, "- world pin base level:", worldUpdater ~= nil and GetWorldPinLevel(WorldMapFrame.ScrollContainer.Child) or "?")
+	MapUtils:INFO("C_TaxiMap.GetTaxiNodesForMap:", C_TaxiMap ~= nil and C_TaxiMap.GetTaxiNodesForMap ~= nil, "- world pin base level:", worldUpdater ~= nil and GetWorldPinLevel(GetWorldCanvas()) or "?")
 	MapUtils:INFO("world pins:", #worldPins, "minimap pins:", #minimapPins, "icon:", GetIcon(DEFAULT_FACTION), "is atlas:", IsAtlas(GetIcon(DEFAULT_FACTION)))
 	MapUtils:INFO("user waypoint:", tostring(GetWaypointKey()), "- set by pin:", tostring(waypointKey), "- tracked:", tostring(IsWaypointTracked()))
 	if canvasMapID ~= nil and C_Map.GetUserWaypointPositionForMap ~= nil then
