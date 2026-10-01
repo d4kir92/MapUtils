@@ -5,6 +5,114 @@ local OFFSET_Y = -8
 local debugging = false
 local display = nil
 local updater = nil
+local waypointWindow = nil
+local function GetDebugWaypoint()
+	if C_Map == nil or C_Map.GetUserWaypoint == nil then return nil end
+	local point = C_Map.GetUserWaypoint()
+	if point == nil or point.position == nil then return nil end
+
+	return point
+end
+
+local function RefreshWaypointWindow()
+	if waypointWindow == nil then return end
+	local window = waypointWindow
+	local point = GetDebugWaypoint()
+	local enabled = point ~= nil and C_Map.SetUserWaypoint ~= nil
+	window.syncing = true
+	if enabled then
+		local x, y = point.position.x, point.position.y
+		window.coordinates:SetText(format("uiMapID: %s\nX: %.3f   Y: %.3f\nZ: %s", tostring(point.uiMapID), x * 100, y * 100, point.z ~= nil and format("%.2f", point.z) or "—"))
+		local z = point.z or 0
+		window.slider:SetMinMaxValues(math.min(-2000, z), math.max(2000, z))
+		window.slider:SetValue(z)
+		if not window.input:HasFocus() then window.input:SetText(format("%.2f", z)) end
+		window.slider:Enable()
+		window.input:Enable()
+	else
+		window.coordinates:SetText("Kein World-Map-Pin gesetzt")
+		window.slider:Disable()
+		window.input:Disable()
+		window.input:ClearFocus()
+		window.input:SetText("")
+	end
+
+	window.slider:SetAlpha(enabled and 1 or 0.4)
+	window.input:SetAlpha(enabled and 1 or 0.4)
+	window.syncing = false
+end
+
+local function SetWaypointHeight(value)
+	if waypointWindow == nil or waypointWindow.syncing then return end
+	if value == nil or value ~= value or value == math.huge or value == -math.huge then return end
+	local point = GetDebugWaypoint()
+	if point == nil or C_Map.SetUserWaypoint == nil then return end
+	local replacement = {uiMapID = point.uiMapID, position = {x = point.position.x, y = point.position.y}, z = value}
+	local wasSet = C_Map.SetUserWaypoint(replacement)
+	local actual = GetDebugWaypoint()
+	if wasSet ~= false and actual ~= nil and actual.z ~= nil and math.abs(actual.z - value) < 0.01 then
+		waypointWindow.status:SetText(MapUtils:IsForever() and "Z gespeichert; Weltmarker bleibt clientgesteuert" or "Wegpunkt-Z gespeichert")
+	else
+		waypointWindow.status:SetText("Client übernimmt den Wegpunkt-Z nicht")
+	end
+	RefreshWaypointWindow()
+end
+
+local function CreateWaypointWindow()
+	if waypointWindow ~= nil then return waypointWindow end
+	local window = CreateFrame("Frame", "MapUtilsDebugWaypointWindow", WorldMapFrame, "BasicFrameTemplateWithInset")
+	waypointWindow = window
+	window:SetSize(360, 220)
+	window:SetPoint("TOPLEFT", WorldMapFrame, "TOPRIGHT", 8, 0)
+	window:SetClampedToScreen(true)
+	window:SetFrameStrata("DIALOG")
+	window:SetMovable(true)
+	window:EnableMouse(true)
+	window:RegisterForDrag("LeftButton")
+	window:SetScript("OnDragStart", window.StartMoving)
+	window:SetScript("OnDragStop", window.StopMovingOrSizing)
+	window.TitleText:SetText("MapUtils Debug – World-Map-Pin")
+	window.coordinates = window:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+	window.coordinates:SetPoint("TOPLEFT", 16, -38)
+	window.coordinates:SetJustifyH("LEFT")
+	local label = window:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+	label:SetPoint("TOPLEFT", 16, -108)
+	label:SetText("Höhe (Z)")
+	window.slider = CreateFrame("Slider", nil, window, "OptionsSliderTemplate")
+	window.slider:SetPoint("TOPLEFT", 20, -140)
+	window.slider:SetSize(180, 17)
+	window.slider:SetMinMaxValues(-2000, 2000)
+	window.slider:SetValueStep(1)
+	if window.slider.SetObeyStepOnDrag ~= nil then window.slider:SetObeyStepOnDrag(true) end
+	window.slider.Low:SetText("")
+	window.slider.High:SetText("")
+	window.slider:SetScript("OnValueChanged", function(_, value) SetWaypointHeight(value) end)
+	window.input = CreateFrame("EditBox", nil, window, "InputBoxTemplate")
+	window.input:SetSize(82, 24)
+	window.input:SetPoint("LEFT", window.slider, "RIGHT", 12, 0)
+	window.status = window:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+	window.status:SetPoint("TOPLEFT", 16, -185)
+	window.status:SetJustifyH("LEFT")
+	if MapUtils:IsForever() then window.status:SetText("Forever: Z steuert nicht die Weltmarker-Höhe") end
+	window.input:SetAutoFocus(false)
+	window.input:SetMaxLetters(16)
+	window.input:SetScript("OnEnterPressed", function(self)
+		local text = self:GetText():gsub(",", ".")
+		local value = tonumber(text)
+		self:ClearFocus()
+		SetWaypointHeight(value)
+		RefreshWaypointWindow()
+	end)
+	window.input:SetScript("OnEscapePressed", function(self)
+		self:ClearFocus()
+		RefreshWaypointWindow()
+	end)
+	window.input:SetScript("OnEditFocusLost", function() RefreshWaypointWindow() end)
+	window:Hide()
+
+	return window
+end
+
 local function CreateDisplay()
 	if display ~= nil then return display end
 	display = CreateFrame("FRAME", nil, UIParent)
@@ -39,6 +147,7 @@ local function Update()
 		return
 	end
 
+	RefreshWaypointWindow()
 	local x, y = GetCursorMapPos()
 	if x == nil then
 		display:Hide()
@@ -106,12 +215,15 @@ function MapUtils:ToggleDebug()
 	end
 
 	if debugging then
+		CreateWaypointWindow():Show()
+		RefreshWaypointWindow()
 		frame.elapsed = 0
 		frame:SetScript("OnUpdate", OnUpdate)
 		MapUtils:INFO("Debug mode on - the cursor shows uiMapID and coordinates while the world map is open, off again after a /reload")
 	else
 		frame:SetScript("OnUpdate", nil)
 		display:Hide()
+		if waypointWindow ~= nil then waypointWindow:Hide() end
 		MapUtils:INFO("Debug mode off")
 	end
 end
