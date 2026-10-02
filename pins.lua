@@ -1470,16 +1470,6 @@ local function PlayWaypointSound(key)
 	if SOUNDKIT ~= nil and SOUNDKIT[key] ~= nil then PlaySound(SOUNDKIT[key]) end
 end
 
-local function IsWaypointTracked()
-	if C_SuperTrack == nil or C_SuperTrack.IsSuperTrackingUserWaypoint == nil then return true end
-
-	return C_SuperTrack.IsSuperTrackingUserWaypoint()
-end
-
-local function SetWaypointTracked(tracked)
-	if C_SuperTrack ~= nil and C_SuperTrack.SetSuperTrackedUserWaypoint ~= nil then C_SuperTrack.SetSuperTrackedUserWaypoint(tracked) end
-end
-
 local waypointEntry = nil
 local waypointKey = nil
 local function GetWaypointKey()
@@ -1514,30 +1504,29 @@ end
 local function ToggleWaypoint(mapID, entry)
 	if mapID == nil or C_Map.SetUserWaypoint == nil or UiMapPoint == nil then return end
 	if IsEntryWaypoint(mapID, entry) then
-		if IsWaypointTracked() then
+		if MapUtils:IsWaypointTracked() then
 			C_Map.ClearUserWaypoint()
 			waypointEntry = nil
 			waypointKey = nil
-			SetWaypointTracked(false)
+			MapUtils:SetWaypointTracked(false)
 			PlayWaypointSound("UI_MAP_WAYPOINT_REMOVE")
 		else
-			SetWaypointTracked(true)
+			MapUtils:SetWaypointTracked(true)
 			PlayWaypointSound("UI_MAP_WAYPOINT_SUPER_TRACK_ON")
 		end
 
 		return
 	end
 
-	if C_Map.CanSetUserWaypointOnMap ~= nil and not C_Map.CanSetUserWaypointOnMap(mapID) then
-		if UIErrorsFrame ~= nil and MAP_PIN_INVALID_MAP ~= nil then UIErrorsFrame:AddMessage(MAP_PIN_INVALID_MAP, 1, 0.1, 0.1) end
+	local waypointSet, reason = MapUtils:SetTrackedWaypoint(mapID, entry.x, entry.y)
+	if not waypointSet then
+		if reason == "invalid" and UIErrorsFrame ~= nil and MAP_PIN_INVALID_MAP ~= nil then UIErrorsFrame:AddMessage(MAP_PIN_INVALID_MAP, 1, 0.1, 0.1) end
 
 		return
 	end
 
-	C_Map.SetUserWaypoint(UiMapPoint.CreateFromCoordinates(mapID, entry.x, entry.y))
 	waypointEntry = entry
 	waypointKey = GetWaypointKey()
-	SetWaypointTracked(true)
 	PlayWaypointSound("UI_MAP_WAYPOINT_SUPER_TRACK_ON")
 end
 
@@ -1612,7 +1601,7 @@ local function UpdatePinStyle(pin)
 	if pin.circle == nil then return end
 	local isWaypoint = pin.entry ~= nil and IsEntryWaypoint(pin.mapID, pin.entry)
 	UpdatePinLevel(pin, isWaypoint)
-	local tracked = isWaypoint and IsWaypointTracked()
+	local tracked = isWaypoint and MapUtils:IsWaypointTracked()
 	local atlas = GetCircleAtlas(tracked, pin.pushed)
 	local pinSize = pin:GetWidth()
 	local size = pinSize
@@ -2292,7 +2281,7 @@ local function ReportState(filter)
 	MapUtils:INFO("canvas uiMapID:", tostring(canvasMapID), "-", GetMapName(canvasMapID), "- piers:", canvasPiers, "- dungeons:", canvasDungeons, "- flights:", canvasFlights, "- meeting stones:", canvasMeetingStones)
 	MapUtils:INFO("C_TaxiMap.GetTaxiNodesForMap:", C_TaxiMap ~= nil and C_TaxiMap.GetTaxiNodesForMap ~= nil, "- world pin base level:", worldUpdater ~= nil and GetWorldPinLevel(GetWorldCanvas()) or "?")
 	MapUtils:INFO("world pins:", #worldPins, "minimap pins:", #minimapPins, "icon:", GetIcon(DEFAULT_FACTION), "is atlas:", IsAtlas(GetIcon(DEFAULT_FACTION)))
-	MapUtils:INFO("user waypoint:", tostring(GetWaypointKey()), "- set by pin:", tostring(waypointKey), "- tracked:", tostring(IsWaypointTracked()))
+	MapUtils:INFO("user waypoint:", tostring(GetWaypointKey()), "- set by pin:", tostring(waypointKey), "- tracked:", tostring(MapUtils:IsWaypointTracked()))
 	if canvasMapID ~= nil and C_Map.GetUserWaypointPositionForMap ~= nil then
 		local pos = C_Map.GetUserWaypointPositionForMap(canvasMapID)
 		if pos ~= nil then MapUtils:INFO(format("user waypoint on canvas map: %.5f / %.5f", pos:GetXY())) end
@@ -2474,7 +2463,7 @@ local function FixSuperTrackedFrame()
 	if superTrackedFixed or frame == nil then return superTrackedFixed end
 	superTrackedFixed = true
 	local function ShouldForceAlpha()
-		if not IsWaypointTracked() and not MapUtils:GetConfig("ALWAYSSHOWWAYPOINT", false) then return false end
+		if not MapUtils:IsWaypointTracked() and not MapUtils:GetConfig("ALWAYSSHOWWAYPOINT", false) then return false end
 		if C_Navigation == nil or C_Navigation.GetDistance == nil then return false end
 		local distance = C_Navigation.GetDistance() or 0
 		if MapUtils:IsForever() then return frame.navFrame ~= nil and distance > 0 end
