@@ -192,6 +192,7 @@ function MapUtils:InitSetting()
 
 	AddCategory("MAPLABELS", 2)
 	AddCheckbox("ZONELEVELS", true)
+	AddCheckbox("ZONERECLEVELS", true, nil, nil, "2026-10-02")
 	AddCheckbox("FISHINGLEVELS", true)
 	if MapUtils:HasRevealData() then
 		AddCategory("REVEAL", 2, nil, ADDED_0928)
