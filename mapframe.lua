@@ -356,3 +356,55 @@ if frame ~= nil then
 		end
 	)
 end
+
+function MapUtils:QuestCategoriesSearching()
+	return QuestScrollFrame and QuestScrollFrame.SearchBox and QuestScrollFrame.SearchBox:GetText() ~= ""
+end
+
+function MapUtils:SaveQuestCategories()
+	if not self.questCategoriesReady or self.restoringQuestCategories or self:QuestCategoriesSearching() then return end
+	if not self:GetConfig("REMEMBERQUESTCATEGORIES", true) then return end
+	MAUTTABPC = MAUTTABPC or {}
+	MAUTTABPC.QUESTCATEGORIES = MAUTTABPC.QUESTCATEGORIES or {}
+	for index = 1, C_QuestLog.GetNumQuestLogEntries() do
+		local info = C_QuestLog.GetInfo(index)
+		if info and info.isHeader then
+			MAUTTABPC.QUESTCATEGORIES[info.headerSortKey or info.title] = info.isCollapsed == true
+		end
+	end
+end
+
+function MapUtils:RestoreQuestCategories()
+	if self.restoringQuestCategories or self:QuestCategoriesSearching() then return end
+	if not self:GetConfig("REMEMBERQUESTCATEGORIES", true) then return end
+	local states = MAUTTABPC and MAUTTABPC.QUESTCATEGORIES
+	self.restoringQuestCategories = true
+	if states then
+		for index = C_QuestLog.GetNumQuestLogEntries(), 1, -1 do
+			local info = C_QuestLog.GetInfo(index)
+			if info and info.isHeader then
+				local collapsed = states[info.headerSortKey or info.title]
+				if collapsed == true and not info.isCollapsed then
+					CollapseQuestHeader(index)
+				elseif collapsed == false and info.isCollapsed then
+					ExpandQuestHeader(index)
+				end
+			end
+		end
+	end
+	self.restoringQuestCategories = nil
+	self.questCategoriesReady = true
+	self:SaveQuestCategories()
+end
+
+if MapUtils:IsForever() and C_QuestLog and CollapseQuestHeader and ExpandQuestHeader then
+	hooksecurefunc("CollapseQuestHeader", function() MapUtils:SaveQuestCategories() end)
+	hooksecurefunc("ExpandQuestHeader", function() MapUtils:SaveQuestCategories() end)
+	WorldMapFrame:HookScript("OnShow", function() MapUtils:RestoreQuestCategories() end)
+	MapUtils.questCategoriesLoader = CreateFrame("Frame")
+	MapUtils.questCategoriesLoader:RegisterEvent("PLAYER_ENTERING_WORLD")
+	MapUtils.questCategoriesLoader:SetScript("OnEvent", function()
+		MapUtils.questCategoriesReady = nil
+		C_Timer.After(0, function() MapUtils:RestoreQuestCategories() end)
+	end)
+end

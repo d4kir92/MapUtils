@@ -970,6 +970,8 @@ local function ApplyEntryTint(pin, entry)
 	pin.texture:SetDesaturated(IsDesaturatedEntry(entry))
 	if entry.kind == "flight" and entry.undiscovered then
 		pin.texture:SetVertexColor(0.55, 0.55, 0.55)
+	elseif entry.kind == "flight" and entry.discoveryKnown and (entry.faction == "Neutral" or type(entry.icon) == "string" and entry.icon:lower():find("neutral", 1, true)) then
+		pin.texture:SetVertexColor(1, 0.82, 0)
 	else
 		pin.texture:SetVertexColor(1, 1, 1)
 	end
@@ -1075,7 +1077,7 @@ local function GetFlights(mapID)
 		if ok and type(nodes) == "table" then
 			for _, node in ipairs(nodes) do
 				local faction = TAXI_FACTIONS[node.faction] or "Neutral"
-				if node.position ~= nil and (faction == "Neutral" or faction == playerFaction) then
+				if node.position ~= nil and (type(node.name) ~= "string" or strfind(strlower(node.name), "^zzold") == nil) and (faction == "Neutral" or faction == playerFaction) then
 					local entry = {}
 					entry.kind = "flight"
 					entry.nodeID = node.nodeID
@@ -1572,9 +1574,18 @@ end
 local function GetWorldPinLevel(child)
 	local level = child:GetFrameLevel() + WORLD_PIN_LEVEL
 	local manager = GetPinLevelsManager()
-	if manager == nil then return level end
-	for _, levelType in ipairs(COVERED_PIN_LEVELS) do
-		level = math.max(level, manager:GetValidFrameLevel(levelType) + 1)
+	if manager ~= nil then
+		for _, levelType in ipairs(COVERED_PIN_LEVELS) do
+			level = math.max(level, manager:GetValidFrameLevel(levelType) + 1)
+		end
+	end
+
+	if WorldMapFrame.EnumeratePinsByTemplate ~= nil then
+		for _, template in ipairs({"LeaMapsGlobalPinTemplate", "FlightPointPinTemplate"}) do
+			for otherPin in WorldMapFrame:EnumeratePinsByTemplate(template) do
+				if otherPin:IsShown() and otherPin:GetFrameStrata() == child:GetFrameStrata() then level = math.max(level, otherPin:GetFrameLevel() + 1) end
+			end
+		end
 	end
 
 	return level
@@ -1582,6 +1593,7 @@ end
 
 local function UpdatePinLevel(pin, isWaypoint)
 	local level = pin.baseLevel
+	if pin.entry ~= nil and pin.entry.kind == "flight" then level = level + 1 end
 	if isWaypoint then
 		local waypointLevel = GetWaypointPinLevel()
 		if waypointLevel ~= nil and waypointLevel >= level then level = waypointLevel + 1 end
@@ -1809,7 +1821,15 @@ local function UpdateWorldPins()
 	local dungeonsOn = DungeonsEnabled(true)
 	local flightsOn = FlightsEnabled(true)
 	local meetingStonesOn = MeetingStonesEnabled(true)
-	if mapID == worldMapID and scale == worldScale and piersOn == worldPiers and dungeonsOn == worldDungeons and flightsOn == worldFlights and meetingStonesOn == worldMeetingStones then return end
+	local baseLevel = GetWorldPinLevel(child)
+	if mapID == worldMapID and scale == worldScale and piersOn == worldPiers and dungeonsOn == worldDungeons and flightsOn == worldFlights and meetingStonesOn == worldMeetingStones then
+		for _, pin in ipairs(worldPins) do
+			pin.baseLevel = baseLevel
+			UpdatePinLevel(pin, pin.entry ~= nil and IsEntryWaypoint(pin.mapID, pin.entry))
+		end
+
+		return
+	end
 	worldMapID = mapID
 	worldScale = scale
 	worldPiers = piersOn
@@ -1826,7 +1846,6 @@ local function UpdateWorldPins()
 	local size = ICON_SIZE / scale
 	local poiScale = GetPoiScale()
 	local dungeonSize = DUNGEON_ICON_SIZE * poiScale / scale
-	local baseLevel = GetWorldPinLevel(child)
 	for i, entry in ipairs(list) do
 		local pin = worldPinPool:Acquire()
 		SetupPin(pin, child, WORLD_PIN_LEVEL, true)
@@ -2181,7 +2200,81 @@ local function ReportIcons()
 	MapUtils:INFO("Use /mappins icon <atlas or texture path> to try one, /mappins icon reset to go back")
 end
 
-local function ReportState()
+function MapUtils:ReportOverlappingTextures(pin)
+	if EnumerateFrames == nil or not pin:IsShown() then return end
+	local px, py = pin.texture:GetCenter()
+	if px == nil or py == nil then return end
+	local scale = pin:GetEffectiveScale()
+	px, py = px * scale, py * scale
+	local function ReportFrame(frame)
+		if not frame:IsShown() then return end
+		local frameScale = frame:GetEffectiveScale()
+		for _, texture in ipairs({frame:GetRegions()}) do
+			if texture:IsObjectType("Texture") and texture:IsShown() and texture:GetWidth() <= 64 and texture:GetHeight() <= 64 then
+				local x, y = texture:GetCenter()
+				if x ~= nil and y ~= nil and math.abs(x * frameScale - px) <= 16 * scale and math.abs(y * frameScale - py) <= 16 * scale then
+					local r, g, b = texture:GetVertexColor()
+					local layer, sublevel = texture:GetDrawLayer()
+					local text = format("nearby texture | own %s | frame %s | parent %s | level %d | strata %s | atlas %s | texture %s | layer %s/%s | alpha %.2f | blend %s | tint %.2f / %.2f / %.2f", tostring(texture == pin.texture), tostring(frame:GetName() or frame), tostring(frame:GetParent() and (frame:GetParent():GetName() or frame:GetParent())), frame:GetFrameLevel(), frame:GetFrameStrata(), tostring(texture:GetAtlas()), tostring(texture:GetTexture()), tostring(layer), tostring(sublevel), texture:GetAlpha(), tostring(texture:GetBlendMode()), r, g, b)
+					self:INFO(text)
+					tinsert(GetCaptures(), text)
+				end
+			end
+		end
+	end
+
+	local frame = EnumerateFrames()
+	while frame do
+		pcall(ReportFrame, frame)
+		frame = EnumerateFrames(frame)
+	end
+end
+
+local function ReportState(filter)
+	if filter ~= nil and filter ~= "" then
+		local needle = strlower(filter)
+		local hits = 0
+		local function ReportPin(pin, surface, index)
+			local entry = pin.entry
+			if entry == nil or strfind(strlower(entry.name or ""), needle, 1, true) == nil then return end
+			hits = hits + 1
+			local r, g, b = pin.texture:GetVertexColor()
+			local text = format("%s pin %d | %s | %s | map %s | %.4f / %.4f | shown %s | waypoint %s | level %d | strata %s | faction %s | icon %s | known %s | undiscovered %s | desaturated %s | tint %.2f / %.2f / %.2f", surface, index, tostring(entry.kind or "pier"), tostring(entry.name), tostring(pin.mapID), entry.x, entry.y, tostring(pin:IsShown()), tostring(IsEntryWaypoint(pin.mapID, entry)), pin:GetFrameLevel(), tostring(pin:GetFrameStrata()), tostring(entry.faction), tostring(pin.icon), tostring(entry.discoveryKnown), tostring(entry.undiscovered), tostring(pin.texture:IsDesaturated()), r, g, b)
+			MapUtils:INFO(text)
+			tinsert(GetCaptures(), text)
+			if surface == "world" and entry.kind == "flight" then MapUtils:ReportOverlappingTextures(pin) end
+			if surface == "world" and WorldMapFrame.pinPools ~= nil then
+				for template, pool in pairs(WorldMapFrame.pinPools) do
+					for otherPin in pool:EnumerateActive() do
+						if otherPin:IsShown() and otherPin.GetPosition ~= nil then
+							local x, y = otherPin:GetPosition()
+							if x ~= nil and y ~= nil and math.abs(x - entry.x) <= 0.005 and math.abs(y - entry.y) <= 0.005 then
+								local texture = otherPin.Texture or otherPin.texture
+								local atlas = texture and texture.GetAtlas and texture:GetAtlas()
+								local cr, cg, cb = 0, 0, 0
+								if texture and texture.GetVertexColor then cr, cg, cb = texture:GetVertexColor() end
+								local otherText = format("overlapping pin | template %s | %.4f / %.4f | level %d | strata %s | atlas %s | tint %.2f / %.2f / %.2f", tostring(template), x, y, otherPin:GetFrameLevel(), tostring(otherPin:GetFrameStrata()), tostring(atlas), cr, cg, cb)
+								MapUtils:INFO(otherText)
+								tinsert(GetCaptures(), otherText)
+							end
+						end
+					end
+				end
+			end
+		end
+
+		for i, pin in ipairs(worldPins) do
+			ReportPin(pin, "world", i)
+		end
+
+		for i, pin in ipairs(minimapPins) do
+			ReportPin(pin, "minimap", i)
+		end
+
+		MapUtils:INFO(format("%d pins matching '%s'; open the relevant map to inspect its pins. Results also saved to SavedVariables.", hits, filter))
+
+		return
+	end
 	local playerMapID = C_Map.GetBestMapForUnit("player")
 	local canvasMapID = nil
 	local mapOpen = false
@@ -2215,6 +2308,10 @@ local function ReportState()
 
 		MapUtils:INFO(format("world pin %d shown = %s offset = %.1f / %.1f size = %.1f level = %d strata = %s", i, tostring(pin:IsShown()), ox, oy, pin:GetWidth(), pin:GetFrameLevel(), tostring(pin:GetFrameStrata())))
 		if pin.entry ~= nil then MapUtils:INFO(format("  %s %s %.4f / %.4f waypoint = %s", tostring(pin.entry.kind or "pier"), tostring(pin.entry.name), pin.entry.x, pin.entry.y, tostring(IsEntryWaypoint(pin.mapID, pin.entry)))) end
+		if pin.entry ~= nil and pin.entry.kind == "flight" then
+			local r, g, b = pin.texture:GetVertexColor()
+			MapUtils:INFO(format("  faction = %s icon = %s known = %s undiscovered = %s tint = %.2f / %.2f / %.2f", tostring(pin.entry.faction), tostring(pin.icon), tostring(pin.entry.discoveryKnown), tostring(pin.entry.undiscovered), r, g, b))
+		end
 	end
 
 	for i, pin in ipairs(minimapPins) do
@@ -2345,7 +2442,7 @@ local function HandleSlash(args)
 	sub = strlower(strtrim(sub or ""))
 	rest = strtrim(rest or "")
 	if sub == "debug" then
-		ReportState()
+		ReportState(rest)
 	elseif sub == "list" then
 		ListCaptures()
 	elseif sub == "clear" then

@@ -127,7 +127,9 @@ end
 
 local function HandleSlash(args)
 	local sub = strlower(strtrim(args or ""))
-	if sub == "debug" then
+	if sub:match("^debug%s+help$") then
+		MapUtils:PrintDebugHelp()
+	elseif sub == "debug" then
 		MapUtils:ToggleDebug()
 	elseif sub == "pos" then
 		MapUtils:PrintPlayerPosition()
@@ -173,6 +175,7 @@ function MapUtils:InitSetting()
 	end)
 
 	AddCategory("WORLDMAP", nil, nil, ADDED_0927)
+	if MapUtils:IsForever() then AddCheckbox("REMEMBERQUESTCATEGORIES", true, function() MapUtils:RestoreQuestCategories() end) end
 	AddCategory("MAPWINDOW", 2, nil, ADDED_0927)
 	AddCheckbox("WORLDMAPMOVE", true, function() MapUtils:RefreshWorldMapFrame() end, nil, ADDED_0927)
 	AddCheckbox("WORLDMAPSCALE", true, function() MapUtils:RefreshWorldMapFrame() end, nil, ADDED_0927)
