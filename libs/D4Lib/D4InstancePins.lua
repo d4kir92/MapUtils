@@ -36,23 +36,8 @@ local BADGE_STYLES = {
 }
 
 local function ApplyIcon(texture, def)
-    if def.resolved == nil then
-        def.resolved = false
-        for _, atlas in ipairs(def[1]) do
-            if D4:AtlasExists(atlas) == true then
-                def.resolved = atlas
-                break
-            end
-        end
-    end
-
-    if def.resolved then
-        texture:SetTexCoord(0, 1, 0, 1)
-        texture:SetAtlas(def.resolved)
-    else
-        texture:SetTexture(def[2])
-        texture:SetTexCoord(0.07, 0.93, 0.07, 0.93)
-    end
+    if def.resolved == nil then def.resolved = D4:FindAtlas(def[1]) or def[2] end
+    D4:SetIconTexture(texture, def.resolved)
 end
 
 local function GetItemTexture(itemID)

@@ -881,61 +881,28 @@ local function GetIcon(faction)
 		return resolvedIcons[faction]
 	end
 
-	for _, atlas in ipairs(ICON_CANDIDATES) do
-		if IsAtlas(atlas) then
-			resolvedIcons[faction] = atlas
-
-			return resolvedIcons[faction]
-		end
-	end
-
-	resolvedIcons[faction] = DEFAULT_ICON
+	resolvedIcons[faction] = MapUtils:FindAtlas(ICON_CANDIDATES) or DEFAULT_ICON
 
 	return resolvedIcons[faction]
 end
 
 local resolvedDungeonIcon = nil
 local function GetDungeonIcon()
-	if resolvedDungeonIcon ~= nil then return resolvedDungeonIcon end
-	for _, atlas in ipairs(DUNGEON_ICON_CANDIDATES) do
-		if IsAtlas(atlas) then
-			resolvedDungeonIcon = atlas
-
-			return resolvedDungeonIcon
-		end
-	end
-
-	resolvedDungeonIcon = DEFAULT_DUNGEON_ICON
+	if resolvedDungeonIcon == nil then resolvedDungeonIcon = MapUtils:FindAtlas(DUNGEON_ICON_CANDIDATES) or DEFAULT_DUNGEON_ICON end
 
 	return resolvedDungeonIcon
 end
 
 local resolvedRaidIcon = nil
 local function GetRaidIcon()
-	if resolvedRaidIcon ~= nil then return resolvedRaidIcon end
-	for _, atlas in ipairs(RAID_ICON_CANDIDATES) do
-		if IsAtlas(atlas) then
-			resolvedRaidIcon = atlas
-
-			return resolvedRaidIcon
-		end
-	end
-
-	resolvedRaidIcon = GetDungeonIcon()
+	if resolvedRaidIcon == nil then resolvedRaidIcon = MapUtils:FindAtlas(RAID_ICON_CANDIDATES) or GetDungeonIcon() end
 
 	return resolvedRaidIcon
 end
 
 local resolvedPathIcon = nil
 local function GetPathIcon()
-	if resolvedPathIcon ~= nil then return resolvedPathIcon or nil end
-	resolvedPathIcon = false
-	for _, atlas in ipairs(PATH_ICON_CANDIDATES) do
-		if IsAtlas(atlas) then
-			resolvedPathIcon = atlas
-			break
-		end
-	end
+	if resolvedPathIcon == nil then resolvedPathIcon = MapUtils:FindAtlas(PATH_ICON_CANDIDATES) or false end
 
 	return resolvedPathIcon or nil
 end
