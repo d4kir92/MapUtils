@@ -50,6 +50,7 @@ locale\names.lua
 core.lua
 pins.lua
 zonelevels.lua
+instancepins.lua
 instancemap.lua
 fader.lua
 mapframe.lua
