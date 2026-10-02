@@ -1234,14 +1234,11 @@ end
 
 function MapUtils:GetLevelColorCode(minLevel, maxLevel)
 	local playerLevel = UnitLevel("player")
+	if playerLevel < minLevel then return MapUtils:GetColorCode(MapUtils:GetLevelDifficultyColor(minLevel)) end
+	if playerLevel > maxLevel then return MapUtils:GetColorCode(MapUtils:GetLevelDifficultyColor(maxLevel - 2)) end
 	local color = QuestDifficultyColors["difficult"]
-	if playerLevel < minLevel then
-		color = GetQuestDifficultyColor(minLevel)
-	elseif playerLevel > maxLevel then
-		color = GetQuestDifficultyColor(maxLevel - 2)
-	end
 
-	return format("|cff%02x%02x%02x", color.r * 255, color.g * 255, color.b * 255)
+	return MapUtils:GetColorCode(color.r, color.g, color.b)
 end
 
 local function GetDungeonLabel(entry)

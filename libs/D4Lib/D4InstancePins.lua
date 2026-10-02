@@ -47,14 +47,6 @@ local function GetItemTexture(itemID)
     return ITEM_ICON_FALLBACK
 end
 
-local function GetBadgeColor(level)
-    if type(GetQuestDifficultyColor) ~= "function" then return 1, 0.82, 0 end
-    local ok, color = pcall(GetQuestDifficultyColor, level)
-    if not ok or type(color) ~= "table" then return 1, 0.82, 0 end
-
-    return color.r or 1, color.g or 1, color.b or 1
-end
-
 local function AddMask(owner, texture)
     if owner.CreateMaskTexture == nil or texture.AddMaskTexture == nil then return end
     local mask = owner:CreateMaskTexture()
@@ -139,7 +131,7 @@ local function StylePin(pin, row, media)
         pin.badgeSkull:SetShown(isSkull)
         if not isSkull then
             pin.badgeText:SetText(level)
-            pin.badgeText:SetTextColor(GetBadgeColor(level))
+            pin.badgeText:SetTextColor(D4:GetLevelDifficultyColor(level))
         end
 
         pin.badge:Show()
