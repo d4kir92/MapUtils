@@ -941,6 +941,8 @@ local function GetPathIcon()
 end
 
 local function IsDesaturatedEntry(entry)
+	if entry.kind == "flight" then return entry.undiscovered == true end
+
 	return entry.kind == "dungeon" and entry.entrance == "path" and entry.icon == nil and GetPathIcon() == nil
 end
 
@@ -964,6 +966,15 @@ local function ApplyIcon(pin, icon)
 	end
 end
 
+local function ApplyEntryTint(pin, entry)
+	pin.texture:SetDesaturated(IsDesaturatedEntry(entry))
+	if entry.kind == "flight" and entry.undiscovered then
+		pin.texture:SetVertexColor(0.55, 0.55, 0.55)
+	else
+		pin.texture:SetVertexColor(1, 1, 1)
+	end
+end
+
 local function GetAtlasWidth(icon)
 	if not IsAtlas(icon) or C_Texture == nil or C_Texture.GetAtlasInfo == nil then return nil end
 	local info = C_Texture.GetAtlasInfo(icon)
@@ -979,6 +990,61 @@ local function GetFlightIcon(node, faction)
 	if IsAtlas(FLIGHT_ICONS[faction]) then return FLIGHT_ICONS[faction] end
 
 	return DEFAULT_FLIGHT_ICON
+end
+
+function MapUtils:GetFlightKnowledge()
+	local guid = UnitGUID("player")
+	if guid == nil or MAUTTAB == nil then return {} end
+	if MAUTTAB.flightKnowledgeVersion ~= 3 then
+		MAUTTAB.flightKnowledge = {}
+		MAUTTAB.flightKnowledgeVersion = 3
+	end
+
+	MAUTTAB.flightKnowledge = MAUTTAB.flightKnowledge or {}
+	MAUTTAB.flightKnowledge[guid] = MAUTTAB.flightKnowledge[guid] or {}
+
+	return MAUTTAB.flightKnowledge[guid]
+end
+
+function MapUtils:CaptureFlightKnowledge()
+	if C_TaxiMap.GetAllTaxiNodes == nil then return end
+	local known = self:GetFlightKnowledge()
+	local forever = self:IsForever()
+	local nativeTypes = {}
+	if forever and NumTaxiNodes ~= nil and TaxiNodeName ~= nil and TaxiNodeGetType ~= nil then
+		for slot = 1, NumTaxiNodes() do
+			local name = TaxiNodeName(slot)
+			if name ~= nil and name ~= "" then nativeTypes[name] = TaxiNodeGetType(slot) end
+		end
+	end
+	local mapID = C_Map.GetBestMapForUnit("player")
+	local visited = {}
+	while mapID ~= nil and mapID ~= 0 and not visited[mapID] do
+		visited[mapID] = true
+		local ok, nodes = pcall(C_TaxiMap.GetAllTaxiNodes, mapID)
+		if ok and type(nodes) == "table" then
+			for _, node in ipairs(nodes) do
+				if node.nodeID ~= nil and not node.isMapLayerTransition then
+					local nodeType
+					if forever then
+						nodeType = nativeTypes[node.name]
+					else
+						nodeType = node.slotIndex ~= nil and TaxiNodeGetType ~= nil and TaxiNodeGetType(node.slotIndex) or nil
+					end
+					if nodeType == "NONE" then
+						known[node.nodeID] = false
+					elseif nodeType == "CURRENT" or nodeType == "REACHABLE" then
+						known[node.nodeID] = true
+					elseif not forever and nodeType == nil and (node.state == 0 or node.state == 1) then
+						known[node.nodeID] = true
+					end
+				end
+			end
+		end
+
+		local info = C_Map.GetMapInfo(mapID)
+		mapID = info ~= nil and info.parentMapID or nil
+	end
 end
 
 local flights = {}
@@ -1002,6 +1068,9 @@ local function GetFlights(mapID)
 					entry.name = MapUtils:TransName(node.name)
 					entry.faction = faction
 					entry.undiscovered = node.isUndiscovered == true
+					local known = MapUtils:GetFlightKnowledge()[node.nodeID]
+					entry.discoveryKnown = entry.undiscovered or known ~= nil or MapUtils:GetWoWBuild() == "RETAIL" and not MapUtils:IsForever() and type(node.isUndiscovered) == "boolean"
+					if not entry.undiscovered and known ~= nil then entry.undiscovered = not known end
 					entry.icon = GetFlightIcon(node, faction)
 					entry.x, entry.y = node.position:GetXY()
 					tinsert(list, entry)
@@ -1015,18 +1084,15 @@ local function GetFlights(mapID)
 	return list
 end
 
-local function GetFlightDescription(entry)
-	if entry.undiscovered then
-		if entry.faction == "Neutral" then
-			if UNDISCOVERED_NEUTRAL_FLIGHTPOINT ~= nil then return UNDISCOVERED_NEUTRAL_FLIGHTPOINT end
-		else
-			local factionName = FACTION_ALLIANCE
-			if entry.faction == "Horde" then factionName = FACTION_HORDE end
-			if UNDISCOVERED_FACTION_FLIGHTPOINT ~= nil and factionName ~= nil then return format(UNDISCOVERED_FACTION_FLIGHTPOINT, factionName) end
-		end
-	end
-
+local function GetFlightDescription()
 	return MapUtils:Trans("LID_FLIGHTPOINT")
+end
+
+local function GetFlightStatus(entry)
+	if not entry.discoveryKnown then return UNKNOWN or "Unknown", 1, 0.82, 0 end
+	if entry.undiscovered then return MapUtils:Trans("LID_FLIGHTUNDISCOVERED"), 1, 0.25, 0.25 end
+
+	return MapUtils:Trans("LID_FLIGHTDISCOVERED"), 0.25, 1, 0.25
 end
 
 local function GetRouteText(route, index)
@@ -1317,7 +1383,9 @@ local function ShowAreaLabel(pin)
 		name = GetDungeonInfo(pin.entry) or pin.entry.name
 		description = MapUtils:Trans("LID_MEETINGSTONE")
 	elseif pin.entry.kind == "flight" then
-		name, description = pin.entry.name, GetFlightDescription(pin.entry)
+		local status, r, g, b = GetFlightStatus(pin.entry)
+		name = pin.entry.name
+		description = format("%s\n|cff%02x%02x%02x%s|r", GetFlightDescription(), math.floor(r * 255), math.floor(g * 255), math.floor(b * 255), status)
 	else
 		name, description = GetPierLabel(pin.entry)
 	end
@@ -1363,7 +1431,8 @@ local function OnPinEnter(pin)
 		GameTooltip:AddLine(MapUtils:Trans("LID_MEETINGSTONE"), 0.6, 0.6, 0.6)
 	elseif entry.kind == "flight" then
 		GameTooltip:AddLine(entry.name, 1, 1, 1)
-		GameTooltip:AddLine(GetFlightDescription(entry), 0.6, 0.6, 0.6)
+		GameTooltip:AddLine(GetFlightDescription(), 0.6, 0.6, 0.6)
+		GameTooltip:AddLine(GetFlightStatus(entry))
 	else
 		GameTooltip:AddLine(entry.name, 1, 1, 1)
 		GameTooltip:AddLine(GetRouteHeader(entry), 0.6, 0.6, 0.6)
@@ -1756,7 +1825,7 @@ local function UpdateWorldPins()
 		pin.minCircleSize = dungeonSize
 		pin.baseLevel = baseLevel
 		ApplyIcon(pin, GetEntryIcon(entry))
-		pin.texture:SetDesaturated(IsDesaturatedEntry(entry))
+		ApplyEntryTint(pin, entry)
 		if entry.kind == "dungeon" and entry.entrance == "path" then
 			pin:SetSize(dungeonSize * 0.7, dungeonSize * 0.7)
 		elseif entry.kind == "dungeon" then
@@ -1839,7 +1908,7 @@ local function UpdateMinimapPins()
 
 		pin.entry = entry
 		ApplyIcon(pin, GetEntryIcon(entry))
-		pin.texture:SetDesaturated(IsDesaturatedEntry(entry))
+		ApplyEntryTint(pin, entry)
 		pin.texture:ClearAllPoints()
 		pin.texture:SetPoint("CENTER", pin, "CENTER")
 		local textureSize = ICON_SIZE * GetEntryIconScale(entry)
@@ -1930,11 +1999,23 @@ end
 if C_TaxiMap ~= nil and C_TaxiMap.GetTaxiNodesForMap ~= nil then
 	local taxiFrame = CreateFrame("FRAME")
 	MapUtils:RegisterEvent(taxiFrame, "TAXI_NODE_STATUS_CHANGED")
+	MapUtils:RegisterEvent(taxiFrame, "TAXIMAP_OPENED")
+	MapUtils:RegisterEvent(taxiFrame, "UI_INFO_MESSAGE")
+	taxiFrame.Refresh = function()
+		wipe(flights)
+		MapUtils:RefreshPins()
+	end
+
 	taxiFrame:SetScript(
 		"OnEvent",
-		function()
-			wipe(flights)
-			MapUtils:RefreshPins()
+		function(self, event, _, message)
+			if event == "TAXIMAP_OPENED" then MapUtils:CaptureFlightKnowledge() end
+			if event == "UI_INFO_MESSAGE" then
+				if ERR_NEWTAXIPATH == nil or message ~= ERR_NEWTAXIPATH then return end
+				if C_Timer ~= nil then C_Timer.After(0.5, self.Refresh) end
+			end
+
+			self.Refresh()
 		end
 	)
 end
