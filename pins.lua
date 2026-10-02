@@ -941,7 +941,7 @@ local function GetPathIcon()
 end
 
 local function IsDesaturatedEntry(entry)
-	if entry.kind == "flight" then return entry.undiscovered == true end
+	if entry.kind == "flight" then return entry.undiscovered == true or not entry.discoveryKnown end
 
 	return entry.kind == "dungeon" and entry.entrance == "path" and entry.icon == nil and GetPathIcon() == nil
 end
@@ -995,9 +995,9 @@ end
 function MapUtils:GetFlightKnowledge()
 	local guid = UnitGUID("player")
 	if guid == nil or MAUTTAB == nil then return {} end
-	if MAUTTAB.flightKnowledgeVersion ~= 3 then
+	if MAUTTAB.flightKnowledgeVersion ~= 4 then
 		MAUTTAB.flightKnowledge = {}
-		MAUTTAB.flightKnowledgeVersion = 3
+		MAUTTAB.flightKnowledgeVersion = 4
 	end
 
 	MAUTTAB.flightKnowledge = MAUTTAB.flightKnowledge or {}
@@ -1017,6 +1017,22 @@ function MapUtils:CaptureFlightKnowledge()
 			if name ~= nil and name ~= "" then nativeTypes[name] = TaxiNodeGetType(slot) end
 		end
 	end
+	local routeNames = {}
+	if NumTaxiNodes ~= nil and TaxiNodeName ~= nil and TaxiNodeGetType ~= nil and GetNumRoutes ~= nil and TaxiGetNodeSlot ~= nil then
+		for slot = 1, NumTaxiNodes() do
+			if TaxiNodeGetType(slot) == "REACHABLE" then
+				for hop = 1, GetNumRoutes(slot) do
+					for _, isSource in ipairs({true, false}) do
+						local routeSlot = TaxiGetNodeSlot(slot, hop, isSource)
+						if type(routeSlot) == "number" and routeSlot >= 1 and routeSlot <= NumTaxiNodes() then
+							local name = TaxiNodeName(routeSlot)
+							if name ~= nil and name ~= "" then routeNames[name] = true end
+						end
+					end
+				end
+			end
+		end
+	end
 	local mapID = C_Map.GetBestMapForUnit("player")
 	local visited = {}
 	while mapID ~= nil and mapID ~= 0 and not visited[mapID] do
@@ -1031,9 +1047,7 @@ function MapUtils:CaptureFlightKnowledge()
 					else
 						nodeType = node.slotIndex ~= nil and TaxiNodeGetType ~= nil and TaxiNodeGetType(node.slotIndex) or nil
 					end
-					if nodeType == "NONE" then
-						known[node.nodeID] = false
-					elseif nodeType == "CURRENT" or nodeType == "REACHABLE" then
+					if nodeType == "CURRENT" or nodeType == "REACHABLE" or routeNames[node.name] then
 						known[node.nodeID] = true
 					elseif not forever and nodeType == nil and (node.state == 0 or node.state == 1) then
 						known[node.nodeID] = true
