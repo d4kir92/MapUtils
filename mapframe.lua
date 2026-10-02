@@ -3,12 +3,6 @@ local MIN_SCALE = 0.5
 local MAX_SCALE = 2
 local SCALE_EPSILON = 0.001
 local GRIP_SIZE = 26
-local MAX_FRAME_LEVEL = 10000
-local STRATA = {"BACKGROUND", "LOW", "MEDIUM", "HIGH", "DIALOG", "FULLSCREEN", "FULLSCREEN_DIALOG", "TOOLTIP"}
-local STRATA_INDEX = {}
-for i, strata in ipairs(STRATA) do
-	STRATA_INDEX[strata] = i
-end
 local frame = WorldMapFrame
 local ready = false
 local foreign = false
@@ -22,34 +16,6 @@ local grip = nil
 local scrollBarsShifted = false
 local fader = nil
 local dragRegions = {"BorderFrame", "TitleCanvasSpacerFrame", "MiniBorderFrame"}
-local function GetStrataIndex(region, index, skip)
-	if region == skip then return index end
-	index = max(index, STRATA_INDEX[region:GetFrameStrata()] or 1)
-	for _, child in ipairs({region:GetChildren()}) do
-		index = GetStrataIndex(child, index, skip)
-	end
-
-	return index
-end
-
-function MapUtils:CreateSizeGrip(parent, size)
-	local sizeGrip = CreateFrame("Button", nil, parent)
-	sizeGrip:SetSize(size, size)
-	sizeGrip:SetPoint("BOTTOMRIGHT", parent, "BOTTOMRIGHT", -2, 2)
-	sizeGrip:SetNormalTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Up")
-	sizeGrip:SetPushedTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Down")
-	sizeGrip:SetHighlightTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Highlight")
-	sizeGrip:Hide()
-
-	return sizeGrip
-end
-
-function MapUtils:RaiseSizeGrip(sizeGrip, root)
-	local index = GetStrataIndex(root, 1, sizeGrip)
-	sizeGrip:SetFrameStrata(STRATA[min(index + 1, #STRATA)])
-	sizeGrip:SetFrameLevel(MAX_FRAME_LEVEL)
-end
-
 function MapUtils:GetCursorUi()
 	local x, y = GetCursorPosition()
 	local s = UIParent:GetEffectiveScale()
@@ -331,8 +297,8 @@ if frame ~= nil then
 	fader = MapUtils:CreateMoveFader(
 		frame,
 		{
-			["enabledKey"] = "WORLDMAPFADE",
-			["opacityKey"] = "WORLDMAPFADEOPACITY",
+			["isEnabled"] = function() return type(MAUTTAB) == "table" and MAUTTAB["WORLDMAPFADE"] == true end,
+			["getOpacity"] = function() return MAUTTAB["WORLDMAPFADEOPACITY"] end,
 			["hookSetAlpha"] = true,
 			["isBusy"] = function() return dragging or sizing ~= nil end
 		}

@@ -53,31 +53,8 @@ local function AddCategory(key, level, label, added)
 	})
 end
 
-local dependents = {}
-local function UpdateDependents()
-	for _, dep in ipairs(dependents) do
-		local enabled = type(MAUTTAB) == "table" and MAUTTAB[dep.key] == true
-		if dep.control.slider and enabled then
-			dep.control.slider:Enable()
-		elseif dep.control.slider then
-			dep.control.slider:Disable()
-		else
-			dep.control:SetEnabled(enabled)
-		end
-
-		local holder = dep.control.holder or dep.control
-		holder:SetAlpha(enabled and 1 or 0.5)
-	end
-end
-
 local function Requires(control, key)
-	control.uiElement.depth = control.uiElement.depth + 1
-	tinsert(dependents, {
-		["control"] = control,
-		["key"] = key
-	})
-
-	return control
+	return maset:AddDependency(control, function() return type(MAUTTAB) == "table" and MAUTTAB[key] == true end)
 end
 
 local function AddCheckbox(key, default, func, label, added)
@@ -89,7 +66,7 @@ local function AddCheckbox(key, default, func, label, added)
 		["func"] = function(value)
 			MapUtils:SV(MAUTTAB, key, value)
 			if func then func() end
-			UpdateDependents()
+			maset:UpdateDependencies()
 		end
 	})
 end
@@ -221,7 +198,7 @@ function MapUtils:InitSetting()
 	AddCategory("FLIGHTPOINTS", 2)
 	AddCheckbox("FLIGHTWORLDMAPPINS", true, function() MapUtils:RefreshPins() end, "LID_WORLDMAPPINS")
 	AddCheckbox("FLIGHTMINIMAPPINS", true, function() MapUtils:RefreshPins() end, "LID_MINIMAPPINS")
-	UpdateDependents()
+	maset:UpdateDependencies()
 	maset:ResumeLayout()
 	MapUtils:CreateMinimapButton({
 		["name"] = "MapUtils",

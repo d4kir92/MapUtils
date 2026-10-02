@@ -124,8 +124,8 @@ local function Init()
 	fader = MapUtils:CreateMoveFader(
 		frame,
 		{
-			["enabledKey"] = "BATTLEFIELDMAPFADE",
-			["opacityKey"] = "BATTLEFIELDMAPFADEOPACITY",
+			["isEnabled"] = function() return type(MAUTTAB) == "table" and MAUTTAB["BATTLEFIELDMAPFADE"] == true end,
+			["getOpacity"] = function() return MAUTTAB["BATTLEFIELDMAPFADEOPACITY"] end,
 			["isBusy"] = function() return sizing ~= nil end
 		}
 	)
