@@ -913,24 +913,67 @@ local function IsDesaturatedEntry(entry)
 	return entry.kind == "dungeon" and entry.entrance == "path" and entry.icon == nil and GetPathIcon() == nil
 end
 
+local SPLIT_ICON = {"dungeon", "raid"}
 local function GetEntryIcon(entry)
 	if entry.icon ~= nil then return entry.icon end
 	if entry.kind == "dungeon" and entry.entrance == "path" and GetPathIcon() ~= nil then return GetPathIcon() end
 	if entry.kind == "dungeon" and entry.entrance == "raid" then return GetRaidIcon() end
+	if entry.kind == "dungeon" and entry.entrance == "both" then return SPLIT_ICON end
 	if entry.kind == "dungeon" then return GetDungeonIcon() end
 	if entry.kind == "meetingstone" then return MEETING_STONE_ICON end
 
 	return GetIcon(entry.faction)
 end
 
+local function SetTextureIcon(texture, icon, half)
+	if IsAtlas(icon) and texture.SetAtlas ~= nil then
+		texture:SetAtlas(icon)
+	else
+		texture:SetTexture(icon)
+		texture:SetTexCoord(0, 1, 0, 1)
+	end
+
+	if half == nil then return end
+	local left, top, _, bottom, right = texture:GetTexCoord()
+	local middle = (left + right) / 2
+	if half == "right" then
+		texture:SetTexCoord(middle, right, top, bottom)
+	else
+		texture:SetTexCoord(left, middle, top, bottom)
+	end
+end
+
 local function ApplyIcon(pin, icon)
 	if pin.icon == icon then return end
 	pin.icon = icon
-	if IsAtlas(icon) and pin.texture.SetAtlas ~= nil then
-		pin.texture:SetAtlas(icon)
-	else
-		pin.texture:SetTexture(icon)
+	pin.splitIcon = icon == SPLIT_ICON
+	if pin.splitIcon then
+		if pin.textureRight == nil then pin.textureRight = pin:CreateTexture(nil, "OVERLAY") end
+		SetTextureIcon(pin.texture, GetDungeonIcon(), "left")
+		SetTextureIcon(pin.textureRight, GetRaidIcon(), "right")
+
+		return
 	end
+
+	if pin.textureRight ~= nil then pin.textureRight:Hide() end
+	SetTextureIcon(pin.texture, icon)
+end
+
+local function LayoutPinIcon(pin, size, x, y)
+	pin.texture:ClearAllPoints()
+	if not pin.splitIcon then
+		pin.texture:SetPoint("CENTER", pin, "CENTER", x, y)
+		pin.texture:SetSize(size, size)
+
+		return
+	end
+
+	pin.texture:SetPoint("RIGHT", pin, "CENTER", x, y)
+	pin.texture:SetSize(size / 2, size)
+	pin.textureRight:ClearAllPoints()
+	pin.textureRight:SetPoint("LEFT", pin, "CENTER", x, y)
+	pin.textureRight:SetSize(size / 2, size)
+	pin.textureRight:Show()
 end
 
 local function ApplyEntryTint(pin, entry)
@@ -941,6 +984,11 @@ local function ApplyEntryTint(pin, entry)
 		pin.texture:SetVertexColor(1, 0.82, 0)
 	else
 		pin.texture:SetVertexColor(1, 1, 1)
+	end
+
+	if pin.textureRight ~= nil then
+		pin.textureRight:SetDesaturated(pin.texture:IsDesaturated())
+		pin.textureRight:SetVertexColor(pin.texture:GetVertexColor())
 	end
 end
 
@@ -1589,9 +1637,7 @@ local function UpdatePinStyle(pin)
 
 	local offset = 0
 	if pin.pushed then offset = PUSHED_OFFSET * (pin.pixel or 1) end
-	pin.texture:ClearAllPoints()
-	pin.texture:SetPoint("CENTER", pin, "CENTER", offset, -offset)
-	pin.texture:SetSize(size, size)
+	LayoutPinIcon(pin, size, offset, -offset)
 end
 
 local function IsCovered()
@@ -1895,10 +1941,7 @@ local function UpdateMinimapPins()
 		pin.entry = entry
 		ApplyIcon(pin, GetEntryIcon(entry))
 		ApplyEntryTint(pin, entry)
-		pin.texture:ClearAllPoints()
-		pin.texture:SetPoint("CENTER", pin, "CENTER")
-		local textureSize = ICON_SIZE * GetEntryIconScale(entry)
-		pin.texture:SetSize(textureSize, textureSize)
+		LayoutPinIcon(pin, ICON_SIZE * GetEntryIconScale(entry), 0, 0)
 		local pos = GetEntryWorldPos(mapID, entry)
 		if pos == nil then
 			pin:Hide()
