@@ -25,6 +25,7 @@
 ## Category-ruRU: Карта
 ## Category-zhCN: 地图
 ## Category-zhTW: 地圖
+## OptionalDeps: AzerothCompendium
 ## DefaultState: enabled
 ## SavedVariables: MAUTTAB
 ## SavedVariablesPerCharacter: MAUTTABPC

@@ -219,4 +219,26 @@ end
 
 local loader = CreateFrame("FRAME")
 MapUtils:RegisterEvent(loader, "PLAYER_LOGIN")
-loader:SetScript("OnEvent", function() MapUtils:InitSetting() end)
+
+function MapUtils:RegisterCompendiumTabs()
+	local api = _G["AzerothCompendiumAPI"]
+	if type(api) ~= "table" or type(api.RegisterTab) ~= "function" then return end
+	api.RegisterTab("MapUtils", {
+		label = "MapUtils",
+		icon = ICON,
+		onClick = function()
+			if maset ~= nil then maset:Show() end
+		end
+	})
+end
+
+loader:RegisterEvent("ADDON_LOADED")
+loader:SetScript("OnEvent", function(_, event, name)
+	if event == "PLAYER_LOGIN" then
+		MapUtils:InitSetting()
+		MapUtils:RegisterCompendiumTabs()
+	elseif name == "AzerothCompendium" then
+		MapUtils:RegisterCompendiumTabs()
+	end
+end)
+MapUtils:RegisterCompendiumTabs()
