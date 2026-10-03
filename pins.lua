@@ -30,6 +30,10 @@ local DEFAULT_DUNGEON_ICON = "Interface\\Icons\\INV_Misc_Bone_Skull_02"
 local DUNGEON_ICON_CANDIDATES = {"Dungeon", "DungeonSkull", "Dungeon-Normal"}
 local PATH_ICON_CANDIDATES = {"CaveUnderground-Down", "CaveUnderground-Up"}
 local RAID_ICON_CANDIDATES = {"Raid"}
+local CROSSING_ICON_CANDIDATES = {}
+CROSSING_ICON_CANDIDATES["down"] = {"CaveUnderground-Down", "Garr_LevelUpgradeArrow"}
+CROSSING_ICON_CANDIDATES["up"] = {"CaveUnderground-Up", "Garr_LevelUpgradeArrow"}
+local DEFAULT_CROSSING_ICON = "Interface\\Icons\\INV_Misc_Map_01"
 local MEETING_STONE_ICON = "Interface\\AddOns\\MapUtils\\media\\meetingstone"
 local DEFAULT_FLIGHT_ICON = "Interface\\TaxiFrame\\UI-Taxi-Icon-Green"
 local FLIGHT_ICONS = {}
@@ -907,6 +911,14 @@ local function GetPathIcon()
 	return resolvedPathIcon or nil
 end
 
+local resolvedCrossingIcons = {}
+local function GetCrossingIcon(up)
+	local direction = up == true and "up" or "down"
+	if resolvedCrossingIcons[direction] == nil then resolvedCrossingIcons[direction] = MapUtils:FindAtlas(CROSSING_ICON_CANDIDATES[direction]) or DEFAULT_CROSSING_ICON end
+
+	return resolvedCrossingIcons[direction]
+end
+
 local function IsDesaturatedEntry(entry)
 	if entry.kind == "flight" then return entry.undiscovered == true or not entry.discoveryKnown end
 
@@ -921,6 +933,7 @@ local function GetEntryIcon(entry)
 	if entry.kind == "dungeon" and entry.entrance == "both" then return SPLIT_ICON end
 	if entry.kind == "dungeon" then return GetDungeonIcon() end
 	if entry.kind == "meetingstone" then return MEETING_STONE_ICON end
+	if entry.kind == "crossing" then return GetCrossingIcon(entry.up) end
 
 	return GetIcon(entry.faction)
 end
@@ -1113,6 +1126,54 @@ local function GetFlights(mapID)
 	flights[mapID] = list
 
 	return list
+end
+
+local crossings = {}
+local function GetCrossings(mapID)
+	if crossings[mapID] ~= nil then return crossings[mapID] end
+	local list = {}
+	local rows = MapUtils.GetZoneCrossings ~= nil and MapUtils:GetZoneCrossings(mapID) or nil
+	for _, row in ipairs(rows or {}) do
+		local dests = type(row[3]) == "table" and row[3] or {row[3]}
+		local names = {}
+		for _, destMapID in ipairs(dests) do
+			local info = C_Map.GetMapInfo(destMapID)
+			if info ~= nil and info.name ~= nil and info.name ~= "" then tinsert(names, info.name) end
+		end
+
+		local tips = {}
+		for i = 4, #row do
+			tinsert(tips, MapUtils:TransName(row[i]))
+		end
+
+		if #names > 0 then
+			tinsert(
+				list,
+				{
+					["kind"] = "crossing",
+					["x"] = row[1],
+					["y"] = row[2],
+					["destMapID"] = dests[1],
+					["name"] = table.concat(names, ", "),
+					["tips"] = tips,
+					["up"] = row.up == true
+				}
+			)
+		end
+	end
+
+	crossings[mapID] = list
+
+	return list
+end
+
+local function GetCrossingLabel(entry)
+	local lines = {MapUtils:Trans("LID_ZONECROSSING")}
+	for _, tip in ipairs(entry.tips) do
+		tinsert(lines, format("|cffffd100%s|r", tip))
+	end
+
+	return entry.name, table.concat(lines, "\n")
 end
 
 local function GetFlightDescription()
@@ -1368,6 +1429,7 @@ local function GetPierLabel(entry)
 end
 
 local function GetDestinationMapID(entry)
+	if entry.destMapID ~= nil then return entry.destMapID end
 	if type(entry.routes) ~= "table" then return nil end
 	local route = entry.routes[1]
 	if type(route) ~= "table" then return nil end
@@ -1410,6 +1472,8 @@ local function ShowAreaLabel(pin)
 	elseif pin.entry.kind == "meetingstone" then
 		name = GetDungeonInfo(pin.entry) or pin.entry.name
 		description = MapUtils:Trans("LID_MEETINGSTONE")
+	elseif pin.entry.kind == "crossing" then
+		name, description = GetCrossingLabel(pin.entry)
 	elseif pin.entry.kind == "flight" then
 		local status, r, g, b = GetFlightStatus(pin.entry)
 		name = pin.entry.name
@@ -1457,6 +1521,12 @@ local function OnPinEnter(pin)
 		local name = GetDungeonInfo(entry)
 		GameTooltip:AddLine(name or entry.name, 1, 1, 1)
 		GameTooltip:AddLine(MapUtils:Trans("LID_MEETINGSTONE"), 0.6, 0.6, 0.6)
+	elseif entry.kind == "crossing" then
+		GameTooltip:AddLine(entry.name, 1, 1, 1)
+		GameTooltip:AddLine(MapUtils:Trans("LID_ZONECROSSING"), 0.6, 0.6, 0.6)
+		for _, tip in ipairs(entry.tips) do
+			GameTooltip:AddLine(tip, 1, 0.82, 0)
+		end
 	elseif entry.kind == "flight" then
 		GameTooltip:AddLine(entry.name, 1, 1, 1)
 		GameTooltip:AddLine(GetFlightDescription(), 0.6, 0.6, 0.6)
@@ -1667,7 +1737,9 @@ end
 
 local function OnPinClick(pin, button)
 	local entry = pin.entry
-	if entry ~= nil and IsPinMouseOver(pin) then
+	if entry ~= nil and button == "LeftButton" and pin.worldMap and MapUtils:IsDebug() and MapUtils:IsPinEditable(entry) then
+		MapUtils:SelectDebugPin(pin.mapID, entry)
+	elseif entry ~= nil and IsPinMouseOver(pin) then
 		if IsCovered() then
 			if button == "RightButton" then MapUtils:ToggleInstanceMap() end
 		elseif button == "LeftButton" then
@@ -1749,9 +1821,22 @@ local function MeetingStonesEnabled(worldMap)
 	return MapUtils:GetConfig("MEETINGSTONEMINIMAPPINS", true) == true
 end
 
-local function BuildList(mapID, piersOn, dungeonsOn, flightsOn, meetingStonesOn)
+local function CrossingsEnabled()
+	return MapUtils:GetConfig("CROSSINGWORLDMAPPINS", true) == true
+end
+
+local function BuildList(mapID, piersOn, dungeonsOn, flightsOn, meetingStonesOn, crossingsOn)
 	if mapID == nil then return nil end
 	local list = nil
+	local crossingList = nil
+	if crossingsOn then crossingList = GetCrossings(mapID) end
+	if crossingList ~= nil and #crossingList > 0 then
+		list = {}
+		for _, entry in ipairs(crossingList) do
+			tinsert(list, entry)
+		end
+	end
+
 	if piersOn and piers[mapID] ~= nil then
 		list = list or {}
 		for _, entry in ipairs(piers[mapID]) do
@@ -1782,6 +1867,8 @@ local function BuildList(mapID, piersOn, dungeonsOn, flightsOn, meetingStonesOn)
 		end
 	end
 
+	if MapUtils.ApplyPinEdits ~= nil then list = MapUtils:ApplyPinEdits(mapID, list, crossingsOn) end
+
 	return list
 end
 
@@ -1811,6 +1898,7 @@ local worldPiers = nil
 local worldDungeons = nil
 local worldFlights = nil
 local worldMeetingStones = nil
+local worldCrossings = nil
 local function UpdateWorldPins()
 	local child = GetWorldCanvas()
 	if child == nil or worldPinPool == nil then return end
@@ -1820,8 +1908,9 @@ local function UpdateWorldPins()
 	local dungeonsOn = DungeonsEnabled(true)
 	local flightsOn = FlightsEnabled(true)
 	local meetingStonesOn = MeetingStonesEnabled(true)
+	local crossingsOn = CrossingsEnabled()
 	local baseLevel = GetWorldPinLevel(child)
-	if mapID == worldMapID and scale == worldScale and piersOn == worldPiers and dungeonsOn == worldDungeons and flightsOn == worldFlights and meetingStonesOn == worldMeetingStones then
+	if mapID == worldMapID and scale == worldScale and piersOn == worldPiers and dungeonsOn == worldDungeons and flightsOn == worldFlights and meetingStonesOn == worldMeetingStones and crossingsOn == worldCrossings then
 		for _, pin in ipairs(worldPins) do
 			pin.baseLevel = baseLevel
 			UpdatePinLevel(pin, pin.entry ~= nil and IsEntryWaypoint(pin.mapID, pin.entry))
@@ -1835,9 +1924,10 @@ local function UpdateWorldPins()
 	worldDungeons = dungeonsOn
 	worldFlights = flightsOn
 	worldMeetingStones = meetingStonesOn
+	worldCrossings = crossingsOn
 	worldPinPool:ReleaseAll()
 	wipe(worldPins)
-	local list = BuildList(mapID, piersOn, dungeonsOn, flightsOn, meetingStonesOn)
+	local list = BuildList(mapID, piersOn, dungeonsOn, flightsOn, meetingStonesOn, crossingsOn)
 	if list == nil then return end
 	if scale == nil or scale <= 0 then return end
 	local w = child:GetWidth()
@@ -1858,7 +1948,7 @@ local function UpdateWorldPins()
 		pin.baseLevel = baseLevel
 		ApplyIcon(pin, GetEntryIcon(entry))
 		ApplyEntryTint(pin, entry)
-		if entry.kind == "dungeon" and entry.entrance == "path" then
+		if entry.kind == "crossing" or entry.kind == "dungeon" and entry.entrance == "path" then
 			pin:SetSize(dungeonSize * 0.7, dungeonSize * 0.7)
 		elseif entry.kind == "dungeon" then
 			pin:SetSize(dungeonSize, dungeonSize)
@@ -1872,6 +1962,7 @@ local function UpdateWorldPins()
 		UpdatePinStyle(pin)
 		pin:ClearAllPoints()
 		pin:SetPoint("CENTER", child, "TOPLEFT", w * entry.x, -h * entry.y)
+		pin:SetAlpha(MapUtils:GetDebugPinAlpha(entry))
 		pin:Show()
 	end
 end
@@ -2130,8 +2221,10 @@ local function RefreshIcons()
 	worldDungeons = nil
 	worldFlights = nil
 	worldMeetingStones = nil
+	worldCrossings = nil
 	resolvedDungeonIcon = nil
 	resolvedRaidIcon = nil
+	wipe(resolvedCrossingIcons)
 end
 
 function MapUtils:RefreshPins()
@@ -2141,6 +2234,7 @@ function MapUtils:RefreshPins()
 	worldDungeons = nil
 	worldFlights = nil
 	worldMeetingStones = nil
+	worldCrossings = nil
 	minimapMapID = nil
 	minimapPiers = nil
 	minimapDungeons = nil

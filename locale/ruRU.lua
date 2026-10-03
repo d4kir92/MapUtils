@@ -69,3 +69,5 @@ MapUtils:AddTrans("ruRU", "LID_SHOWENTRANCEPINS", "Показать метки �
 MapUtils:AddTrans("ruRU", "LID_HIDEENTRANCEPINS", "Скрыть метки входов")
 MapUtils:AddTrans("ruRU", "LID_SHOWLEVELPINS", "Показать метки переходов между уровнями")
 MapUtils:AddTrans("ruRU", "LID_HIDELEVELPINS", "Скрыть метки переходов между уровнями")
+MapUtils:AddTrans("ruRU", "LID_ZONECROSSINGS", "Переходы между зонами")
+MapUtils:AddTrans("ruRU", "LID_ZONECROSSING", "Переход в другую зону")

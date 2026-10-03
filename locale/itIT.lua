@@ -69,3 +69,5 @@ MapUtils:AddTrans("itIT", "LID_SHOWENTRANCEPINS", "Mostra i segnalini degli ingr
 MapUtils:AddTrans("itIT", "LID_HIDEENTRANCEPINS", "Nascondi i segnalini degli ingressi")
 MapUtils:AddTrans("itIT", "LID_SHOWLEVELPINS", "Mostra i segnalini dei cambi di livello")
 MapUtils:AddTrans("itIT", "LID_HIDELEVELPINS", "Nascondi i segnalini dei cambi di livello")
+MapUtils:AddTrans("itIT", "LID_ZONECROSSINGS", "Passaggi di zona")
+MapUtils:AddTrans("itIT", "LID_ZONECROSSING", "Passaggio di zona")

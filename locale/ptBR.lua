@@ -69,3 +69,5 @@ MapUtils:AddTrans("ptBR", "LID_SHOWENTRANCEPINS", "Mostrar marcadores de entrada
 MapUtils:AddTrans("ptBR", "LID_HIDEENTRANCEPINS", "Ocultar marcadores de entradas")
 MapUtils:AddTrans("ptBR", "LID_SHOWLEVELPINS", "Mostrar marcadores de troca de nível")
 MapUtils:AddTrans("ptBR", "LID_HIDELEVELPINS", "Ocultar marcadores de troca de nível")
+MapUtils:AddTrans("ptBR", "LID_ZONECROSSINGS", "Passagens entre zonas")
+MapUtils:AddTrans("ptBR", "LID_ZONECROSSING", "Passagem para outra zona")

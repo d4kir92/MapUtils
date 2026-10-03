@@ -69,3 +69,5 @@ MapUtils:AddTrans("esMX", "LID_SHOWENTRANCEPINS", "Mostrar marcadores de entrada
 MapUtils:AddTrans("esMX", "LID_HIDEENTRANCEPINS", "Ocultar marcadores de entradas")
 MapUtils:AddTrans("esMX", "LID_SHOWLEVELPINS", "Mostrar marcadores de cambio de nivel")
 MapUtils:AddTrans("esMX", "LID_HIDELEVELPINS", "Ocultar marcadores de cambio de nivel")
+MapUtils:AddTrans("esMX", "LID_ZONECROSSINGS", "Pasos entre zonas")
+MapUtils:AddTrans("esMX", "LID_ZONECROSSING", "Paso a otra zona")

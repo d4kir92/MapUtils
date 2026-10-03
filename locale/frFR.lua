@@ -69,3 +69,5 @@ MapUtils:AddTrans("frFR", "LID_SHOWENTRANCEPINS", "Afficher les repères d'entr�
 MapUtils:AddTrans("frFR", "LID_HIDEENTRANCEPINS", "Masquer les repères d'entrée")
 MapUtils:AddTrans("frFR", "LID_SHOWLEVELPINS", "Afficher les repères de changement de niveau")
 MapUtils:AddTrans("frFR", "LID_HIDELEVELPINS", "Masquer les repères de changement de niveau")
+MapUtils:AddTrans("frFR", "LID_ZONECROSSINGS", "Passages de zone")
+MapUtils:AddTrans("frFR", "LID_ZONECROSSING", "Passage de zone")

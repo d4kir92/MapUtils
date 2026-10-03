@@ -4,6 +4,7 @@ local DEFAULT_WIDTH = 420
 local DEFAULT_HEIGHT = 300
 local ADDED_0927 = "2026-09-27"
 local ADDED_0928 = "2026-09-28"
+local ADDED_1003 = "2026-10-03"
 local maset = nil
 local function GetTocVersion()
 	if C_AddOns and C_AddOns.GetAddOnMetadata then return C_AddOns.GetAddOnMetadata("MapUtils", "Version") end
@@ -198,6 +199,8 @@ function MapUtils:InitSetting()
 	AddCategory("FLIGHTPOINTS", 2)
 	AddCheckbox("FLIGHTWORLDMAPPINS", true, function() MapUtils:RefreshPins() end, "LID_WORLDMAPPINS")
 	AddCheckbox("FLIGHTMINIMAPPINS", true, function() MapUtils:RefreshPins() end, "LID_MINIMAPPINS")
+	AddCategory("ZONECROSSINGS", 2, nil, ADDED_1003)
+	AddCheckbox("CROSSINGWORLDMAPPINS", true, function() MapUtils:RefreshPins() end, "LID_WORLDMAPPINS", ADDED_1003)
 	maset:UpdateDependencies()
 	maset:ResumeLayout()
 	MapUtils:CreateMinimapButton({
