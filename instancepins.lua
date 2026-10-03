@@ -14,7 +14,7 @@ MapUtils.INSTANCEPINS = {
 		{"entrance", 0.080, 0.610},
 		{"boss", 0.340, 0.570, 260322, "Saltspine", false, 144209, 1},
 		{"boss", 0.635, 0.250, 260326, "Relic Guardian", false, 144224, 1},
-		{"boss", 0.775, 0.690, 260325, "Shadetooth", false, 144210, 1},
+		{"boss", 0.715, 0.530, 260325, "Shadetooth", false, 144210, 1},
 		{"boss", 0.790, 0.280, 260808, "Highland Horror", false, 9010, 1},
 	},
 	["2999"] = {
@@ -241,9 +241,26 @@ MapUtils.INSTANCEPINS = {
 		{"entrance", 0.333, 0.791},
 	},
 	["232"] = {
-		{"entrance", 0.264, 0.226},
-		{"boss", 0.840, 0.660, 12259, "Gehennas", 63, 13030, 3},
+		{"entrance", 0.264, 0.226, "raid"},
+		{"boss", 0.660, 0.370, 12118, "Lucifron", 63, 13031, 3},
+		{"boss", 0.695, 0.230, 11982, "Magmadar", 63, 10193, 3},
+		{"boss", 0.350, 0.490, 12259, "Gehennas", 63, 13030, 3},
+		{"boss", 0.315, 0.690, 12057, "Garr", 63, 12110, 3},
+		{"boss", 0.550, 0.850, 12264, "Shazzrah", 63, 13032, 3},
+		{"boss", 0.535, 0.750, 12056, "Baron Geddon", 63, 12129, 3},
+		{"boss", 0.810, 0.820, 12098, "Sulfuron Harbinger", 63, 13030, 3},
+		{"boss", 0.685, 0.570, 11988, "Golemagg the Incinerator", 63, 11986, 3},
+		{"boss", 0.840, 0.660, 12018, "Majordomo Executus", 63, 12029, 3},
 		{"boss", 0.548, 0.540, 11502, "Ragnaros", 63, 11121, 3},
+	},
+	["287"] = {
+		{"entrance", 0.527, 0.836, "raid"},
+		{"level", 0.435, 0.300, "288", true},
+		{"level", 0.360, 0.130, "288", true},
+	},
+	["288"] = {
+		{"level", 0.525, 0.320, "287"},
+		{"level", 0.463, 0.198, "287"},
 	},
 	["234"] = {
 		{"entrance", 0.718, 0.926},
@@ -260,6 +277,23 @@ MapUtils.INSTANCEPINS = {
 		{"level", 0.355, 0.390, "317"},
 		{"level", 0.570, 0.770, "317"},
 	},
+	["233"] = {
+		{"entrance", 0.290, 0.490, "raid"},
+		{"boss", 0.390, 0.730, 14517, "High Priestess Jeklik", 63, 15219, 3},
+		{"boss", 0.515, 0.540, 14507, "High Priest Venoxis", 63, 15217, 3},
+		{"boss", 0.470, 0.770, 14510, "High Priestess Mar'li", 63, 15220, 3},
+		{"boss", 0.625, 0.680, 11382, "Bloodlord Mandokir", 63, 11288, 3},
+		{"boss", 0.600, 0.462, 15082, "Gri'lek / Hazza'rah / Renataki / Wushoolay", 63, 8390, 3},
+		{"boss", 0.535, 0.320, 15114, "Gahz'ranka", 63, 15288, 3},
+		{"boss", 0.620, 0.340, 14509, "High Priest Thekal", 63, 15216, 3},
+		{"boss", 0.475, 0.190, 14515, "High Priestess Arlokk", 63, 15218, 3},
+		{"boss", 0.310, 0.240, 11380, "Jin'do the Hexxer", 63, 11311, 3},
+		{"boss", 0.505, 0.390, 14834, "Hakkar", 63, 15295, 3},
+	},
+	["248"] = {
+		{"entrance", 0.341, 0.205, "raid"},
+		{"boss", 0.670, 0.310, 10184, "Onyxia", 63, 8570, 3},
+	},
 }
 
 MapUtils:AddName("deDE", "Aggem Thorncurse", "Aggem Dornfluch")
@@ -268,6 +302,7 @@ MapUtils:AddName("deDE", "Arcanist Doan", "Arkanist Doan")
 MapUtils:AddName("deDE", "Archmage Arugal", "Erzmagier Arugal")
 MapUtils:AddName("deDE", "Azshir the Sleepless", "Azshir der Schlaflose")
 MapUtils:AddName("deDE", "Baelog / Eric \"The Swift\" / Olaf", "Baelog / Eric \"Der Flinke\" / Olaf")
+MapUtils:AddName("deDE", "Bloodlord Mandokir", "Blutfürst Mandokir")
 MapUtils:AddName("deDE", "Bloodmage Thalnos", "Blutmagier Thalnos")
 MapUtils:AddName("deDE", "Bruegal Ironknuckle", "Bruegal Eisenfaust")
 MapUtils:AddName("deDE", "Chief Ukorz Sandscalp", "Häuptling Ukorz Sandscalp")
@@ -282,13 +317,21 @@ MapUtils:AddName("deDE", "Electrocutioner 6000", "Elektrokutionator 6000")
 MapUtils:AddName("deDE", "Fallen Champion", "Gestürzter Held")
 MapUtils:AddName("deDE", "Fenrus the Devourer", "Fenrus der Verschlinger")
 MapUtils:AddName("deDE", "Glutton", "Nimmersatt")
+MapUtils:AddName("deDE", "Golemagg the Incinerator", "Golemagg der Verbrenner")
 MapUtils:AddName("deDE", "High Inquisitor Fairbanks", "Hochinquisitor Fairbanks")
 MapUtils:AddName("deDE", "High Inquisitor Whitemane", "Hochinquisitor Whitemane")
+MapUtils:AddName("deDE", "High Priest Thekal", "Hohepriester Thekal")
+MapUtils:AddName("deDE", "High Priest Venoxis", "Hohepriester Venoxis")
+MapUtils:AddName("deDE", "High Priestess Arlokk", "Hohepriesterin Arlokk")
+MapUtils:AddName("deDE", "High Priestess Jeklik", "Hohepriesterin Jeklik")
+MapUtils:AddName("deDE", "High Priestess Mar'li", "Hohepriesterin Mar'li")
 MapUtils:AddName("deDE", "Houndmaster Loksey", "Hundemeister Loksey")
 MapUtils:AddName("deDE", "Interrogator Vishas", "Befrager Vishas")
 MapUtils:AddName("deDE", "Ironspine", "Eisenrücken")
 MapUtils:AddName("deDE", "Jergosh the Invoker", "Jergosh der Herbeirufer")
+MapUtils:AddName("deDE", "Jin'do the Hexxer", "Jin'do der Verhexer")
 MapUtils:AddName("deDE", "Lord Cobrahn", "Lord Kobrahn")
+MapUtils:AddName("deDE", "Majordomo Executus", "Majordomus Exekutus")
 MapUtils:AddName("deDE", "Mekgineer Thermaplugg", "Robogenieur Thermaplugg")
 MapUtils:AddName("deDE", "Miner Johnson", "Minenarbeiter Johnson")
 MapUtils:AddName("deDE", "Mordresh Fire Eye", "Mordresh Feuerauge")
@@ -303,6 +346,7 @@ MapUtils:AddName("deDE", "Rotgrip", "Faulschnapper")
 MapUtils:AddName("deDE", "Scarlet Commander Mograine", "Scharlachroter Kommandant Mograine")
 MapUtils:AddName("deDE", "Shadowpriest Sezz'ziz", "Schattenpriester Sezz'ziz")
 MapUtils:AddName("deDE", "Sneed's Shredder / Sneed", "Sneeds Schredder / Sneed")
+MapUtils:AddName("deDE", "Sulfuron Harbinger", "Sulfuronherold")
 MapUtils:AddName("deDE", "Taragaman the Hungerer", "Taragaman der Hungerleider")
 MapUtils:AddName("deDE", "Targorr the Dread", "Targorr der Schreckliche")
 MapUtils:AddName("deDE", "Twilight Lord Kelris", "Twilight-Lord Kelris")

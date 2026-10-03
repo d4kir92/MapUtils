@@ -322,7 +322,7 @@ local function OnMapPinEnter(pin)
 		GameTooltip:SetText(GetLevelLabel(shownLevels, shownLevels[pin.level]))
 		GameTooltip:AddLine(format("|cffffd100%s|r  %s", MapUtils:Trans("LID_LEFTCLICK"), MapUtils:Trans("LID_SHOWDESTMAP")), 0.6, 0.6, 0.6)
 	else
-		GameTooltip:SetText(MapUtils:Trans("LID_DUNGEONENTRANCE"))
+		GameTooltip:SetText(MapUtils:Trans(row[4] == "raid" and "LID_RAIDENTRANCE" or "LID_DUNGEONENTRANCE"))
 	end
 
 	GameTooltip:Show()

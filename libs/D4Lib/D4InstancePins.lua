@@ -9,6 +9,7 @@ local ITEM_ICON_FALLBACK = 134400
 local LEVEL_SKULL_MIN = 63
 local PIN_ICONS = {
     ["entrance"] = {{"Dungeon", "DungeonSkull", "Dungeon-Normal"}, "Interface\\Icons\\INV_Misc_Bone_Skull_02"},
+    ["raid"] = {{"Raid", "Dungeon", "DungeonSkull", "Dungeon-Normal"}, "Interface\\Icons\\INV_Misc_Bone_Skull_02"},
     ["down"] = {{"CaveUnderground-Down", "CaveUnderground-Up"}, "Interface\\Icons\\INV_Misc_Map_01"},
     ["up"] = {{"CaveUnderground-Up", "CaveUnderground-Down"}, "Interface\\Icons\\INV_Misc_Map_01"},
 }
@@ -139,7 +140,7 @@ local function StylePin(pin, row, media)
         pin.portrait:SetTexture(GetItemTexture(row[4]))
         pcall(pin.portrait.SetTexCoord, pin.portrait, 0.07, 0.93, 0.07, 0.93)
     else
-        local def = row[1] == "entrance" and PIN_ICONS["entrance"] or row[5] and PIN_ICONS["up"] or PIN_ICONS["down"]
+        local def = row[1] == "entrance" and PIN_ICONS[row[4] == "raid" and "raid" or "entrance"] or row[5] and PIN_ICONS["up"] or PIN_ICONS["down"]
         ApplyIcon(pin.icon, def)
         ApplyIcon(pin.highlight, def)
     end
