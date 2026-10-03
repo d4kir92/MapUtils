@@ -6,6 +6,7 @@ local GRIP_SIZE = 26
 local frame = WorldMapFrame
 local ready = false
 local foreign = false
+local foreignMove = false
 local applying = false
 local dragging = false
 local wasClamped = false
@@ -27,7 +28,7 @@ local function IsEnabled(key)
 end
 
 local function MoveEnabled()
-	return IsEnabled("WORLDMAPMOVE")
+	return not foreignMove and IsEnabled("WORLDMAPMOVE")
 end
 
 local function ScaleEnabled()
@@ -45,8 +46,10 @@ end
 local function CheckForeign()
 	if foreign then return true end
 	if not dragging and frame:IsMovable() then
-		foreign = true
-	elseif math.abs(frame:GetScale() - lastScale) > SCALE_EPSILON then
+		foreignMove = true
+	end
+
+	if math.abs(frame:GetScale() - lastScale) > SCALE_EPSILON then
 		foreign = true
 	end
 
@@ -164,9 +167,13 @@ local function Apply()
 	else
 		local scale = 1
 		if ScaleEnabled() then scale = ClampScale(MAUTTAB["WORLDMAPSCALEVALUE"]) end
+		local foreignLeft, foreignTop
+		if foreignMove then foreignLeft, foreignTop = GetPos() end
 		SetScale(scale)
 		local pos = MAUTTAB["WORLDMAPPOS"]
-		if MoveEnabled() and type(pos) == "table" and pos.x ~= nil and pos.y ~= nil then
+		if foreignMove then
+			if foreignLeft ~= nil then SetPos(foreignLeft, foreignTop) end
+		elseif MoveEnabled() and type(pos) == "table" and pos.x ~= nil and pos.y ~= nil then
 			SetPos(ClampPos(pos.x, pos.y))
 		elseif blizzardPoint ~= nil then
 			local point, relativeTo, relativePoint, x, y = unpack(blizzardPoint)
@@ -191,7 +198,7 @@ local function OnBlizzardPoint(_, ...)
 end
 
 local function OnDragStart()
-	if not ready or not MoveEnabled() or IsMaximized() or IsLocked() or CheckForeign() then return end
+	if not ready or IsMaximized() or IsLocked() or CheckForeign() or not MoveEnabled() then return end
 	dragging = true
 	wasClamped = frame:IsClampedToScreen()
 	frame:SetMovable(true)
