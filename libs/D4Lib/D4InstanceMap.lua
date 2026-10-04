@@ -186,6 +186,21 @@ function D4:CreateInstanceMap(provider)
     end
 
     local function ToggleOverlay()
+        if overlay ~= nil and overlay:IsShown() and provider.getReturnMapID ~= nil then
+            local info = shownLevels ~= nil and shownLevels[shownIndex] or nil
+            local mapID = provider.getReturnMapID(info)
+            if mapID ~= nil and WorldMapFrame.SetMapID ~= nil then
+                hiddenFor = shownInstance
+                ClearForced()
+                overlay:Hide()
+                levelButton:Hide()
+                if mapPinSet ~= nil then mapPinSet:Hide() end
+                WorldMapFrame:SetMapID(mapID)
+                Refresh()
+                return
+            end
+        end
+
         if forced ~= nil then
             ClearForced()
             Refresh()
@@ -237,6 +252,8 @@ function D4:CreateInstanceMap(provider)
             if hint then GameTooltip:AddLine(hint, 0.6, 0.6, 0.6) end
         else
             GameTooltip:SetText(provider.getEntranceText and provider.getEntranceText(row) or "")
+            local hint = provider.getEntranceHint and provider.getEntranceHint(row)
+            if hint then GameTooltip:AddLine(hint, 0.6, 0.6, 0.6) end
         end
 
         GameTooltip:Show()
@@ -428,6 +445,16 @@ function D4:CreateInstanceMap(provider)
             if not levelButton:IsShown() then levelButton:Show() end
         elseif levelButton:IsShown() then
             levelButton:Hide()
+        end
+
+        local toggle = WorldMapFrame.SidePanelToggle
+        if toggle ~= nil and toggle.SetFrameLevel ~= nil then
+            local level = overlay:GetFrameLevel() + 2001
+            if toggle:GetFrameLevel() < level then toggle:SetFrameLevel(level) end
+            for _, name in ipairs({"OpenButton", "CloseButton"}) do
+                local button = toggle[name]
+                if button ~= nil and button.SetFrameLevel ~= nil and button:GetFrameLevel() <= level then button:SetFrameLevel(level + 1) end
+            end
         end
 
         if not overlay:IsShown() then overlay:Show() end
