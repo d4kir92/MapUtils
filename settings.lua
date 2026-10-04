@@ -5,7 +5,10 @@ local DEFAULT_HEIGHT = 300
 local ADDED_0927 = "2026-09-27"
 local ADDED_0928 = "2026-09-28"
 local ADDED_1003 = "2026-10-03"
+local ADDED_1004 = "2026-10-04"
+local SHARED_KEYS = {"DUNGEONWORLDMAPPINS", "MEETINGSTONEWORLDMAPPINS", "INSTANCEPINS_BOSS", "INSTANCEPINS_ITEM", "INSTANCEPINS_ENTRANCE", "INSTANCEPINS_LEVEL"}
 local maset = nil
+local sharedCheckboxes = {}
 local function GetTocVersion()
 	if C_AddOns and C_AddOns.GetAddOnMetadata then return C_AddOns.GetAddOnMetadata("MapUtils", "Version") end
 	if GetAddOnMetadata then return GetAddOnMetadata("MapUtils", "Version") end
@@ -24,6 +27,29 @@ function MapUtils:ToggleSettings()
 	if maset == nil then return end
 	maset:Toggle()
 end
+
+function MapUtils:OnSharedOptionChanged(key, value)
+	if sharedCheckboxes[key] ~= nil then sharedCheckboxes[key]:SetChecked(value) end
+	MapUtils:RefreshPins()
+	if MapUtils.RefreshInstanceMap ~= nil then MapUtils:RefreshInstanceMap() end
+end
+
+function MapUtils:SetSharedOption(key, value)
+	MAUTTAB = MAUTTAB or {}
+	MapUtils:SV(MAUTTAB, key, value)
+	MapUtils:SetSharedSetting(key, value)
+	MapUtils:OnSharedOptionChanged(key, value)
+end
+
+MapUtils:RegisterSharedSettings(
+	{
+		["keys"] = SHARED_KEYS,
+		["getDB"] = function() return MAUTTAB end,
+		["get"] = function(key) return MapUtils:GetConfig(key, true) end,
+		["set"] = function(key, value) MAUTTAB[key] = value end,
+		["onChange"] = function(key, value) MapUtils:OnSharedOptionChanged(key, value) end,
+	}
+)
 
 local function GetCollapsed(key)
 	if key == nil then return nil end
@@ -70,6 +96,18 @@ local function AddCheckbox(key, default, func, label, added)
 			maset:UpdateDependencies()
 		end
 	})
+end
+
+local function AddSharedCheckbox(key, label, added)
+	sharedCheckboxes[key] = maset:AddCheckbox(
+		{
+			["label"] = label,
+			["search"] = key,
+			["added"] = added,
+			["value"] = MapUtils:GetConfig(key, true),
+			["func"] = function(value) MapUtils:SetSharedOption(key, value) end
+		}
+	)
 end
 
 local function AddDropdown(key, default, choices, func, label, added)
@@ -191,11 +229,19 @@ function MapUtils:InitSetting()
 	AddCheckbox("WORLDMAPPINS", true, function() MapUtils:RefreshPins() end)
 	AddCheckbox("MINIMAPPINS", true, function() MapUtils:RefreshPins() end)
 	AddCategory("DUNGEONS", 2)
-	AddCheckbox("DUNGEONWORLDMAPPINS", true, function() MapUtils:RefreshPins() end, "LID_WORLDMAPPINS")
+	AddSharedCheckbox("DUNGEONWORLDMAPPINS", "LID_WORLDMAPPINS")
 	AddCheckbox("DUNGEONMINIMAPPINS", true, function() MapUtils:RefreshPins() end, "LID_MINIMAPPINS")
 	AddCategory("MEETINGSTONES", 2, nil, ADDED_0928)
-	AddCheckbox("MEETINGSTONEWORLDMAPPINS", true, function() MapUtils:RefreshPins() end, "LID_WORLDMAPPINS", ADDED_0928)
+	AddSharedCheckbox("MEETINGSTONEWORLDMAPPINS", "LID_WORLDMAPPINS", ADDED_0928)
 	AddCheckbox("MEETINGSTONEMINIMAPPINS", true, function() MapUtils:RefreshPins() end, "LID_MINIMAPPINS", ADDED_0928)
+	if not MapUtils.nativeInstanceMaps then
+		AddCategory("INSTANCEMAPPINS", 2, "LID_INSTANCEMAPS", ADDED_1004)
+		AddSharedCheckbox("INSTANCEPINS_BOSS", "LID_SHOWBOSSPINS", ADDED_1004)
+		AddSharedCheckbox("INSTANCEPINS_ITEM", "LID_SHOWQUESTPINS", ADDED_1004)
+		AddSharedCheckbox("INSTANCEPINS_ENTRANCE", "LID_SHOWENTRANCEPINS", ADDED_1004)
+		AddSharedCheckbox("INSTANCEPINS_LEVEL", "LID_SHOWLEVELPINS", ADDED_1004)
+	end
+
 	AddCategory("FLIGHTPOINTS", 2)
 	AddCheckbox("FLIGHTWORLDMAPPINS", true, function() MapUtils:RefreshPins() end, "LID_WORLDMAPPINS")
 	AddCheckbox("FLIGHTMINIMAPPINS", true, function() MapUtils:RefreshPins() end, "LID_MINIMAPPINS")
@@ -244,4 +290,4 @@ loader:SetScript("OnEvent", function(_, event, name)
 		MapUtils:RegisterCompendiumTabs()
 	end
 end)
-MapUtils:RegisterCompendiumTabs()
+MapUtils:RegisterCompendiumTabs()
