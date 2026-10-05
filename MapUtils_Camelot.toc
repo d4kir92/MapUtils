@@ -1,6 +1,6 @@
 ## Interface: 16001
 
-## Version: 1.2.23
+## Version: 1.2.24
 ## Title: MapUtils by |cff55d2ffD4KiR |T132115:16:16:0:0|t 
 ## Notes: Better world map: boats, zeppelins, flight points and dungeon entrances as clickable waypoints, dungeon & raid maps, unexplored areas, zone levels and a movable, scalable map
 ## Notes-deDE: Bessere Weltkarte: Schiffe, Zeppeline, Flugpunkte und Dungeon-Eingänge als anklickbare Wegpunkte, Dungeon- & Raidkarten, unerforschte Gebiete, Zonenlevel und eine verschieb- und skalierbare Karte

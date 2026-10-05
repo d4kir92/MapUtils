@@ -1554,12 +1554,17 @@ end
 
 local waypointEntry = nil
 local waypointKey = nil
+local waypointCache = {positions = {}}
 local function GetWaypointKey()
+	if waypointCache.valid then return waypointCache.key end
+	waypointCache.valid = true
 	if C_Map.HasUserWaypoint == nil or C_Map.GetUserWaypoint == nil or not C_Map.HasUserWaypoint() then return nil end
 	local point = C_Map.GetUserWaypoint()
 	if point == nil or point.position == nil then return nil end
 
-	return format("%s|%s|%s", tostring(point.uiMapID), tostring(point.position.x), tostring(point.position.y))
+	waypointCache.key = format("%s|%s|%s", tostring(point.uiMapID), tostring(point.position.x), tostring(point.position.y))
+
+	return waypointCache.key
 end
 
 local function IsSameEntry(a, b)
@@ -1576,8 +1581,12 @@ local function IsEntryWaypoint(mapID, entry)
 	if key == nil then return false end
 	if waypointEntry ~= nil and key == waypointKey then return IsSameEntry(entry, waypointEntry) end
 	if C_Map.GetUserWaypointPositionForMap == nil then return false end
-	local pos = C_Map.GetUserWaypointPositionForMap(mapID)
-	if pos == nil then return false end
+	local pos = waypointCache.positions[mapID]
+	if pos == nil then
+		pos = C_Map.GetUserWaypointPositionForMap(mapID) or false
+		waypointCache.positions[mapID] = pos
+	end
+	if pos == false then return false end
 	local x, y = pos:GetXY()
 
 	return math.abs(x - entry.x) < WAYPOINT_TOLERANCE and math.abs(y - entry.y) < WAYPOINT_TOLERANCE
@@ -2113,7 +2122,12 @@ if C_Map.SetUserWaypoint ~= nil then
 	local styleFrame = CreateFrame("FRAME")
 	styleFrame:RegisterEvent("USER_WAYPOINT_UPDATED")
 	if C_SuperTrack ~= nil then styleFrame:RegisterEvent("SUPER_TRACKING_CHANGED") end
-	styleFrame:SetScript("OnEvent", UpdatePinStyles)
+	styleFrame:SetScript("OnEvent", function()
+		waypointCache.valid = false
+		waypointCache.key = nil
+		wipe(waypointCache.positions)
+		UpdatePinStyles()
+	end)
 end
 
 if C_TaxiMap ~= nil and C_TaxiMap.GetTaxiNodesForMap ~= nil then
