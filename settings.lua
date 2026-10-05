@@ -193,8 +193,13 @@ function MapUtils:InitSetting()
 	AddCategory("WORLDMAP", nil, nil, ADDED_0927)
 	if MapUtils:IsForever() then AddCheckbox("REMEMBERQUESTCATEGORIES", true, function() MapUtils:RestoreQuestCategories() end) end
 	AddCategory("MAPWINDOW", 2, nil, ADDED_0927)
-	AddCheckbox("WORLDMAPMOVE", true, function() MapUtils:RefreshWorldMapFrame() end, nil, ADDED_0927)
-	AddCheckbox("WORLDMAPSCALE", true, function() MapUtils:RefreshWorldMapFrame() end, nil, ADDED_0927)
+	local byMoveAny = MapUtils:IsWorldMapByMoveAny()
+	for _, key in ipairs({"WORLDMAPMOVE", "WORLDMAPSCALE"}) do
+		local label = nil
+		if byMoveAny then label = MapUtils:Trans("LID_" .. key) .. " |cffff8000(" .. MapUtils:Trans("LID_HANDLEDBYMOVEANY") .. ")|r" end
+		local checkbox = AddCheckbox(key, true, function() MapUtils:RefreshWorldMapFrame() end, label, ADDED_0927)
+		if byMoveAny then maset:AddDependency(checkbox, function() return false end, 0) end
+	end
 	AddCategory("NAVIGATION", 2, nil, ADDED_0928)
 	AddCheckbox("ALWAYSSHOWWAYPOINT", false, nil, nil, ADDED_0928)
 	AddCategory("MAPFADE", 2, nil, ADDED_0927)

@@ -11,7 +11,7 @@ MapUtils extends the World of Warcraft world map, zone map, and minimap with dun
 - Shows the level range of a zone when hovering it on the world map.
 - Shows the minimum fishing skill of a zone on the world map.
 - Shows unexplored areas on the world map and zone map, with a selectable tint (blue, gray, darkened, faded, gold, green, red, purple, or original colors).
-- Lets you move the world map by dragging its border and scale it with the grip in the bottom-right corner (50% - 200%).
+- Lets you move the world map by dragging its border and scale it with the grip in the bottom-right corner (50% - 200%). When MoveAny is loaded, MoveAny moves and scales the world map instead.
 - Lets you scale the zone map (Shift+M) with the grip in the bottom-right corner (50% - 300%) while it is unlocked.
 - Fades the world map and zone map while you move, with an adjustable visibility; the map becomes fully visible again on mouseover.
 - Clicking a pier or flight point icon sets it as your waypoint; the waypoint pin stays visible while a navigation target exists.

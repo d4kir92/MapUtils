@@ -291,6 +291,10 @@ function MapUtils:PrintFadeDebug()
 	if MapUtils.PrintBattlefieldFadeDebug ~= nil then MapUtils:PrintBattlefieldFadeDebug() end
 end
 
+function MapUtils:IsWorldMapByMoveAny()
+	return MapUtils:IsAddOnActive("MoveAny")
+end
+
 function MapUtils:RefreshWorldMapFrame()
 	Apply()
 	if fader ~= nil then fader:Reset() end
@@ -316,6 +320,8 @@ if frame ~= nil then
 	loader:SetScript(
 		"OnEvent",
 		function()
+			MAUTTAB = MAUTTAB or {}
+			if MapUtils:IsWorldMapByMoveAny() then return end
 			HookDrag(frame)
 			for _, key in ipairs(dragRegions) do
 				HookDrag(frame[key])
@@ -323,7 +329,6 @@ if frame ~= nil then
 
 			if frame.BorderFrame ~= nil then HookDrag(frame.BorderFrame.TitleContainer) end
 			HookDrag(WorldMapTitleButton)
-			MAUTTAB = MAUTTAB or {}
 			ready = true
 			if frame:IsShown() then Apply() end
 		end

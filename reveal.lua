@@ -39,7 +39,7 @@ function MapUtils:HasRevealData()
 	return next(revealData) ~= nil
 end
 
-local function IsAddOnActive(name)
+function MapUtils:IsAddOnActive(name)
 	if C_AddOns and C_AddOns.IsAddOnLoaded then return C_AddOns.IsAddOnLoaded(name) == true end
 	if IsAddOnLoaded then return IsAddOnLoaded(name) == true end
 
@@ -47,7 +47,7 @@ local function IsAddOnActive(name)
 end
 
 function MapUtils:IsRevealedByLeatrix()
-	if not IsAddOnActive("Leatrix_Maps") then return false end
+	if not MapUtils:IsAddOnActive("Leatrix_Maps") then return false end
 
 	return not (type(LeaMapsDB) == "table" and LeaMapsDB["RevealMap"] == "Off")
 end
