@@ -82,17 +82,53 @@ local function GetLevelLabel(levels, level)
 	return MapUtils:TransName(level.name)
 end
 
+local CreateInstancePins = MapUtils.CreateInstancePins
+function MapUtils:CreateInstancePins(parent, options)
+	local onEnter = options.onEnter
+	local getLevel = options.getLevel
+	options.getLevel = function(row)
+		local level = getLevel ~= nil and getLevel(row) or nil
+		return level or (MapUtils:IsDebug() and 1 or nil)
+	end
+	options.onEnter = function(pin)
+		if not pin.hoverHooked then
+			pin.hoverHooked = true
+			pin:HookScript("OnLeave", function(button) MapUtils:HidePinHighlight(button) end)
+			pin:HookScript("OnHide", function(button) MapUtils:HidePinHighlight(button) end)
+		end
+		MapUtils:ShowPinHighlight(pin)
+		if onEnter ~= nil then onEnter(pin) end
+	end
+	local onMouseUp = options.onMouseUp
+	options.onMouseUp = function(pin, button)
+		if button == "LeftButton" and MapUtils:IsDebug() and pin.row ~= nil and pin.row.debugEntry ~= nil then
+			MapUtils:SelectDebugPin(pin.row.debugMapKey, pin.row.debugEntry)
+		elseif onMouseUp ~= nil then
+			onMouseUp(pin, button)
+		end
+	end
+	local set = CreateInstancePins(self, parent, options)
+	local update = set.Update
+	set.Update = function(pinSet, ...)
+		update(pinSet, ...)
+		for _, pin in ipairs(pinSet.pins) do
+			if pin.row ~= nil and pin.row.debugEntry ~= nil then pin:SetAlpha(MapUtils:GetDebugPinAlpha(pin.row.debugEntry)) end
+			pin.highlight:SetAlpha(0)
+		end
+	end
+	return set
+end
 local instanceMap = MapUtils:CreateInstanceMap(
 	{
 		["media"] = MEDIA_PATH,
 		["isDisabled"] = function() return MapUtils.nativeInstanceMaps end,
 		["getLevels"] = function(instanceMapID) return art[instanceMapID] end,
 		["getLabel"] = GetLevelLabel,
-		["getPins"] = function(info) return MapUtils.INSTANCEPINS ~= nil and info.key ~= nil and MapUtils.INSTANCEPINS[info.key] or nil end,
+		["getPins"] = function(info) return MapUtils:GetDebugInstancePins(info) end,
 		["getBossName"] = function(row) return MapUtils:TransName(row[5]) end,
 		["getLevelHint"] = function() return format("|cffffd100%s|r  %s", MapUtils:Trans("LID_LEFTCLICK"), MapUtils:Trans("LID_SHOWDESTMAP")) end,
 		["getEntranceText"] = function(row) return MapUtils:Trans(row[4] == "raid" and "LID_RAIDENTRANCE" or "LID_DUNGEONENTRANCE") end,
-		["isPinEnabled"] = function(kind) return MapUtils:GetConfig("INSTANCEPINS_" .. strupper(kind), true) ~= false end,
+		["isPinEnabled"] = function(kind) return MapUtils:IsDebug() or MapUtils:GetConfig("INSTANCEPINS_" .. strupper(kind), true) ~= false end,
 		["setPinEnabled"] = function(kind, enabled) MapUtils:SetSharedOption("INSTANCEPINS_" .. strupper(kind), enabled) end,
 		["getToggleText"] = function(kind, enabled) return MapUtils:Trans("LID_" .. (enabled and "HIDE" or "SHOW") .. PIN_TOGGLE_KEYS[kind]) end,
 	}

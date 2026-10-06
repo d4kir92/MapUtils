@@ -248,6 +248,16 @@ function MapUtils:InitSetting()
 		AddSharedCheckbox("INSTANCEPINS_LEVEL", "LID_SHOWLEVELPINS", ADDED_1004)
 	end
 
+	if MapUtils:IsForever() then
+		AddCategory("SPIRITHEALERS", 2, nil, "2026-10-06")
+		AddCheckbox("SPIRITHEALERWORLDMAPPINS", false, function() MapUtils:RefreshPins() end, "LID_WORLDMAPPINS")
+		AddCheckbox("SPIRITHEALERMINIMAPPINS", false, function() MapUtils:RefreshPins() end, "LID_MINIMAPPINS")
+		AddDropdown("SPIRITHEALERSTYLE", "NORMAL", {
+			{value = "NORMAL", label = MapUtils:Trans("LID_NORMAL")},
+			{value = "CHIBI", label = "Chibi"},
+		}, function() MapUtils:RefreshPins() end)
+	end
+
 	AddCategory("FLIGHTPOINTS", 2)
 	AddCheckbox("FLIGHTWORLDMAPPINS", true, function() MapUtils:RefreshPins() end, "LID_WORLDMAPPINS")
 	AddCheckbox("FLIGHTMINIMAPPINS", true, function() MapUtils:RefreshPins() end, "LID_MINIMAPPINS")

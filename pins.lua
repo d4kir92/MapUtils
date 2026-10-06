@@ -1,4 +1,200 @@
 local _, MapUtils = ...
+MapUtils.SPIRITHEALERS = {
+	[1411] = {
+		{kind = "spirithealer", x = 0.4420, y = 0.6940},
+		{kind = "spirithealer", x = 0.4700, y = 0.1750},
+		{kind = "spirithealer", x = 0.5350, y = 0.4450},
+		{kind = "spirithealer", x = 0.5750, y = 0.7320},
+	},
+	[1412] = {
+		{kind = "spirithealer", x = 0.4260, y = 0.7800},
+		{kind = "spirithealer", x = 0.4580, y = 0.5950},
+	},
+	[1413] = {
+		{kind = "spirithealer", x = 0.4520, y = 0.6100},
+		{kind = "spirithealer", x = 0.5070, y = 0.3250},
+		{kind = "spirithealer", x = 0.6020, y = 0.3980},
+	},
+	[1416] = {
+		{kind = "spirithealer", x = 0.4290, y = 0.3800},
+	},
+	[1417] = {
+		{kind = "spirithealer", x = 0.4870, y = 0.5550},
+	},
+	[1418] = {
+		{kind = "spirithealer", x = 0.0820, y = 0.5550},
+		{kind = "spirithealer", x = 0.5690, y = 0.2450},
+	},
+	[1419] = {
+		{kind = "spirithealer", x = 0.5100, y = 0.1220},
+	},
+	[1420] = {
+		{kind = "spirithealer", x = 0.1760, y = 0.6760},
+		{kind = "spirithealer", x = 0.3120, y = 0.6480},
+		{kind = "spirithealer", x = 0.5620, y = 0.4940},
+		{kind = "spirithealer", x = 0.7900, y = 0.4080},
+		{kind = "spirithealer", x = 0.8200, y = 0.6950},
+	},
+	[1421] = {
+		{kind = "spirithealer", x = 0.4420, y = 0.4150},
+	},
+	[1422] = {
+		{kind = "spirithealer", x = 0.4550, y = 0.8550},
+		{kind = "spirithealer", x = 0.6550, y = 0.7460},
+	},
+	[1423] = {
+		{kind = "spirithealer", x = 0.3820, y = 0.7050},
+		{kind = "spirithealer", x = 0.4720, y = 0.4440},
+		{kind = "spirithealer", x = 0.7040, y = 0.5440},
+		{kind = "spirithealer", x = 0.8000, y = 0.6450},
+	},
+	[1424] = {
+		{kind = "spirithealer", x = 0.5160, y = 0.5250},
+		{kind = "spirithealer", x = 0.6350, y = 0.1950},
+	},
+	[1425] = {
+		{kind = "spirithealer", x = 0.1680, y = 0.4460},
+		{kind = "spirithealer", x = 0.6050, y = 0.3860},
+		{kind = "spirithealer", x = 0.6200, y = 0.2680},
+		{kind = "spirithealer", x = 0.7260, y = 0.6800},
+	},
+	[1426] = {
+		{kind = "spirithealer", x = 0.2950, y = 0.6980},
+		{kind = "spirithealer", x = 0.4700, y = 0.5500},
+		{kind = "spirithealer", x = 0.5420, y = 0.3900},
+	},
+	[1427] = {
+		{kind = "spirithealer", x = 0.3550, y = 0.2260},
+	},
+	[1428] = {
+		{kind = "spirithealer", x = 0.6320, y = 0.2350},
+	},
+	[1429] = {
+		{kind = "spirithealer", x = 0.3950, y = 0.6050},
+		{kind = "spirithealer", x = 0.4950, y = 0.4330},
+		{kind = "spirithealer", x = 0.8350, y = 0.6950},
+	},
+	[1430] = {
+		{kind = "spirithealer", x = 0.4000, y = 0.7530},
+	},
+	[1431] = {
+		{kind = "spirithealer", x = 0.2000, y = 0.4940},
+		{kind = "spirithealer", x = 0.4480, y = 0.6720},
+		{kind = "spirithealer", x = 0.4780, y = 0.4560},
+		{kind = "spirithealer", x = 0.7500, y = 0.5900},
+	},
+	[1432] = {
+		{kind = "spirithealer", x = 0.3250, y = 0.4670},
+	},
+	[1433] = {
+		{kind = "spirithealer", x = 0.1580, y = 0.5650},
+		{kind = "spirithealer", x = 0.2080, y = 0.5650},
+	},
+	[1434] = {
+		{kind = "spirithealer", x = 0.3000, y = 0.7300},
+		{kind = "spirithealer", x = 0.3840, y = 0.0880},
+	},
+	[1435] = {
+		{kind = "spirithealer", x = 0.5020, y = 0.6220},
+	},
+	[1436] = {
+		{kind = "spirithealer", x = 0.5160, y = 0.4960},
+	},
+	[1437] = {
+		{kind = "spirithealer", x = 0.1150, y = 0.4340},
+		{kind = "spirithealer", x = 0.4950, y = 0.4150},
+	},
+	[1438] = {
+		{kind = "spirithealer", x = 0.5620, y = 0.6320},
+		{kind = "spirithealer", x = 0.5870, y = 0.4250},
+	},
+	[1439] = {
+		{kind = "spirithealer", x = 0.4180, y = 0.3650},
+		{kind = "spirithealer", x = 0.4350, y = 0.9230},
+	},
+	[1440] = {
+		{kind = "spirithealer", x = 0.1780, y = 0.1100},
+		{kind = "spirithealer", x = 0.2220, y = 0.2820},
+		{kind = "spirithealer", x = 0.4020, y = 0.5300},
+		{kind = "spirithealer", x = 0.5150, y = 0.6320},
+		{kind = "spirithealer", x = 0.8060, y = 0.5800},
+		{kind = "spirithealer", x = 0.8420, y = 0.5680},
+		{kind = "spirithealer", x = 0.9320, y = 0.4220},
+	},
+	[1441] = {
+		{kind = "spirithealer", x = 0.3050, y = 0.2350},
+		{kind = "spirithealer", x = 0.6910, y = 0.5350},
+	},
+	[1442] = {
+		{kind = "spirithealer", x = 0.5750, y = 0.6200},
+	},
+	[1443] = {
+		{kind = "spirithealer", x = 0.5020, y = 0.6280},
+	},
+	[1444] = {
+		{kind = "spirithealer", x = 0.3150, y = 0.4800},
+		{kind = "spirithealer", x = 0.4400, y = 0.0740},
+		{kind = "spirithealer", x = 0.5040, y = 0.1340},
+		{kind = "spirithealer", x = 0.5480, y = 0.4760},
+		{kind = "spirithealer", x = 0.7300, y = 0.4480},
+	},
+	[1445] = {
+		{kind = "spirithealer", x = 0.3960, y = 0.3080},
+		{kind = "spirithealer", x = 0.6350, y = 0.4300},
+	},
+	[1446] = {
+		{kind = "spirithealer", x = 0.5400, y = 0.2860},
+	},
+	[1447] = {
+		{kind = "spirithealer", x = 0.1450, y = 0.7850},
+		{kind = "spirithealer", x = 0.5420, y = 0.7140},
+		{kind = "spirithealer", x = 0.7040, y = 0.1560},
+	},
+	[1448] = {
+		{kind = "spirithealer", x = 0.4950, y = 0.3060},
+		{kind = "spirithealer", x = 0.5620, y = 0.8660},
+	},
+	[1449] = {
+		{kind = "spirithealer", x = 0.8000, y = 0.4980},
+	},
+	[1450] = {
+		{kind = "spirithealer", x = 0.6200, y = 0.6950},
+	},
+	[1451] = {
+		{kind = "spirithealer", x = 0.2800, y = 0.8750},
+		{kind = "spirithealer", x = 0.4700, y = 0.3850},
+		{kind = "spirithealer", x = 0.8060, y = 0.1980},
+	},
+	[1452] = {
+		{kind = "spirithealer", x = 0.6120, y = 0.3480},
+	},
+	[1456] = {
+		{kind = "spirithealer", x = 0.5650, y = 0.1790},
+	},
+	[1457] = {
+		{kind = "spirithealer", x = 0.7720, y = 0.2670},
+	},
+	[1458] = {
+		{kind = "spirithealer", x = 0.6760, y = 0.1390},
+	},
+	[2482] = {
+		{kind = "spirithealer", x = 0.0950, y = 0.4700},
+		{kind = "spirithealer", x = 0.8120, y = 0.4050},
+		{kind = "spirithealer", x = 0.8560, y = 0.6880},
+	},
+	[2521] = {
+		{kind = "spirithealer", x = 0.4020, y = 0.6380},
+		{kind = "spirithealer", x = 0.4100, y = 0.2240},
+		{kind = "spirithealer", x = 0.5500, y = 0.6820},
+		{kind = "spirithealer", x = 0.5540, y = 0.4500},
+		{kind = "spirithealer", x = 0.6860, y = 0.5020},
+	},
+	[2548] = {
+		{kind = "spirithealer", x = 0.6080, y = 0.4560},
+		{kind = "spirithealer", x = 0.6200, y = 0.8350},
+		{kind = "spirithealer", x = 0.7590, y = 0.5450},
+	},
+}
 local ICON_SIZE = 20
 local DUNGEON_ICON_SIZE = 32
 local POI_START_SCALE = 1
@@ -933,6 +1129,7 @@ local function GetEntryIcon(entry)
 	if entry.kind == "dungeon" and entry.entrance == "both" then return SPLIT_ICON end
 	if entry.kind == "dungeon" then return GetDungeonIcon() end
 	if entry.kind == "meetingstone" then return MEETING_STONE_ICON end
+	if entry.kind == "spirithealer" then return "Interface\\AddOns\\MapUtils\\media\\" .. (MapUtils:GetConfig("SPIRITHEALERSTYLE", "NORMAL") == "CHIBI" and "spirithealer_chibi" or "spirithealer") end
 	if entry.kind == "crossing" then return GetCrossingIcon(entry.up) end
 
 	return GetIcon(entry.faction)
@@ -1231,7 +1428,7 @@ local function GetLFGIndex()
 end
 
 local function IsRange(min, max)
-	return min ~= nil and max ~= nil and min > 0 and max > min
+	return min ~= nil and max ~= nil and min > 0 and max >= min
 end
 
 local function HasActivityAPI()
@@ -1278,7 +1475,8 @@ local function GetActivityLevels()
 			local min = info.minLevelSuggestion or 0
 			local max = info.maxLevelSuggestion or 0
 			if IsRange(min, max) then
-				local levels = {min, max}
+				local levels = {min, max, info.minLevel, info.shortName or info.fullName}
+				if info.mapID ~= nil and info.mapID > 0 and map[info.mapID] == nil then map[info.mapID] = levels end
 				if info.shortName ~= nil and info.shortName ~= "" and map[info.shortName] == nil then map[info.shortName] = levels end
 				if info.fullName ~= nil and info.fullName ~= "" and map[info.fullName] == nil then map[info.fullName] = levels end
 				count = count + 1
@@ -1306,14 +1504,14 @@ local function GetDungeonInfo(entry)
 	end
 
 	local minLevel, maxLevel = nil, nil
-	if lfgName ~= nil then
-		local levels = GetActivityLevels()[lfgName]
-		if levels ~= nil then
-			minLevel = levels[1]
-			maxLevel = levels[2]
-		end
+	local activityMap = GetActivityLevels()
+	local levels = entry.instance ~= nil and activityMap[entry.instance] or nil
+	if levels == nil and lfgName ~= nil then levels = activityMap[lfgName] end
+	if levels == nil and entry.name ~= nil then levels = activityMap[entry.name] end
+	if levels ~= nil then
+		minLevel, maxLevel = levels[1], levels[2]
+		if lfgName == nil and levels[4] ~= nil and levels[4] ~= "" then lfgName = levels[4] end
 	end
-
 	if minLevel == nil then
 		if IsRange(apiRecMin, apiRecMax) then
 			minLevel = apiRecMin
@@ -1328,7 +1526,8 @@ local function GetDungeonInfo(entry)
 	end
 
 	local recLevel = nil
-	if apiMin ~= nil and apiMin > 0 and apiMin ~= minLevel then recLevel = apiMin end
+	local accessLevel = levels ~= nil and levels[3] or apiMin
+	if accessLevel ~= nil and accessLevel > 0 and accessLevel ~= minLevel then recLevel = accessLevel end
 
 	return lfgName, minLevel, maxLevel, recLevel
 end
@@ -1472,6 +1671,9 @@ local function ShowAreaLabel(pin)
 	elseif pin.entry.kind == "meetingstone" then
 		name = GetDungeonInfo(pin.entry) or pin.entry.name
 		description = MapUtils:Trans("LID_MEETINGSTONE")
+	elseif pin.entry.kind == "spirithealer" then
+		name = pin.entry.name or MapUtils:Trans("LID_SPIRITHEALER")
+		description = ""
 	elseif pin.entry.kind == "crossing" then
 		name, description = GetCrossingLabel(pin.entry)
 	elseif pin.entry.kind == "flight" then
@@ -1496,7 +1698,43 @@ local function ShowAreaLabel(pin)
 	return true
 end
 
+function MapUtils:ShowPinHighlight(pin)
+	local sources = pin.row ~= nil and {pin.portrait:IsShown() and pin.portrait or pin.icon} or {pin.texture, pin.splitIcon and pin.textureRight or nil}
+	pin.hoverTextures = pin.hoverTextures or {}
+	MapUtils:HidePinHighlight(pin)
+	for _, source in ipairs(sources) do
+		local texture = pin.hoverTextures[source]
+		if texture == nil then
+			texture = pin:CreateTexture(nil, "OVERLAY", nil, 7)
+			texture:SetBlendMode("ADD")
+			texture:SetAlpha(0.45)
+			pin.hoverTextures[source] = texture
+			if pin.row ~= nil and (pin.row[1] == "boss" or pin.row[1] == "item") and pin.CreateMaskTexture ~= nil and texture.AddMaskTexture ~= nil then
+				local mask = pin:CreateMaskTexture()
+				mask:SetAllPoints(texture)
+				mask:SetTexture("Interface\\CharacterFrame\\TempPortraitAlphaMask", "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+				texture:AddMaskTexture(mask)
+			end
+		end
+		texture:SetAllPoints(source)
+		local atlas = source.GetAtlas ~= nil and source:GetAtlas() or nil
+		if atlas ~= nil then
+			texture:SetAtlas(atlas)
+		else
+			texture:SetTexture(source:GetTexture())
+		end
+		texture:SetTexCoord(source:GetTexCoord())
+		texture:Show()
+	end
+end
+
+function MapUtils:HidePinHighlight(pin)
+	for _, texture in pairs(pin.hoverTextures or {}) do
+		texture:Hide()
+	end
+end
 local function OnPinEnter(pin)
+	MapUtils:ShowPinHighlight(pin)
 	local entry = pin.entry
 	if entry == nil then return end
 	if pin.worldMap and ShowAreaLabel(pin) then return end
@@ -1521,6 +1759,8 @@ local function OnPinEnter(pin)
 		local name = GetDungeonInfo(entry)
 		GameTooltip:AddLine(name or entry.name, 1, 1, 1)
 		GameTooltip:AddLine(MapUtils:Trans("LID_MEETINGSTONE"), 0.6, 0.6, 0.6)
+	elseif entry.kind == "spirithealer" then
+		GameTooltip:AddLine(entry.name or MapUtils:Trans("LID_SPIRITHEALER"), 1, 1, 1)
 	elseif entry.kind == "crossing" then
 		GameTooltip:AddLine(entry.name, 1, 1, 1)
 		GameTooltip:AddLine(MapUtils:Trans("LID_ZONECROSSING"), 0.6, 0.6, 0.6)
@@ -1724,6 +1964,7 @@ local function IsCovered()
 end
 
 local function OnPinLeave(pin)
+	MapUtils:HidePinHighlight(pin)
 	if pin.pushed then
 		pin.pushed = false
 		UpdatePinStyle(pin)
@@ -1770,6 +2011,11 @@ local function SetupPin(pin, parent, levelOffset, clickable)
 	pin.baseLevel = parent:GetFrameLevel() + levelOffset
 	pin:SetFrameLevel(pin.baseLevel)
 	pin:EnableMouse(true)
+	if not pin.hoverHooked then
+		pin.hoverHooked = true
+		pin:HookScript("OnHide", function(self) MapUtils:HidePinHighlight(self) end)
+	end
+	MapUtils:HidePinHighlight(pin)
 	pin:SetScript("OnEnter", OnPinEnter)
 	pin:SetScript("OnLeave", OnPinLeave)
 	if pin.texture == nil then
@@ -1834,13 +2080,19 @@ local function CrossingsEnabled()
 	return MapUtils:GetConfig("CROSSINGWORLDMAPPINS", true) == true
 end
 
-local function BuildList(mapID, piersOn, dungeonsOn, flightsOn, meetingStonesOn, crossingsOn)
+local function BuildList(mapID, piersOn, dungeonsOn, flightsOn, meetingStonesOn, crossingsOn, spiritHealersOn)
 	if mapID == nil then return nil end
 	local list = nil
+	if spiritHealersOn and MapUtils.SPIRITHEALERS[mapID] ~= nil then
+		list = {}
+		for _, entry in ipairs(MapUtils.SPIRITHEALERS[mapID]) do
+			tinsert(list, entry)
+		end
+	end
 	local crossingList = nil
 	if crossingsOn then crossingList = GetCrossings(mapID) end
 	if crossingList ~= nil and #crossingList > 0 then
-		list = {}
+		list = list or {}
 		for _, entry in ipairs(crossingList) do
 			tinsert(list, entry)
 		end
@@ -1876,9 +2128,18 @@ local function BuildList(mapID, piersOn, dungeonsOn, flightsOn, meetingStonesOn,
 		end
 	end
 
-	if MapUtils.ApplyPinEdits ~= nil then list = MapUtils:ApplyPinEdits(mapID, list, crossingsOn) end
+	if MapUtils.ApplyPinEdits ~= nil then list = MapUtils:ApplyPinEdits(mapID, list, {pier = piersOn, dungeon = dungeonsOn, flight = flightsOn, meetingstone = meetingStonesOn, crossing = crossingsOn, spirithealer = spiritHealersOn}) end
 
 	return list
+end
+
+function MapUtils:PrimeDebugPinMap(mapID)
+	if type(mapID) == "string" then
+		local key = mapID:match("^instance:(.+)$")
+		if key ~= nil then MapUtils:GetDebugInstancePins({key = key}, true) end
+		return
+	end
+	BuildList(mapID, true, true, true, true, true, MapUtils:IsForever())
 end
 
 local function GetPoiScale()
@@ -1908,6 +2169,7 @@ local worldDungeons = nil
 local worldFlights = nil
 local worldMeetingStones = nil
 local worldCrossings = nil
+local worldSpiritHealers = nil
 local function UpdateWorldPins()
 	local child = GetWorldCanvas()
 	if child == nil or worldPinPool == nil then return end
@@ -1918,8 +2180,13 @@ local function UpdateWorldPins()
 	local flightsOn = FlightsEnabled(true)
 	local meetingStonesOn = MeetingStonesEnabled(true)
 	local crossingsOn = CrossingsEnabled()
+	local spiritHealersOn = MapUtils:IsForever() and MapUtils:GetConfig("SPIRITHEALERWORLDMAPPINS", false) == true
+	if MapUtils:IsDebug() then
+		piersOn, dungeonsOn, flightsOn, meetingStonesOn, crossingsOn = true, true, true, true, true
+		spiritHealersOn = MapUtils:IsForever()
+	end
 	local baseLevel = GetWorldPinLevel(child)
-	if mapID == worldMapID and scale == worldScale and piersOn == worldPiers and dungeonsOn == worldDungeons and flightsOn == worldFlights and meetingStonesOn == worldMeetingStones and crossingsOn == worldCrossings then
+	if mapID == worldMapID and scale == worldScale and piersOn == worldPiers and dungeonsOn == worldDungeons and flightsOn == worldFlights and meetingStonesOn == worldMeetingStones and crossingsOn == worldCrossings and spiritHealersOn == worldSpiritHealers then
 		for _, pin in ipairs(worldPins) do
 			pin.baseLevel = baseLevel
 			UpdatePinLevel(pin, pin.entry ~= nil and IsEntryWaypoint(pin.mapID, pin.entry))
@@ -1934,9 +2201,10 @@ local function UpdateWorldPins()
 	worldFlights = flightsOn
 	worldMeetingStones = meetingStonesOn
 	worldCrossings = crossingsOn
+	worldSpiritHealers = spiritHealersOn
 	worldPinPool:ReleaseAll()
 	wipe(worldPins)
-	local list = BuildList(mapID, piersOn, dungeonsOn, flightsOn, meetingStonesOn, crossingsOn)
+	local list = BuildList(mapID, piersOn, dungeonsOn, flightsOn, meetingStonesOn, crossingsOn, spiritHealersOn)
 	if list == nil then return end
 	if scale == nil or scale <= 0 then return end
 	local w = child:GetWidth()
@@ -1995,14 +2263,17 @@ local minimapDungeons = nil
 local minimapFlights = nil
 local minimapMeetingStones = nil
 local minimapList = nil
+local minimapSpiritHealers = nil
 local function GetMinimapList(mapID, piersOn, dungeonsOn, flightsOn, meetingStonesOn)
-	if mapID == minimapMapID and piersOn == minimapPiers and dungeonsOn == minimapDungeons and flightsOn == minimapFlights and meetingStonesOn == minimapMeetingStones then return minimapList end
+	local spiritHealersOn = MapUtils:IsForever() and MapUtils:GetConfig("SPIRITHEALERMINIMAPPINS", false) == true
+	if mapID == minimapMapID and piersOn == minimapPiers and dungeonsOn == minimapDungeons and flightsOn == minimapFlights and meetingStonesOn == minimapMeetingStones and spiritHealersOn == minimapSpiritHealers then return minimapList end
 	minimapMapID = mapID
 	minimapPiers = piersOn
 	minimapDungeons = dungeonsOn
 	minimapFlights = flightsOn
 	minimapMeetingStones = meetingStonesOn
-	minimapList = BuildList(mapID, piersOn, dungeonsOn, flightsOn, meetingStonesOn)
+	minimapSpiritHealers = spiritHealersOn
+	minimapList = BuildList(mapID, piersOn, dungeonsOn, flightsOn, meetingStonesOn, false, spiritHealersOn)
 
 	return minimapList
 end
