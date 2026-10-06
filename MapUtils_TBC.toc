@@ -54,6 +54,7 @@ zonelevels.lua
 instancepins.lua
 instancemap.lua
 mapframe.lua
+coords.lua
 battlefieldmap.lua
 reveal.lua
 revealdata.lua

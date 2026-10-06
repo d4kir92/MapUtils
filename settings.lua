@@ -212,6 +212,7 @@ function MapUtils:InitSetting()
 	end
 
 	AddCategory("MAPLABELS", 2)
+	AddCheckbox("COORDSIMPROVEMENTS", true, function() MapUtils:RefreshCoords() end, nil, "2026-10-06")
 	AddCheckbox("ZONELEVELS", true)
 	AddCheckbox("ZONERECLEVELS", true, nil, nil, "2026-10-02")
 	AddCheckbox("FISHINGLEVELS", true)
