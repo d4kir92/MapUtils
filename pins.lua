@@ -2278,16 +2278,36 @@ local function GetMinimapList(mapID, piersOn, dungeonsOn, flightsOn, meetingSton
 	return minimapList
 end
 
+MapUtils.MinimapState = {
+	time = 0
+}
+
+function MapUtils:WakeMinimapPins()
+	local state = MapUtils.MinimapState
+	state.time = 0
+	if state.updater ~= nil then state.updater:Show() end
+end
+
 local function UpdateMinimapPins()
+	local state = MapUtils.MinimapState
 	local mapID = C_Map.GetBestMapForUnit("player")
+	local wx, wy = UnitPosition("player")
+	local facing = GetPlayerFacing ~= nil and GetPlayerFacing() or 0
+	local zoom = Minimap:GetZoom()
+	local now = GetTime()
+	if issecretvalue == nil or not (issecretvalue(mapID) or issecretvalue(wx) or issecretvalue(wy) or issecretvalue(facing) or issecretvalue(zoom)) then
+		if state.mapID == mapID and state.x == wx and state.y == wy and state.facing == facing and state.zoom == zoom and now - state.time < 1 then return end
+		state.mapID, state.x, state.y, state.facing, state.zoom, state.time = mapID, wx, wy, facing, zoom, now
+	end
+
 	local list = GetMinimapList(mapID, PiersEnabled(false), DungeonsEnabled(false), FlightsEnabled(false), MeetingStonesEnabled(false))
-	if list == nil then
+	if list == nil or #list == 0 then
 		HideAll(minimapPins)
+		if state.updater ~= nil then state.updater:Hide() end
 
 		return
 	end
 
-	local wx, wy = UnitPosition("player")
 	local yards = GetMinimapYards()
 	if wx == nil or wy == nil or yards == nil or yards <= 0 then
 		HideAll(minimapPins)
@@ -2298,8 +2318,7 @@ local function UpdateMinimapPins()
 	local width = Minimap:GetWidth()
 	local scale = width / yards
 	local radius = width / 2
-	local facing = 0
-	if MapUtils:GetCVar("rotateMinimap") == "1" then facing = GetPlayerFacing() or 0 end
+	if MapUtils:GetCVar("rotateMinimap") ~= "1" then facing = 0 end
 	local cosF = math.cos(facing)
 	local sinF = math.sin(facing)
 	for i, entry in ipairs(list) do
@@ -2382,7 +2401,17 @@ if worldCanvas ~= nil and CreateFramePool ~= nil then
 	)
 end
 
-if Minimap ~= nil then minimapUpdater = CreateUpdater(Minimap, UpdateMinimapPins) end
+if Minimap ~= nil then
+	minimapUpdater = CreateUpdater(Minimap, UpdateMinimapPins)
+	MapUtils.MinimapState.updater = minimapUpdater
+	MapUtils.MinimapState.zoneWatcher = CreateFrame("FRAME")
+	for _, event in ipairs({"PLAYER_ENTERING_WORLD", "ZONE_CHANGED", "ZONE_CHANGED_INDOORS", "ZONE_CHANGED_NEW_AREA"}) do
+		pcall(MapUtils.MinimapState.zoneWatcher.RegisterEvent, MapUtils.MinimapState.zoneWatcher, event)
+	end
+
+	MapUtils.MinimapState.zoneWatcher:SetScript("OnEvent", function() MapUtils:WakeMinimapPins() end)
+end
+
 local function UpdatePinStyles()
 	for _, pin in ipairs(worldPins) do
 		if pin:IsShown() then UpdatePinStyle(pin) end
@@ -2529,6 +2558,7 @@ function MapUtils:RefreshPins()
 	if worldPinPool ~= nil then worldPinPool:ReleaseAll() end
 	wipe(worldPins)
 	HideAll(minimapPins)
+	MapUtils:WakeMinimapPins()
 end
 
 local function SetIcon(value)
