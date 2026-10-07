@@ -71,3 +71,4 @@ MapUtils:AddTrans("itIT", "LID_SHOWLEVELPINS", "Mostra i segnalini dei cambi di 
 MapUtils:AddTrans("itIT", "LID_HIDELEVELPINS", "Nascondi i segnalini dei cambi di livello")
 MapUtils:AddTrans("itIT", "LID_ZONECROSSINGS", "Passaggi di zona")
 MapUtils:AddTrans("itIT", "LID_ZONECROSSING", "Passaggio di zona")
+MapUtils:AddTrans("itIT", "LID_QUESTTURNINWORLDMAPPINS", "Mostra le missioni da consegnare sulle mappe dei continenti e di Azeroth")

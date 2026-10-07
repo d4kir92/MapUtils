@@ -191,6 +191,7 @@ function MapUtils:InitSetting()
 	end)
 
 	AddCategory("WORLDMAP", nil, nil, ADDED_0927)
+	if MapUtils.RefreshQuestTurnIns then AddCheckbox("QUESTTURNINWORLDMAPPINS", true, function() MapUtils:RefreshQuestTurnIns() end, nil, "2026-10-07") end
 	if MapUtils:IsForever() then AddCheckbox("REMEMBERQUESTCATEGORIES", true, function() MapUtils:RestoreQuestCategories() end) end
 	AddCategory("MAPWINDOW", 2, nil, ADDED_0927)
 	local byMoveAny = MapUtils:IsWorldMapByMoveAny()

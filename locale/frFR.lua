@@ -71,3 +71,4 @@ MapUtils:AddTrans("frFR", "LID_SHOWLEVELPINS", "Afficher les repères de changem
 MapUtils:AddTrans("frFR", "LID_HIDELEVELPINS", "Masquer les repères de changement de niveau")
 MapUtils:AddTrans("frFR", "LID_ZONECROSSINGS", "Passages de zone")
 MapUtils:AddTrans("frFR", "LID_ZONECROSSING", "Passage de zone")
+MapUtils:AddTrans("frFR", "LID_QUESTTURNINWORLDMAPPINS", "Afficher les quêtes à rendre sur les cartes des continents et d'Azeroth")

@@ -71,3 +71,4 @@ MapUtils:AddTrans("ruRU", "LID_SHOWLEVELPINS", "Показать метки пе
 MapUtils:AddTrans("ruRU", "LID_HIDELEVELPINS", "Скрыть метки переходов между уровнями")
 MapUtils:AddTrans("ruRU", "LID_ZONECROSSINGS", "Переходы между зонами")
 MapUtils:AddTrans("ruRU", "LID_ZONECROSSING", "Переход в другую зону")
+MapUtils:AddTrans("ruRU", "LID_QUESTTURNINWORLDMAPPINS", "Показывать задания для сдачи на картах континентов и Азерота")

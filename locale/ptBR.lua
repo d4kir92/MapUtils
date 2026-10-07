@@ -71,3 +71,4 @@ MapUtils:AddTrans("ptBR", "LID_SHOWLEVELPINS", "Mostrar marcadores de troca de n
 MapUtils:AddTrans("ptBR", "LID_HIDELEVELPINS", "Ocultar marcadores de troca de nível")
 MapUtils:AddTrans("ptBR", "LID_ZONECROSSINGS", "Passagens entre zonas")
 MapUtils:AddTrans("ptBR", "LID_ZONECROSSING", "Passagem para outra zona")
+MapUtils:AddTrans("ptBR", "LID_QUESTTURNINWORLDMAPPINS", "Mostrar entregas de missões nos mapas dos continentes e de Azeroth")
