@@ -377,6 +377,7 @@ function impl.CreateArrow()
     impl.SetAtlas(frame.Arrow, NAV_ARROW, true)
     frame.Arrow:Hide()
     frame.Distance = frame:CreateFontString(nil, "BACKGROUND", "GameFontNormal")
+    frame.DistanceText = frame.Distance
     frame.Distance:SetPoint("TOP", frame.Icon, "BOTTOM", 0, -8)
     frame:SetScript("OnUpdate", function(self, elapsed)
         registry.impl.OnArrowUpdate(self, elapsed)
@@ -461,6 +462,19 @@ function D4:EnableWaypointFallback(getDB)
     end
 
     return true
+end
+
+function D4:GetWaypointDistance()
+    if registry.impl.IsFallback() then return registry.impl.GetRelative() or 0 end
+    if C_Navigation ~= nil and C_Navigation.GetDistance ~= nil then return C_Navigation.GetDistance() or 0 end
+
+    return 0
+end
+
+function D4:GetWaypointFrame()
+    if registry.impl.IsFallback() then return registry.arrow end
+
+    return SuperTrackedFrame
 end
 
 function D4:HasWaypointSupport()
