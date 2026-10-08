@@ -1876,8 +1876,8 @@ local waypointCache = {positions = {}}
 local function GetWaypointKey()
 	if waypointCache.valid then return waypointCache.key end
 	waypointCache.valid = true
-	if C_Map.HasUserWaypoint == nil or C_Map.GetUserWaypoint == nil or not C_Map.HasUserWaypoint() then return nil end
-	local point = C_Map.GetUserWaypoint()
+	if not MapUtils:HasUserWaypoint() then return nil end
+	local point = MapUtils:GetUserWaypoint()
 	if point == nil or point.position == nil then return nil end
 
 	waypointCache.key = format("%s|%s|%s", tostring(point.uiMapID), tostring(point.position.x), tostring(point.position.y))
@@ -1898,10 +1898,9 @@ local function IsEntryWaypoint(mapID, entry)
 	local key = GetWaypointKey()
 	if key == nil then return false end
 	if waypointEntry ~= nil and key == waypointKey then return IsSameEntry(entry, waypointEntry) end
-	if C_Map.GetUserWaypointPositionForMap == nil then return false end
 	local pos = waypointCache.positions[mapID]
 	if pos == nil then
-		pos = C_Map.GetUserWaypointPositionForMap(mapID) or false
+		pos = MapUtils:GetUserWaypointPositionForMap(mapID) or false
 		waypointCache.positions[mapID] = pos
 	end
 	if pos == false then return false end
@@ -1911,10 +1910,10 @@ local function IsEntryWaypoint(mapID, entry)
 end
 
 local function ToggleWaypoint(mapID, entry)
-	if mapID == nil or C_Map.SetUserWaypoint == nil or UiMapPoint == nil then return end
+	if mapID == nil or not MapUtils:HasWaypointSupport() then return end
 	if IsEntryWaypoint(mapID, entry) then
 		if MapUtils:IsWaypointTracked() then
-			C_Map.ClearUserWaypoint()
+			MapUtils:ClearUserWaypoint()
 			waypointEntry = nil
 			waypointKey = nil
 			MapUtils:SetWaypointTracked(false)
@@ -1949,7 +1948,7 @@ local function GetCircleAtlas(tracked, pushed)
 		atlas = CIRCLE_PUSHED
 	end
 
-	if atlas ~= nil and IsAtlas(atlas) then return atlas end
+	if MapUtils:HasAtlasOrFallback(atlas) then return atlas end
 
 	return nil
 end
@@ -2017,7 +2016,7 @@ local function UpdatePinStyle(pin)
 	local extend = 0
 	if atlas ~= nil then
 		local circleSize = math.max(pinSize, pin.minCircleSize or pinSize)
-		pin.circle:SetAtlas(atlas)
+		MapUtils:SetAtlasOrFallback(pin.circle, atlas)
 		pin.circle:SetSize(circleSize, circleSize)
 		pin.circle:Show()
 		size = math.min(pinSize, circleSize * TRACKED_ICON_SCALE)
@@ -2498,17 +2497,20 @@ local function UpdatePinStyles()
 	end
 end
 
-if C_Map.SetUserWaypoint ~= nil then
-	local styleFrame = CreateFrame("FRAME")
-	styleFrame:RegisterEvent("USER_WAYPOINT_UPDATED")
-	if C_SuperTrack ~= nil then styleFrame:RegisterEvent("SUPER_TRACKING_CHANGED") end
-	styleFrame:SetScript("OnEvent", function()
-		waypointCache.valid = false
-		waypointCache.key = nil
-		wipe(waypointCache.positions)
-		UpdatePinStyles()
-	end)
-end
+MapUtils:EnableWaypointFallback(function() return MAUTTABPC end)
+MapUtils:RegisterWaypointMarker(function(mapID, x, y)
+	for _, pin in ipairs(worldPins) do
+		if pin:IsShown() and pin.entry ~= nil and pin.mapID == mapID and math.abs(pin.entry.x - x) < WAYPOINT_TOLERANCE and math.abs(pin.entry.y - y) < WAYPOINT_TOLERANCE then return true end
+	end
+
+	return false
+end)
+MapUtils:RegisterWaypointCallback(function()
+	waypointCache.valid = false
+	waypointCache.key = nil
+	wipe(waypointCache.positions)
+	UpdatePinStyles()
+end)
 
 if C_TaxiMap ~= nil and C_TaxiMap.GetTaxiNodesForMap ~= nil then
 	local taxiFrame = CreateFrame("FRAME")
@@ -2778,8 +2780,8 @@ local function ReportState(filter)
 	MapUtils:INFO("C_TaxiMap.GetTaxiNodesForMap:", C_TaxiMap ~= nil and C_TaxiMap.GetTaxiNodesForMap ~= nil, "- world pin base level:", worldUpdater ~= nil and GetWorldPinLevel(GetWorldCanvas()) or "?")
 	MapUtils:INFO("world pins:", #worldPins, "minimap pins:", #minimapPins, "icon:", GetIcon(DEFAULT_FACTION), "is atlas:", IsAtlas(GetIcon(DEFAULT_FACTION)))
 	MapUtils:INFO("user waypoint:", tostring(GetWaypointKey()), "- set by pin:", tostring(waypointKey), "- tracked:", tostring(MapUtils:IsWaypointTracked()))
-	if canvasMapID ~= nil and C_Map.GetUserWaypointPositionForMap ~= nil then
-		local pos = C_Map.GetUserWaypointPositionForMap(canvasMapID)
+	if canvasMapID ~= nil then
+		local pos = MapUtils:GetUserWaypointPositionForMap(canvasMapID)
 		if pos ~= nil then MapUtils:INFO(format("user waypoint on canvas map: %.5f / %.5f", pos:GetXY())) end
 	end
 
