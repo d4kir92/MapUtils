@@ -1,5 +1,5 @@
 local addonName, D4 = ...
-local VERSION = 2
+local VERSION = 3
 local DB_KEY = "D4WAYPOINT"
 local ARRIVAL_DISTANCE = 10
 local UPDATE_INTERVAL = 0.02
@@ -346,7 +346,7 @@ function impl.IsClientAtlas(name)
 end
 
 function impl.SetAtlas(texture, name, useAtlasSize)
-    if impl.IsClientAtlas(name) then
+    if impl.IsClientAtlas(name) and (impl.IsNative() or FALLBACK_ATLASES[name] == nil) then
         texture:SetAtlas(name, useAtlasSize)
 
         return true
