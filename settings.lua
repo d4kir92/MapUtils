@@ -201,6 +201,7 @@ function MapUtils:InitSetting()
 		local checkbox = AddCheckbox(key, true, function() MapUtils:RefreshWorldMapFrame() end, label, ADDED_0927)
 		if byMoveAny then maset:AddDependency(checkbox, function() return false end, 0) end
 	end
+	if MapUtils.IsWorldMapWheelZoomAvailable and MapUtils:IsWorldMapWheelZoomAvailable() then AddCheckbox("WORLDMAPZOOM", true, nil, nil, "2026-10-08") end
 	AddCategory("NAVIGATION", 2, nil, ADDED_0928)
 	AddCheckbox("ALWAYSSHOWWAYPOINT", false, nil, nil, ADDED_0928)
 	AddCategory("MAPFADE", 2, nil, ADDED_0927)

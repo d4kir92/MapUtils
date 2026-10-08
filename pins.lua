@@ -547,8 +547,8 @@ piers[1453] = {
 	},
 	{
 		["name"] = "Dwarven District",
-		["x"] = 0.666,
-		["y"] = 0.347,
+		["x"] = 0.616,
+		["y"] = 0.107,
 		["forever"] = {0.6901, 0.3071},
 		["transport"] = "tram",
 		["routes"] = {

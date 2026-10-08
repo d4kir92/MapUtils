@@ -386,3 +386,68 @@ if MapUtils:IsForever() and C_QuestLog and CollapseQuestHeader and ExpandQuestHe
 		C_Timer.After(0, function() MapUtils:RestoreQuestCategories() end)
 	end)
 end
+
+local WheelZoom = {
+	installDelay = 3,
+	container = WorldMapFrame and WorldMapFrame.ScrollContainer,
+	zoomMethods = {"InstantPanAndZoom", "SetZoomTarget", "ZoomIn", "ZoomOut"},
+}
+WheelZoom.disabledByBlizzard = WheelZoom.container ~= nil and nop ~= nil and WheelZoom.container:GetScript("OnMouseWheel") == nop
+function MapUtils:IsWorldMapWheelZoomAvailable()
+	return WheelZoom.disabledByBlizzard == true
+end
+
+function WheelZoom.MarkForeign()
+	if not WheelZoom.own then WheelZoom.foreignTime = GetTime() end
+end
+
+function WheelZoom.Apply()
+	local pending = WheelZoom.pending
+	WheelZoom.pending = nil
+	local container = WheelZoom.container
+	if pending == nil or not container:IsVisible() then return end
+	if WheelZoom.foreignTime ~= nil and WheelZoom.foreignTime >= pending.time then return end
+	if math.abs(container:GetCanvasScale() - pending.scale) > SCALE_EPSILON then return end
+	local zoomOut, zoomIn = container:GetCurrentZoomRange()
+	local target = pending.delta > 0 and zoomIn or zoomOut
+	if target == nil or math.abs(target - container:GetCanvasScale()) <= SCALE_EPSILON then return end
+	WheelZoom.own = true
+	container:InstantPanAndZoom(target, pending.x, pending.y)
+	WheelZoom.own = false
+end
+
+function WheelZoom.OnMouseWheel(container, delta)
+	if not IsEnabled("WORLDMAPZOOM") or container.zoomLevels == nil then return end
+	if WheelZoom.foreignTime == GetTime() then return end
+	local x, y = container:GetNormalizedCursorPosition()
+	WheelZoom.pending = {
+		["delta"] = delta,
+		["x"] = x,
+		["y"] = y,
+		["time"] = GetTime(),
+		["scale"] = container:GetCanvasScale(),
+	}
+	C_Timer.After(0, WheelZoom.Apply)
+end
+
+function WheelZoom.Install()
+	if WheelZoom.installed or not WheelZoom.disabledByBlizzard then return end
+	local container = WheelZoom.container
+	if container:GetScript("OnMouseWheel") ~= nop then return end
+	WheelZoom.installed = true
+	for _, method in ipairs(WheelZoom.zoomMethods) do
+		if type(container[method]) == "function" then hooksecurefunc(container, method, WheelZoom.MarkForeign) end
+	end
+
+	container:EnableMouseWheel(true)
+	container:HookScript("OnMouseWheel", WheelZoom.OnMouseWheel)
+end
+
+if WheelZoom.disabledByBlizzard then
+	WheelZoom.loader = CreateFrame("Frame")
+	WheelZoom.loader:RegisterEvent("PLAYER_LOGIN")
+	WheelZoom.loader:SetScript("OnEvent", function(sel)
+		sel:UnregisterAllEvents()
+		C_Timer.After(WheelZoom.installDelay, WheelZoom.Install)
+	end)
+end
