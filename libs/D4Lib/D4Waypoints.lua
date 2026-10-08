@@ -5,7 +5,7 @@ local ARRIVAL_DISTANCE = 10
 local UPDATE_INTERVAL = 0.02
 local EDGE_MARGIN = 40
 local DEFAULT_FOV = 90
-local FOV_ASPECT = 4 / 3
+local FOV_ASPECT = 2.09
 local MARKER_DELAY = 0.1
 local MEDIA = "Interface\\AddOns\\" .. addonName .. "\\libs\\D4Lib\\media\\"
 local FALLBACK_ATLASES = {
@@ -163,6 +163,19 @@ function impl.GetRelative()
     local cx, cy = dx + zoom * math.cos(facing), dy + zoom * math.sin(facing)
 
     return math.sqrt(dx * dx + dy * dy), math.atan2(cy, cx) - facing
+end
+
+function impl.Debug()
+    local distance, angle = impl.GetRelative()
+    if distance == nil then return "no waypoint or no position" end
+    angle = (angle + math.pi) % (2 * math.pi) - math.pi
+    local wp = registry.waypoint
+    local px, py = UnitPosition("player")
+    local tx, ty = wp.worldPos:GetXY()
+    local raw = (math.atan2(ty - py, tx - px) - GetPlayerFacing() + math.pi) % (2 * math.pi) - math.pi
+    local offset = impl.GetScreenOffset(angle)
+
+    return format("angle=%.2f raw=%.2f dist=%.1f zoom=%.1f fov=%s ui=%.0fx%.0f px=%.0fx%.0f offset=%.0f", math.deg(angle), math.deg(raw), distance, GetCameraZoom ~= nil and GetCameraZoom() or -1, tostring(GetCVar("cameraFov")), UIParent:GetWidth(), UIParent:GetHeight(), GetPhysicalScreenSize ~= nil and select(1, GetPhysicalScreenSize()) or 0, GetPhysicalScreenSize ~= nil and select(2, GetPhysicalScreenSize()) or 0, offset)
 end
 
 function impl.PlaySound(key)
