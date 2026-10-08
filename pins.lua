@@ -322,6 +322,7 @@ piers[1420] = {
 piers[1424] = {
 	{
 		["name"] = "Southshore",
+		["foreverOnly"] = true,
 		["x"] = 0.5057,
 		["y"] = 0.6967,
 		["routes"] = {
@@ -383,6 +384,7 @@ piers[1437] = {
 			{
 				["dest"] = "Southshore",
 				["mapID"] = 1424,
+				["foreverOnly"] = true,
 			},
 			{
 				["dest"] = "Auberdine",
@@ -430,11 +432,13 @@ piers[1439] = {
 			{
 				["dest"] = "Southshore",
 				["mapID"] = 1424,
+				["foreverOnly"] = true,
 			},
 		},
 	},
 	{
 		["name"] = "Auberdine",
+		["foreverOnly"] = true,
 		["x"] = 0.3074,
 		["y"] = 0.4103,
 		["routes"] = {
@@ -500,6 +504,7 @@ piers[1446] = {
 	{
 		["name"] = "Tanaris",
 		["nameMapID"] = 1446,
+		["foreverOnly"] = true,
 		["x"] = 0.6813,
 		["y"] = 0.2254,
 		["faction"] = "Neutral",
@@ -515,6 +520,7 @@ piers[2548] = {
 	{
 		["name"] = "Riverglades",
 		["nameMapID"] = 2548,
+		["foreverOnly"] = true,
 		["x"] = 0.8024,
 		["y"] = 0.5408,
 		["faction"] = "Neutral",
@@ -529,6 +535,7 @@ piers[2548] = {
 piers[1453] = {
 	{
 		["name"] = "Stormwind Harbor",
+		["foreverOnly"] = true,
 		["x"] = 0.2253,
 		["y"] = 0.562,
 		["routes"] = {
@@ -568,7 +575,25 @@ piers[1455] = {
 	},
 }
 
-for _, list in pairs(piers) do
+for mapID, list in pairs(piers) do
+	if not MapUtils:IsForever() then
+		local kept = {}
+		for _, pier in ipairs(list) do
+			if not pier.foreverOnly then
+				local routes = {}
+				for _, route in ipairs(pier.routes or {}) do
+					if not route.foreverOnly then tinsert(routes, route) end
+				end
+
+				pier.routes = routes
+				tinsert(kept, pier)
+			end
+		end
+
+		piers[mapID] = #kept > 0 and kept or nil
+		list = kept
+	end
+
 	for _, pier in ipairs(list) do
 		if pier.forever ~= nil and MapUtils:IsForever() then pier.x, pier.y = pier.forever[1], pier.forever[2] end
 		pier.name = MapUtils:TransName(pier.name)
@@ -582,6 +607,7 @@ end
 
 local dungeons = {}
 local function AddDungeon(info, positions)
+	if info.foreverOnly and not MapUtils:IsForever() then return end
 	for mapID, pos in pairs(positions) do
 		local entry = {}
 		for key, value in pairs(info) do
@@ -599,6 +625,7 @@ local function AddDungeon(info, positions)
 
 		entry.x = pos[1]
 		entry.y = pos[2]
+		if pos.forever ~= nil and MapUtils:IsForever() then entry.x, entry.y = pos.forever[1], pos.forever[2] end
 		dungeons[mapID] = dungeons[mapID] or {}
 		tinsert(dungeons[mapID], entry)
 	end
@@ -607,6 +634,7 @@ end
 AddDungeon(
 	{
 		["name"] = "Ruins of Lordaeron",
+		["foreverOnly"] = true,
 		["lfg"] = 3272,
 		["instance"] = 2999,
 		["minLevel"] = 11,
@@ -621,6 +649,7 @@ AddDungeon(
 AddDungeon(
 	{
 		["name"] = "Hall of the Thanes",
+		["foreverOnly"] = true,
 		["instance"] = 3065,
 		["minLevel"] = 10,
 	},
@@ -632,6 +661,7 @@ AddDungeon(
 AddDungeon(
 	{
 		["name"] = "Hall of the Thanes",
+		["foreverOnly"] = true,
 		["entrance"] = "path",
 		["instance"] = 3065,
 		["minLevel"] = 10,
@@ -694,6 +724,7 @@ AddDungeon(
 AddDungeon(
 	{
 		["name"] = "City of Dalaran",
+		["foreverOnly"] = true,
 		["lfg"] = 3271,
 		["instance"] = 2959,
 		["minLevel"] = 28,
@@ -708,6 +739,7 @@ AddDungeon(
 AddDungeon(
 	{
 		["name"] = "Excavation Site: Wetlands",
+		["foreverOnly"] = true,
 		["lfg"] = 3274,
 		["instance"] = 2998,
 	},
@@ -725,7 +757,11 @@ AddDungeon(
 		["maxLevel"] = 30,
 	},
 	{
-		[1453] = {0.524, 0.7},
+		[1453] = {
+			0.4229,
+			0.5889,
+			["forever"] = {0.524, 0.7},
+		},
 	}
 )
 
@@ -805,6 +841,7 @@ AddDungeon(
 AddDungeon(
 	{
 		["name"] = "The Drowned City",
+		["foreverOnly"] = true,
 		["minLevel"] = 35,
 		["maxLevel"] = 40,
 	},
@@ -998,6 +1035,7 @@ meetingStones[1434] = {
 	{
 		["kind"] = "meetingstone",
 		["name"] = "The Drowned City",
+		["foreverOnly"] = true,
 		["x"] = 0.21756,
 		["y"] = 0.27748,
 	},
@@ -1006,12 +1044,24 @@ meetingStones[1437] = {
 	{
 		["kind"] = "meetingstone",
 		["name"] = "Excavation Site: Wetlands",
+		["foreverOnly"] = true,
 		["lfg"] = 3274,
 		["instance"] = 2998,
 		["x"] = 0.53788,
 		["y"] = 0.65724,
 	},
 }
+
+if not MapUtils:IsForever() then
+	for mapID, list in pairs(meetingStones) do
+		local kept = {}
+		for _, stone in ipairs(list) do
+			if not stone.foreverOnly then tinsert(kept, stone) end
+		end
+
+		meetingStones[mapID] = #kept > 0 and kept or nil
+	end
+end
 
 local mapRects = {}
 local function GetMapRect(mapID)
@@ -2223,12 +2273,14 @@ local function UpdateWorldPins()
 		pin.pixel = 1 / scale
 		pin.minCircleSize = dungeonSize
 		pin.baseLevel = baseLevel
-		ApplyIcon(pin, GetEntryIcon(entry))
+		local icon = GetEntryIcon(entry)
+		ApplyIcon(pin, icon)
 		ApplyEntryTint(pin, entry)
 		if entry.kind == "crossing" or entry.kind == "dungeon" and entry.entrance == "path" then
 			pin:SetSize(dungeonSize * 0.7, dungeonSize * 0.7)
 		elseif entry.kind == "dungeon" then
-			pin:SetSize(dungeonSize, dungeonSize)
+			local entranceSize = math.min(DUNGEON_ICON_SIZE, GetAtlasWidth(icon) or DUNGEON_ICON_SIZE) * poiScale / scale
+			pin:SetSize(entranceSize, entranceSize)
 		elseif entry.kind == "flight" then
 			local flightSize = (GetAtlasWidth(entry.icon) or ICON_SIZE) * poiScale / scale
 			pin:SetSize(flightSize, flightSize)
