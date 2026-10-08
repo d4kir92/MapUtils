@@ -459,6 +459,35 @@ piers[1439] = {
 			},
 		},
 	},
+	{
+		["name"] = "Auberdine",
+		["minBuildNr"] = 20000,
+		["faction"] = "Neutral",
+		["x"] = 0.3,
+		["y"] = 0.41,
+		["routes"] = {
+			{
+				["mapID"] = 1943,
+			},
+		},
+	},
+}
+
+piers[1943] = {
+	{
+		["name"] = "Azuremyst Isle",
+		["nameMapID"] = 1943,
+		["minBuildNr"] = 20000,
+		["faction"] = "Alliance",
+		["x"] = 0.2,
+		["y"] = 0.54,
+		["routes"] = {
+			{
+				["dest"] = "Auberdine",
+				["mapID"] = 1439,
+			},
+		},
+	},
 }
 
 piers[1444] = {
@@ -576,24 +605,23 @@ piers[1455] = {
 }
 
 for mapID, list in pairs(piers) do
-	if not MapUtils:IsForever() then
-		local kept = {}
-		for _, pier in ipairs(list) do
-			if not pier.foreverOnly then
-				local routes = {}
-				for _, route in ipairs(pier.routes or {}) do
-					if not route.foreverOnly then tinsert(routes, route) end
-				end
-
-				pier.routes = routes
-				tinsert(kept, pier)
+	local forever = MapUtils:IsForever()
+	local buildNr = MapUtils:GetWoWBuildNr()
+	local kept = {}
+	for _, pier in ipairs(list) do
+		if (forever or not pier.foreverOnly) and (pier.minBuildNr == nil or not forever and buildNr >= pier.minBuildNr) then
+			local routes = {}
+			for _, route in ipairs(pier.routes or {}) do
+				if (forever or not route.foreverOnly) and (route.minBuildNr == nil or not forever and buildNr >= route.minBuildNr) then tinsert(routes, route) end
 			end
-		end
 
-		piers[mapID] = #kept > 0 and kept or nil
-		list = kept
+			pier.routes = routes
+			tinsert(kept, pier)
+		end
 	end
 
+	piers[mapID] = #kept > 0 and kept or nil
+	list = kept
 	for _, pier in ipairs(list) do
 		if pier.forever ~= nil and MapUtils:IsForever() then pier.x, pier.y = pier.forever[1], pier.forever[2] end
 		pier.name = MapUtils:TransName(pier.name)
