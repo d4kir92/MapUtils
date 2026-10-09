@@ -24,6 +24,20 @@ local function ShowCoords(label, x, y, px, py, width, height)
 	label:Show()
 end
 
+local playerPos = {}
+local function GetPlayerPos(mapID)
+	if mapID == nil then return nil end
+	local wy, wx = UnitPosition("player")
+	if wx == nil or wx ~= playerPos.wx or wy ~= playerPos.wy or mapID ~= playerPos.mapID then
+		local pos = C_Map.GetPlayerMapPosition(mapID, "player")
+		playerPos.x, playerPos.y = nil, nil
+		if pos ~= nil then playerPos.x, playerPos.y = pos:GetXY() end
+		playerPos.wx, playerPos.wy, playerPos.mapID = wx, wy, mapID
+	end
+
+	return playerPos.x, playerPos.y
+end
+
 local nativePanel
 local nativeAlpha
 local function RefreshNativeCoords(enabled)
@@ -75,10 +89,8 @@ function MapUtils:RefreshCoords()
 	end
 
 	if IsEnabled("worldMapShowPlayerCoords") and C_Map and C_Map.GetPlayerMapPosition and child ~= nil then
-		local mapID = map:GetMapID()
-		local pos = mapID and C_Map.GetPlayerMapPosition(mapID, "player")
-		if pos ~= nil then
-			local x, y = pos:GetXY()
+		local x, y = GetPlayerPos(map:GetMapID())
+		if x ~= nil and y ~= nil then
 			local scale = childScale / scrollScale
 			local left, top = child:GetLeft(), child:GetTop()
 			local scrollLeft, scrollTop = scroll:GetLeft(), scroll:GetTop()

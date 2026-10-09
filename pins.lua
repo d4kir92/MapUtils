@@ -242,6 +242,12 @@ TAXI_FACTIONS[1] = "Horde"
 TAXI_FACTIONS[2] = "Alliance"
 local ZONE_MAP_TYPE = 3
 local COVERED_PIN_LEVELS = {"PIN_FRAME_LEVEL_DUNGEON_ENTRANCE", "PIN_FRAME_LEVEL_FLIGHT_POINT"}
+local PinCache = {
+	["templates"] = {"LeaMapsGlobalPinTemplate", "FlightPointPinTemplate"},
+	["atlas"] = {},
+	["atlasWidth"] = {}
+}
+
 local MINIMAP_YARDS = {}
 MINIMAP_YARDS["outdoor"] = {[0] = 466.66666, 400, 333.33333, 266.66666, 200, 133.33333}
 MINIMAP_YARDS["indoor"] = {[0] = 300, 240, 180, 120, 80, 50}
@@ -1139,8 +1145,9 @@ end
 local function IsAtlas(icon)
 	if icon == nil or icon == "" then return false end
 	if MapUtils.AtlasExists == nil then return false end
+	if PinCache.atlas[icon] == nil then PinCache.atlas[icon] = MapUtils:AtlasExists(icon) == true end
 
-	return MapUtils:AtlasExists(icon) == true
+	return PinCache.atlas[icon]
 end
 
 local resolvedIcons = {}
@@ -1282,10 +1289,12 @@ end
 
 local function GetAtlasWidth(icon)
 	if not IsAtlas(icon) or C_Texture == nil or C_Texture.GetAtlasInfo == nil then return nil end
-	local info = C_Texture.GetAtlasInfo(icon)
-	if info == nil or info.width == nil or info.width <= 0 then return nil end
+	if PinCache.atlasWidth[icon] == nil then
+		local info = C_Texture.GetAtlasInfo(icon)
+		PinCache.atlasWidth[icon] = info ~= nil and info.width ~= nil and info.width > 0 and info.width or false
+	end
 
-	return info.width
+	return PinCache.atlasWidth[icon] or nil
 end
 
 local function GetFlightIcon(node, faction)
@@ -1978,7 +1987,7 @@ local function GetWorldPinLevel(child)
 	end
 
 	if WorldMapFrame.EnumeratePinsByTemplate ~= nil then
-		for _, template in ipairs({"LeaMapsGlobalPinTemplate", "FlightPointPinTemplate"}) do
+		for _, template in ipairs(PinCache.templates) do
 			for otherPin in WorldMapFrame:EnumeratePinsByTemplate(template) do
 				if otherPin:IsShown() and otherPin:GetFrameStrata() == child:GetFrameStrata() then level = math.max(level, otherPin:GetFrameLevel() + 1) end
 			end

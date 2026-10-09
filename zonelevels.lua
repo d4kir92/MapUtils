@@ -139,15 +139,8 @@ local function GetRangeText(levels)
 	return format("%d-%d", levels[1], levels[2])
 end
 
-local function AppendZoneLevel(label)
-	local levelsOn = MapUtils:GetConfig("ZONELEVELS", true) == true
-	local recOn = MapUtils:GetConfig("ZONERECLEVELS", true) == true
-	local fishingOn = MapUtils:GetConfig("FISHINGLEVELS", true) == true
-	if not levelsOn and not recOn and not fishingOn then return end
-	local text = label.Name:GetText()
-	if text == nil or text == "" then return end
+local function ApplyZoneLevel(label, text, mapID, levelsOn, recOn, fishingOn)
 	if WorldMapFrame.GetNormalizedCursorPosition == nil or C_Map.GetMapInfoAtPosition == nil then return end
-	local mapID = WorldMapFrame:GetMapID()
 	local x, y = WorldMapFrame:GetNormalizedCursorPosition()
 	if mapID == nil or x == nil or y == nil then return end
 	local info = C_Map.GetMapInfoAtPosition(mapID, x, y)
@@ -172,6 +165,31 @@ local function AppendZoneLevel(label)
 	elseif recText ~= nil and description:find(recText, 1, true) == nil then
 		label.Description:SetText(recText .. "\n" .. description)
 	end
+end
+
+local applied = {}
+local function GetDescriptionText(label)
+	if label.Description == nil then return nil end
+
+	return label.Description:GetText()
+end
+
+local function AppendZoneLevel(label)
+	local levelsOn = MapUtils:GetConfig("ZONELEVELS", true) == true
+	local recOn = MapUtils:GetConfig("ZONERECLEVELS", true) == true
+	local fishingOn = MapUtils:GetConfig("FISHINGLEVELS", true) == true
+	if not levelsOn and not recOn and not fishingOn then return end
+	local text = label.Name:GetText()
+	if text == nil or text == "" then return end
+	local mapID = WorldMapFrame:GetMapID()
+	local options = (levelsOn and 1 or 0) + (recOn and 2 or 0) + (fishingOn and 4 or 0)
+	if applied.label == label and applied.name == text and applied.description == GetDescriptionText(label) and applied.mapID == mapID and applied.options == options then return end
+	ApplyZoneLevel(label, text, mapID, levelsOn, recOn, fishingOn)
+	applied.label = label
+	applied.name = label.Name:GetText()
+	applied.description = GetDescriptionText(label)
+	applied.mapID = mapID
+	applied.options = options
 end
 
 local hooked = false

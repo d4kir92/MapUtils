@@ -95,6 +95,7 @@ local PinEdit = {
 	["tracked"] = {},
 	["addEntries"] = {},
 	["instanceEntries"] = {},
+	["instanceRows"] = {},
 	["worldKinds"] = {"pier", "dungeon", "flight", "meetingstone", "spirithealer", "crossing"},
 	["instanceKinds"] = {"boss", "item", "entrance", "level"},
 	["addKindIndex"] = 1,
@@ -251,6 +252,7 @@ function MapUtils:GetDebugInstancePins(info, skipRefresh)
 	if info.key == nil then return nil end
 	local mapKey = "instance:" .. info.key
 	PinEdit.instanceMapKey = mapKey
+	if PinEdit.instanceRows[mapKey] ~= nil then return PinEdit.instanceRows[mapKey] end
 	local entries = {}
 	for _, row in ipairs(MapUtils.INSTANCEPINS ~= nil and MapUtils.INSTANCEPINS[info.key] or {}) do
 		local entry = PinEdit.instanceEntries[row]
@@ -273,8 +275,13 @@ function MapUtils:GetDebugInstancePins(info, skipRefresh)
 		row.debugEntry, row.debugMapKey = entry, mapKey
 		tinsert(rows, row)
 	end
+	PinEdit.instanceRows[mapKey] = rows
 	if not skipRefresh then PinEdit.Refresh() end
 	return rows
+end
+
+function MapUtils:ClearDebugInstancePins()
+	wipe(PinEdit.instanceRows)
 end
 
 function MapUtils:RefreshDebugPinContext()

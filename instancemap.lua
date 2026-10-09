@@ -143,6 +143,7 @@ function MapUtils:IsInstanceMapShown()
 end
 
 function MapUtils:RefreshInstanceMap()
+	if MapUtils.ClearDebugInstancePins ~= nil then MapUtils:ClearDebugInstancePins() end
 	instanceMap:Invalidate()
 end
 

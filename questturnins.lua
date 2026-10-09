@@ -4,6 +4,9 @@ if C_Map.GetMapChildrenInfo == nil or C_Map.GetMapRectOnMap == nil or C_QuestLog
 local updater = CreateFrame("Frame", nil, WorldMapFrame)
 local pins = {}
 local entries = {}
+local seen = {}
+local mapTypes = {}
+local zoneChildren = {}
 local dirty = true
 local lastMapID
 local elapsedTime = 0
@@ -31,9 +34,39 @@ local function ProjectPosition(sourceID, targetID, x, y)
 	return x, y
 end
 
+local function GetMapType(mapID)
+	if mapID == nil then return nil end
+	if mapTypes[mapID] == nil then
+		local info = C_Map.GetMapInfo(mapID)
+		if info == nil then return nil end
+		mapTypes[mapID] = info.mapType or false
+	end
+
+	return mapTypes[mapID] or nil
+end
+
+local function GetZoneChildren(mapID)
+	if zoneChildren[mapID] ~= nil then return zoneChildren[mapID] end
+	local children = C_Map.GetMapChildrenInfo(mapID, nil, true)
+	if children == nil then return {} end
+	table.sort(children, function(a, b)
+		if a.mapType ~= b.mapType then return a.mapType > b.mapType end
+		return a.mapID < b.mapID
+	end)
+
+	local list = {}
+	for _, source in ipairs(children) do
+		if source.mapType >= Enum.UIMapType.Zone then table.insert(list, source) end
+	end
+
+	zoneChildren[mapID] = list
+
+	return list
+end
+
 local function CollectEntries(mapID)
 	wipe(entries)
-	local seen = {}
+	wipe(seen)
 	if WorldMapFrame.EnumeratePinsByTemplate then
 		for pin in WorldMapFrame:EnumeratePinsByTemplate("QuestPinTemplate") do
 			local questID = pin.GetQuestID and pin:GetQuestID()
@@ -41,28 +74,20 @@ local function CollectEntries(mapID)
 		end
 	end
 
-	local children = C_Map.GetMapChildrenInfo(mapID, nil, true) or {}
-	table.sort(children, function(a, b)
-		if a.mapType ~= b.mapType then return a.mapType > b.mapType end
-		return a.mapID < b.mapID
-	end)
-
-	for _, source in ipairs(children) do
-		if source.mapType >= Enum.UIMapType.Zone then
-			for _, poi in ipairs(C_QuestLog.GetQuestsOnMap(source.mapID) or {}) do
-				local questID = poi.questID
-				if questID and not seen[questID] and C_QuestLog.ReadyForTurnIn(questID) and type(poi.x) == "number" and type(poi.y) == "number" and poi.x >= 0 and poi.x <= 1 and poi.y >= 0 and poi.y <= 1 then
-					local x, y = ProjectPosition(source.mapID, mapID, poi.x, poi.y)
-					if x and y and x >= 0 and x <= 1 and y >= 0 and y <= 1 then
-						seen[questID] = true
-						table.insert(entries, {
-							questID = questID,
-							mapID = source.mapID,
-							name = source.name,
-							x = x,
-							y = y
-						})
-					end
+	for _, source in ipairs(GetZoneChildren(mapID)) do
+		for _, poi in ipairs(C_QuestLog.GetQuestsOnMap(source.mapID) or {}) do
+			local questID = poi.questID
+			if questID and not seen[questID] and C_QuestLog.ReadyForTurnIn(questID) and type(poi.x) == "number" and type(poi.y) == "number" and poi.x >= 0 and poi.x <= 1 and poi.y >= 0 and poi.y <= 1 then
+				local x, y = ProjectPosition(source.mapID, mapID, poi.x, poi.y)
+				if x and y and x >= 0 and x <= 1 and y >= 0 and y <= 1 then
+					seen[questID] = true
+					table.insert(entries, {
+						questID = questID,
+						mapID = source.mapID,
+						name = source.name,
+						x = x,
+						y = y
+					})
 				end
 			end
 		end
@@ -129,9 +154,9 @@ end
 
 local function UpdatePins()
 	local mapID = WorldMapFrame:GetMapID()
-	local info = mapID and C_Map.GetMapInfo(mapID)
+	local mapType = GetMapType(mapID)
 	local getter = C_CVar and C_CVar.GetCVarBool or GetCVarBool
-	if info == nil or Enum == nil or Enum.UIMapType == nil or (info.mapType ~= Enum.UIMapType.World and info.mapType ~= Enum.UIMapType.Continent) or not MapUtils:GetConfig("QUESTTURNINWORLDMAPPINS", true) or (getter and not getter("questPOI")) then
+	if mapType == nil or Enum == nil or Enum.UIMapType == nil or (mapType ~= Enum.UIMapType.World and mapType ~= Enum.UIMapType.Continent) or not MapUtils:GetConfig("QUESTTURNINWORLDMAPPINS", true) or (getter and not getter("questPOI")) then
 		HidePins()
 		lastMapID = nil
 		return
