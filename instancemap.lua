@@ -64,7 +64,7 @@ AddArt(230, "Blackrock Depths", {{242, "Detention Block"}, {243, "Shadowforge Ci
 AddArt(229, "Blackrock Spire", {{250, "Tazz'Alor"}, {251, "Skitterweb Tunnels"}, {252, "Hordemar City"}, {253, "Hall of Blackhand"}, {254, "Halycon's Lair"}, {255, "Chamber of Battle"}})
 AddArt(409, "Molten Core", {{232}})
 AddArt(469, "Blackwing Lair", {{287, "Dragonmaw Garrison"}, {288, "Halls of Strife"}, {289, "Crimson Laboratories"}, {290, "Nefarian's Lair"}})
-AddArt(429, "Dire Maul", {{234}, {235, "Gordok Commons"}, {236, "Capital Gardens"}, {237, "Court of the Highborne"}, {238, "Prison of Immol'Thar"}, {239, "Warpwood Quarter"}, {240, "The Shrine of Eldretharr"}})
+AddArt(429, "Dire Maul", {{235, "Gordok Commons"}, {236, "Capital Gardens"}, {237, "Court of the Highborne"}, {238, "Prison of Immol'Thar"}, {239, "Warpwood Quarter"}, {240, "The Shrine of Eldretharr"}})
 AddArt(289, "Scholomance", {{306, "The Reliquary"}, {307, "Chamber of Summoning"}, {308, "The Upper Study"}, {309, "Headmaster's Study"}})
 AddArt(329, "Stratholme", {{317, "Crusader's Square"}, {318, "The Gauntlet"}})
 AddArt(309, "Zul'Gurub", {{233}})

@@ -55,10 +55,6 @@ dungeonMaps[231] = {
 	"Interface\\AddOns\\MapUtils\\media\\231" -- Uldaman - Khaz'Goroth's Seat
 }
 
-dungeonMaps[234] = {
-	"Interface\\AddOns\\MapUtils\\media\\234" -- Dire Maul
-}
-
 dungeonMaps[235] = {
 	"Interface\\AddOns\\MapUtils\\media\\235" -- Dire Maul - Gordok Commons
 }
@@ -446,7 +442,7 @@ instanceToMap[48] = 221 -- Blackfathom Deeps
 instanceToMap[34] = 225 -- The Stockade
 instanceToMap[90] = 226 -- Gnomeregan
 instanceToMap[70] = 230 -- Uldaman
-instanceToMap[429] = 234 -- Dire Maul
+instanceToMap[429] = 235 -- Dire Maul
 instanceToMap[230] = 242 -- Blackrock Depths
 instanceToMap[229] = 250 -- Blackrock Spire
 instanceToMap[43] = 279 -- Wailing Caverns
