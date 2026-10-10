@@ -42,7 +42,7 @@ local function AddArt(instanceMapID, instanceName, levels)
 	end
 end
 
-AddArt(2959, "City of Dalaran", {{2959, "City of Dalaran (1)"}, {"2959_2", "City of Dalaran (2)"}})
+AddArt(2959, "City of Dalaran", {{2959, "City of Dalaran (1)", 684}, {"2959_2", "City of Dalaran (2)", 689}})
 AddArt(2998, "Excavation Site: Wetlands", {{2998}})
 AddArt(2999, "Ruins of Lordaeron", {{2999}})
 AddArt(3065, "Hall of the Thanes", {{3065}})
