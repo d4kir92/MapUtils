@@ -34,7 +34,7 @@ local function AddArt(instanceMapID, instanceName, levels)
 			["instance"] = instanceName,
 			["name"] = level[2],
 			["width"] = 1024,
-			["height"] = level[3] or 683,
+			["height"] = MapUtils.INSTANCEARTHEIGHTS ~= nil and MapUtils.INSTANCEARTHEIGHTS[tostring(level[1])] or 683,
 			["fileWidth"] = 1024,
 			["fileHeight"] = 1024,
 			["zoom"] = 1,
@@ -42,7 +42,7 @@ local function AddArt(instanceMapID, instanceName, levels)
 	end
 end
 
-AddArt(2959, "City of Dalaran", {{2959, "City of Dalaran (1)", 684}, {"2959_2", "City of Dalaran (2)", 689}})
+AddArt(2959, "City of Dalaran", {{2959, "City of Dalaran (1)"}, {"2959_2", "City of Dalaran (2)"}})
 AddArt(2998, "Excavation Site: Wetlands", {{2998}})
 AddArt(2999, "Ruins of Lordaeron", {{2999}})
 AddArt(3065, "Hall of the Thanes", {{3065}})
@@ -50,7 +50,7 @@ AddArt(389, "Ragefire Chasm", {{213}})
 AddArt(36, "The Deadmines", {{291}, {292, "Ironclad Cove"}})
 AddArt(43, "Wailing Caverns", {{279}})
 AddArt(33, "Shadowfang Keep", {{310, "The Courtyard"}, {311, "Dining Hall"}, {312, "The Vacant Den"}, {313, "Lower Observatory"}, {314, "Upper Observatory"}, {316, "The Wall Walk"}, {315, "Lord Godfrey's Chamber"}})
-AddArt(34, "The Stockade", {{225, nil, 670}})
+AddArt(34, "The Stockade", {{225}})
 AddArt(48, "Blackfathom Deeps", {{221, "The Pool of Ask'Ar"}, {222, "Moonshrine Sanctum"}, {223, "The Forgotten Pool"}})
 AddArt(90, "Gnomeregan", {{226, "The Hall of Gears"}, {227, "The Dormitory"}, {228, "Launch Bay"}, {229, "Tinkers' Court"}})
 AddArt(47, "Razorfen Kraul", {{301}})

@@ -430,6 +430,11 @@ MapUtils.INSTANCEPINS = {
 		{"boss", 0.670, 0.310, 10184, "Onyxia", 9999, 8570, 3},
 	},
 }
+MapUtils.INSTANCEARTHEIGHTS = {
+	["2959"] = 684,
+	["2959_2"] = 689,
+	["225"] = 670,
+}
 
 MapUtils:AddName("deDE", "Agathelos the Raging", "Agathelos der Tobende")
 MapUtils:AddName("deDE", "Aggem Thorncurse <Death's Head Prophet>", "Aggem Dornfluch")

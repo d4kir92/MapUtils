@@ -166,7 +166,7 @@ end
 function PinEdit.FormatAdd(record)
 	local text = format("%s [%s] add {%.5f, %.5f", record.kind or "crossing", tostring(record.map), record.x, record.y)
 	if record.dest ~= nil then text = text .. ", dest " .. tostring(record.dest) end
-	if record.kind == nil or record.kind == "crossing" then text = text .. ", " .. PinEdit.GetDirection(record.up) end
+	if record.kind == nil or record.kind == "crossing" or record.kind == "level" then text = text .. ", " .. PinEdit.GetDirection(record.up) end
 	for _, field in ipairs({"name", "instance", "target", "faction", "entrance"}) do
 		if record[field] ~= nil then text = text .. ", " .. field .. " " .. tostring(record[field]) end
 	end
