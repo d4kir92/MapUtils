@@ -1143,7 +1143,7 @@ local function GetMapName(mapID)
 end
 
 local function IsAtlas(icon)
-	if icon == nil or icon == "" then return false end
+	if type(icon) ~= "string" or icon == "" then return false end
 	if MapUtils.AtlasExists == nil then return false end
 	if PinCache.atlas[icon] == nil then PinCache.atlas[icon] = MapUtils:AtlasExists(icon) == true end
 
