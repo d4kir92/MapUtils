@@ -1100,16 +1100,18 @@ end
 local mapRects = {}
 local function GetMapRect(mapID)
 	if mapID == nil then return nil end
-	if mapRects[mapID] ~= nil then return mapRects[mapID] end
+	if mapRects[mapID] ~= nil then return mapRects[mapID] or nil end
 	if C_Map == nil or C_Map.GetWorldPosFromMapPos == nil then return nil end
+	mapRects[mapID] = false
 	if C_Map.GetMapInfo(mapID) == nil then return nil end
-	local _, topLeft = C_Map.GetWorldPosFromMapPos(mapID, CreateVector2D(0, 0))
+	local continentID, topLeft = C_Map.GetWorldPosFromMapPos(mapID, CreateVector2D(0, 0))
 	local _, bottomRight = C_Map.GetWorldPosFromMapPos(mapID, CreateVector2D(1, 1))
 	if topLeft == nil or bottomRight == nil then return nil end
 	if bottomRight.x == topLeft.x or bottomRight.y == topLeft.y then return nil end
 	local rect = {}
 	rect[1] = topLeft
 	rect[2] = CreateVector2D(bottomRight.x - topLeft.x, bottomRight.y - topLeft.y)
+	rect.continentID = continentID
 	mapRects[mapID] = rect
 
 	return rect
@@ -1118,11 +1120,14 @@ end
 local function GetPlayerMapPos(mapID)
 	local rect = GetMapRect(mapID)
 	if rect == nil then return nil end
-	local wx, wy = UnitPosition("player")
+	local wx, wy, _, instanceID = UnitPosition("player")
 	if wx == nil or wy == nil then return nil end
+	if rect.continentID ~= nil and instanceID ~= nil and rect.continentID ~= instanceID then return nil end
 
 	return (wy - rect[1].y) / rect[2].y, (wx - rect[1].x) / rect[2].x
 end
+
+MapUtils.GetPlayerMapPos = GetPlayerMapPos
 
 local function GetEntryWorldPos(mapID, entry)
 	if entry.worldPos ~= nil then return entry.worldPos end
@@ -2527,8 +2532,16 @@ if C_TaxiMap ~= nil and C_TaxiMap.GetTaxiNodesForMap ~= nil then
 	MapUtils:RegisterEvent(taxiFrame, "TAXIMAP_OPENED")
 	MapUtils:RegisterEvent(taxiFrame, "UI_INFO_MESSAGE")
 	taxiFrame.Refresh = function()
+		taxiFrame.pending = false
 		wipe(flights)
 		MapUtils:RefreshPins()
+	end
+
+	taxiFrame.QueueRefresh = function()
+		if C_Timer == nil then return taxiFrame.Refresh() end
+		if taxiFrame.pending then return end
+		taxiFrame.pending = true
+		C_Timer.After(1, taxiFrame.Refresh)
 	end
 
 	taxiFrame:SetScript(
@@ -2540,6 +2553,7 @@ if C_TaxiMap ~= nil and C_TaxiMap.GetTaxiNodesForMap ~= nil then
 				if C_Timer ~= nil then C_Timer.After(0.5, self.Refresh) end
 			end
 
+			if event == "TAXI_NODE_STATUS_CHANGED" then return self.QueueRefresh() end
 			self.Refresh()
 		end
 	)

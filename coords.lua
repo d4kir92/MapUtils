@@ -25,13 +25,27 @@ local function ShowCoords(label, x, y, px, py, width, height)
 end
 
 local playerPos = {}
+local linearMaps = {}
+local function IsLinearMap(mapID)
+	if linearMaps[mapID] == nil then
+		local info = C_Map.GetMapInfo(mapID)
+		local continentType = Enum and Enum.UIMapType and Enum.UIMapType.Continent or 2
+		linearMaps[mapID] = info ~= nil and info.mapType ~= nil and info.mapType >= continentType
+	end
+
+	return linearMaps[mapID]
+end
+
 local function GetPlayerPos(mapID)
 	if mapID == nil then return nil end
 	local wy, wx = UnitPosition("player")
 	if wx == nil or wx ~= playerPos.wx or wy ~= playerPos.wy or mapID ~= playerPos.mapID then
-		local pos = C_Map.GetPlayerMapPosition(mapID, "player")
 		playerPos.x, playerPos.y = nil, nil
-		if pos ~= nil then playerPos.x, playerPos.y = pos:GetXY() end
+		if MapUtils.GetPlayerMapPos ~= nil and IsLinearMap(mapID) then playerPos.x, playerPos.y = MapUtils.GetPlayerMapPos(mapID) end
+		if playerPos.x == nil then
+			local pos = C_Map.GetPlayerMapPosition(mapID, "player")
+			if pos ~= nil then playerPos.x, playerPos.y = pos:GetXY() end
+		end
 		playerPos.wx, playerPos.wy, playerPos.mapID = wx, wy, mapID
 	end
 
@@ -39,9 +53,11 @@ local function GetPlayerPos(mapID)
 end
 
 local nativePanel
+local nativeSearched = false
 local nativeAlpha
 local function RefreshNativeCoords(enabled)
-	if nativePanel == nil and WorldMapFrame ~= nil then
+	if not nativeSearched and WorldMapFrame ~= nil then
+		nativeSearched = true
 		for _, frame in ipairs({WorldMapFrame:GetChildren()}) do
 			if frame.PlayerCoords ~= nil and frame.CursorCoords ~= nil then
 				nativePanel = frame
