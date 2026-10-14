@@ -1,5 +1,5 @@
 local _, MapUtils = ...
-MapUtils:SetAddonOutput("MapUtils", 134269)
+MapUtils:SetAddonOutput()
 local dungeonMaps = {}
 local raidMaps = {}
 -- Classic ERA Dungeons:

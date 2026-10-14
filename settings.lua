@@ -1,5 +1,5 @@
 local _, MapUtils = ...
-local ICON = 134269
+local ICON = MapUtils:GetAddonIcon()
 local DEFAULT_WIDTH = 420
 local DEFAULT_HEIGHT = 300
 local ADDED_0927 = "2026-09-27"
@@ -9,12 +9,6 @@ local ADDED_1004 = "2026-10-04"
 local SHARED_KEYS = {"DUNGEONWORLDMAPPINS", "MEETINGSTONEWORLDMAPPINS", "DUNGEONMINIMAPPINS", "MEETINGSTONEMINIMAPPINS", "INSTANCEPINS_BOSS", "INSTANCEPINS_ITEM", "INSTANCEPINS_ENTRANCE", "INSTANCEPINS_LEVEL"}
 local maset = nil
 local sharedCheckboxes = {}
-local function GetTocVersion()
-	if C_AddOns and C_AddOns.GetAddOnMetadata then return C_AddOns.GetAddOnMetadata("MapUtils", "Version") end
-	if GetAddOnMetadata then return GetAddOnMetadata("MapUtils", "Version") end
-
-	return "0.0.0"
-end
 
 function MapUtils:GetConfig(key, value)
 	MAUTTAB = MAUTTAB or {}
@@ -161,7 +155,7 @@ end
 function MapUtils:InitSetting()
 	if maset ~= nil then return end
 	MAUTTAB = MAUTTAB or {}
-	MapUtils:SetVersion(ICON, GetTocVersion())
+	MapUtils:SetVersion()
 	MapUtils:SetAppendTab(MAUTTAB)
 	maset = MapUtils:CreateUIWindow({
 		["name"] = "MapUtilsSettings",
@@ -176,7 +170,7 @@ function MapUtils:InitSetting()
 		end,
 		["getCollapsed"] = function(key) return GetCollapsed(key) end,
 		["setCollapsed"] = function(key, collapsed) SetCollapsed(key, collapsed) end,
-		["title"] = format("|T%d:16:16:0:0|t MapUtils v%s", ICON, GetTocVersion())
+		["title"] = format("|T%d:16:16:0:0|t MapUtils v%s", ICON, MapUtils:GetAddonVersion())
 	})
 
 	maset:SuspendLayout()
@@ -271,7 +265,7 @@ function MapUtils:InitSetting()
 		["name"] = "MapUtils",
 		["icon"] = ICON,
 		["dbtab"] = MAUTTAB,
-		["vTT"] = {{format("|T%d:16:16:0:0|t MapUtils", ICON), "v" .. GetTocVersion()}, {MapUtils:Trans("LID_LEFTCLICK"), MapUtils:Trans("LID_OPENSETTINGS")}, {MapUtils:Trans("LID_RIGHTCLICK"), MapUtils:Trans("LID_HIDEMINIMAPBUTTON")}},
+		["vTT"] = {{format("|T%d:16:16:0:0|t MapUtils", ICON), "v" .. MapUtils:GetAddonVersion()}, {MapUtils:Trans("LID_LEFTCLICK"), MapUtils:Trans("LID_OPENSETTINGS")}, {MapUtils:Trans("LID_RIGHTCLICK"), MapUtils:Trans("LID_HIDEMINIMAPBUTTON")}},
 		["funcL"] = function() MapUtils:ToggleSettings() end,
 		["funcR"] = function()
 			MapUtils:SV(MAUTTAB, "MMBTN", false)
