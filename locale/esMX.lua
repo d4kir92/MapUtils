@@ -73,3 +73,4 @@ MapUtils:AddTrans("esMX", "LID_HIDELEVELPINS", "Ocultar marcadores de cambio de 
 MapUtils:AddTrans("esMX", "LID_ZONECROSSINGS", "Pasos entre zonas")
 MapUtils:AddTrans("esMX", "LID_ZONECROSSING", "Paso a otra zona")
 MapUtils:AddTrans("esMX", "LID_QUESTTURNINWORLDMAPPINS", "Mostrar entregas de misiones en los mapas de continentes y Azeroth")
+MapUtils:AddTrans("esMX", "LID_WORLDMAPCOORDS", "Mostrar las coordenadas en el mapa del mundo")

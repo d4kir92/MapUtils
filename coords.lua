@@ -55,7 +55,7 @@ end
 local nativePanel
 local nativeSearched = false
 local nativeAlpha
-local function RefreshNativeCoords(enabled)
+local function RefreshNativeCoords(hidden)
 	if not nativeSearched and WorldMapFrame ~= nil then
 		nativeSearched = true
 		for _, frame in ipairs({WorldMapFrame:GetChildren()}) do
@@ -67,7 +67,7 @@ local function RefreshNativeCoords(enabled)
 	end
 
 	if nativePanel == nil then return end
-	if enabled then
+	if hidden then
 		if nativeAlpha == nil then nativeAlpha = nativePanel:GetAlpha() end
 		if nativePanel:GetAlpha() ~= 0 then nativePanel:SetAlpha(0) end
 	elseif nativeAlpha ~= nil then
@@ -80,8 +80,9 @@ function MapUtils:RefreshCoords()
 	if updater == nil then return end
 	updater.player:Hide()
 	updater.cursor:Hide()
-	local enabled = MapUtils:GetConfig("COORDSIMPROVEMENTS", true) == true
-	RefreshNativeCoords(enabled)
+	local shown = MapUtils:GetConfig("WORLDMAPCOORDS", true) == true
+	local enabled = shown and MapUtils:GetConfig("COORDSIMPROVEMENTS", true) == true
+	RefreshNativeCoords(enabled or not shown)
 	if not enabled then return end
 	local map = WorldMapFrame
 	local scroll = map.ScrollContainer

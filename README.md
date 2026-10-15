@@ -35,7 +35,7 @@ Enter `/maputils` in chat or left-click the minimap button to open the settings 
 The settings are grouped into collapsible categories:
 
 - **General:** minimap button.
-- **World map:** map window (move, scale), fade while moving, dungeon and raid maps, map labels (zone levels, fishing skill), and unexplored areas.
+- **World map:** map window (move, scale), fade while moving, dungeon and raid maps, map labels (coordinates, zone levels, fishing skill), and unexplored areas.
 - **Zone map (Shift+M):** map window (scale) and fade while moving.
 - **Map icons:** piers, zeppelins and tram, dungeon and raid entrances, and flight points, each separately for the world map and the minimap.
 
