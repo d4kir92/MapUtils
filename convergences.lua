@@ -1,5 +1,9 @@
 local _, MapUtils = ...
-MapUtils.CONVERGENCES = {}
+MapUtils.CONVERGENCES = {
+	[1412] = {
+		{variant = "elemental", x = 0.3859, y = 0.4474},
+	},
+}
 local Convergence = {
 	spells = {
 		elemental = 1271953,
