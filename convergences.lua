@@ -43,6 +43,11 @@ local Convergence = {
 		e = "elemental",
 		l = "leyline"
 	},
+	publicChannels = {
+		world = true,
+		lfg = true
+	},
+	replyBusyUntil = 0,
 	perMessage = 9,
 	maxMessages = 20,
 	sendGap = 1.1,
@@ -369,9 +374,11 @@ end
 
 function Convergence.Reply(sender)
 	local now = GetTime()
+	if now < Convergence.replyBusyUntil then return end
 	if Convergence.replied[sender] ~= nil and now - Convergence.replied[sender] < Convergence.replyGap then return end
 	Convergence.replied[sender] = now
 	local messages = Convergence.BuildReply()
+	Convergence.replyBusyUntil = now + math.min(#messages, Convergence.maxMessages) * Convergence.sendGap
 	for i = 1, math.min(#messages, Convergence.maxMessages) do
 		local message = messages[i]
 		C_Timer.After((i - 1) * Convergence.sendGap, function() Convergence.Send(message, "WHISPER", sender) end)
@@ -419,9 +426,24 @@ function Convergence.OnAddonMessage(prefix, message, sender)
 	Convergence.QueueDebugRefresh()
 end
 
+function Convergence.GetPublicChannels()
+	local channels = {}
+	if GetNumDisplayChannels == nil or GetChannelDisplayInfo == nil then return channels end
+	for i = 1, GetNumDisplayChannels() or 0 do
+		local name, header, _, number, _, _, category = GetChannelDisplayInfo(i)
+		if not header and type(name) == "string" and type(number) == "number" and number > 0 and category == "CHANNEL_CATEGORY_CUSTOM" and Convergence.publicChannels[strlower(name)] then channels[name] = number end
+	end
+
+	return channels
+end
+
 function MapUtils:RequestConvergences()
 	local sent = {}
 	if IsInGuild() and Convergence.Send("Q", "GUILD") then tinsert(sent, "GUILD") end
+	for name, number in pairs(Convergence.GetPublicChannels()) do
+		if Convergence.Send("Q", "CHANNEL", tostring(number)) then tinsert(sent, name) end
+	end
+
 	if LE_PARTY_CATEGORY_INSTANCE ~= nil and IsInGroup(LE_PARTY_CATEGORY_INSTANCE) then
 		if Convergence.Send("Q", "INSTANCE_CHAT") then tinsert(sent, "INSTANCE_CHAT") end
 	elseif IsInRaid() then
