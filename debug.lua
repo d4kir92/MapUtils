@@ -674,6 +674,48 @@ function PinEdit.CreateUI()
 	output.add:SetPoint("LEFT", output.kind, "RIGHT", 6, 0)
 	output:Hide()
 	PinEdit.output = output
+	if not MapUtils:IsForever() or MapUtils.GetConvergenceReport == nil then return end
+	local convergences = PinEdit.CreateWindow("MapUtilsDebugConvergences", 460, 226)
+	convergences:SetPoint("TOPRIGHT", WorldMapFrame, "TOPLEFT", -8, 0)
+	convergences.scroll = CreateFrame("ScrollFrame", nil, convergences, "UIPanelScrollFrameTemplate")
+	convergences.scroll:SetPoint("TOPLEFT", convergences, "TOPLEFT", 12, -30)
+	convergences.scroll:SetPoint("BOTTOMRIGHT", convergences, "BOTTOMRIGHT", -32, 40)
+	convergences.edit = CreateFrame("EditBox", nil, convergences.scroll)
+	convergences.edit:SetMultiLine(true)
+	convergences.edit:SetAutoFocus(false)
+	convergences.edit:SetFontObject(ChatFontNormal)
+	convergences.edit:SetWidth(410)
+	convergences.edit:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
+	convergences.scroll:SetScrollChild(convergences.edit)
+	convergences.select = PinEdit.CreateButton(convergences, "Select all", 80, function()
+		convergences.edit:SetFocus()
+		convergences.edit:HighlightText()
+	end)
+
+	convergences.select:SetPoint("BOTTOMLEFT", convergences, "BOTTOMLEFT", 12, 10)
+	convergences.request = PinEdit.CreateButton(convergences, "Ask other players", 140, function() MapUtils:RequestConvergences() end)
+	convergences.request:SetPoint("LEFT", convergences.select, "RIGHT", 6, 0)
+	convergences:Hide()
+	PinEdit.convergences = convergences
+end
+
+function PinEdit.RefreshConvergences()
+	local convergences = PinEdit.convergences
+	if convergences == nil then return end
+	if not debugging then
+		convergences:Hide()
+
+		return
+	end
+
+	local lines = MapUtils:GetConvergenceReport()
+	convergences.TitleText:SetText(format("MapUtils Debug – Convergences not in MapUtils (%d)", #lines))
+	if not convergences.edit:HasFocus() then convergences.edit:SetText(table.concat(lines, "\n")) end
+	convergences:Show()
+end
+
+function MapUtils:RefreshConvergenceDebug()
+	PinEdit.RefreshConvergences()
 end
 
 function PinEdit.PrimeSources()
@@ -728,6 +770,7 @@ function PinEdit.IsNew(record)
 end
 function PinEdit.Refresh()
 	if PinEdit.editor == nil then return end
+	PinEdit.RefreshConvergences()
 	if not debugging then
 		PinEdit.editor:Hide()
 		PinEdit.output:Hide()
@@ -835,6 +878,7 @@ function MapUtils:PrintDebugHelp()
 	self:INFO("Im Debug-Modus: Linksklick auf ein Weltkarten- oder Instanz-Symbol öffnet den Pin-Editor; X/Y eingeben + Enter oder mit den Pfeilen um 0.1 / 0.01 / 0.001 verschieben, Reset stellt den Originalwert wieder her")
 	self:INFO("Pin-Editor: 'Delete' blendet das Symbol aus (im Debug-Modus schwach sichtbar, 'Restore' holt es zurück); bei Zonenübergängen 'To' = Ziel-uiMapID + Enter, 'Up'/'Down' wechselt das Höhlen-Symbol")
 	self:INFO("Pin-Änderungen: Im Dropdown die Pin-Art wählen, '+ Add pin' erstellt einen Pin in der Kartenmitte; auch auf Instanzkarten. Pin anklicken, Name/ID/Ziel setzen oder Delete/Restore verwenden. 'Select all' und Strg+C kopiert Änderungen, 'Reset all' verwirft alle; gespeichert in MAUTTAB.PINEDITS / PINADDS")
+	self:INFO("Convergences-Fenster (nur WoW Forever, links neben der Weltkarte): listet erfasste Ley Lines / Elemental Convergences, die noch nicht fest in MapUtils sind. 'Ask other players' fragt Gilde und Gruppe per Addon-Nachricht, Antworten anderer MapUtils-Nutzer erscheinen in der Liste; 'Select all' und Strg+C kopiert sie")
 	self:INFO("/maputils pos - Spielerposition ausgeben")
 	self:INFO("/maputils fade - Diagnose zum Ein-/Ausblenden von Weltkarte und Gebietskarte ausgeben")
 	self:INFO("/mappins debug - Karten-, Symbol- und Wegpunktstatus ausgeben")

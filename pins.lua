@@ -1128,6 +1128,7 @@ local function GetPlayerMapPos(mapID)
 end
 
 MapUtils.GetPlayerMapPos = GetPlayerMapPos
+MapUtils.GetMapRect = GetMapRect
 
 local function GetEntryWorldPos(mapID, entry)
 	if entry.worldPos ~= nil then return entry.worldPos end
@@ -1766,6 +1767,9 @@ local function ShowAreaLabel(pin)
 	elseif pin.entry.kind == "spirithealer" then
 		name = pin.entry.name or MapUtils:Trans("LID_SPIRITHEALER")
 		description = ""
+	elseif pin.entry.kind == "convergence" then
+		name = pin.entry.name
+		description = pin.entry.captured and MapUtils:Trans("LID_CONVERGENCECAPTURED") or ""
 	elseif pin.entry.kind == "crossing" then
 		name, description = GetCrossingLabel(pin.entry)
 	elseif pin.entry.kind == "flight" then
@@ -1853,6 +1857,9 @@ local function OnPinEnter(pin)
 		GameTooltip:AddLine(MapUtils:Trans("LID_MEETINGSTONE"), 0.6, 0.6, 0.6)
 	elseif entry.kind == "spirithealer" then
 		GameTooltip:AddLine(entry.name or MapUtils:Trans("LID_SPIRITHEALER"), 1, 1, 1)
+	elseif entry.kind == "convergence" then
+		GameTooltip:AddLine(entry.name, 1, 1, 1)
+		if entry.captured then GameTooltip:AddLine(MapUtils:Trans("LID_CONVERGENCECAPTURED"), 0.6, 0.6, 0.6) end
 	elseif entry.kind == "crossing" then
 		GameTooltip:AddLine(entry.name, 1, 1, 1)
 		GameTooltip:AddLine(MapUtils:Trans("LID_ZONECROSSING"), 0.6, 0.6, 0.6)
@@ -2171,7 +2178,7 @@ local function CrossingsEnabled()
 	return MapUtils:GetConfig("CROSSINGWORLDMAPPINS", true) == true
 end
 
-local function BuildList(mapID, piersOn, dungeonsOn, flightsOn, meetingStonesOn, crossingsOn, spiritHealersOn)
+local function BuildList(mapID, piersOn, dungeonsOn, flightsOn, meetingStonesOn, crossingsOn, spiritHealersOn, convergencesOn)
 	if mapID == nil then return nil end
 	local list = nil
 	if spiritHealersOn and MapUtils.SPIRITHEALERS[mapID] ~= nil then
@@ -2220,6 +2227,14 @@ local function BuildList(mapID, piersOn, dungeonsOn, flightsOn, meetingStonesOn,
 	end
 
 	if MapUtils.ApplyPinEdits ~= nil then list = MapUtils:ApplyPinEdits(mapID, list, {pier = piersOn, dungeon = dungeonsOn, flight = flightsOn, meetingstone = meetingStonesOn, crossing = crossingsOn, spirithealer = spiritHealersOn}) end
+	local convergenceList = nil
+	if convergencesOn and MapUtils.GetConvergencePins ~= nil then convergenceList = MapUtils:GetConvergencePins(mapID) end
+	if convergenceList ~= nil and #convergenceList > 0 then
+		list = list or {}
+		for _, entry in ipairs(convergenceList) do
+			tinsert(list, entry)
+		end
+	end
 
 	return list
 end
@@ -2261,6 +2276,7 @@ local worldFlights = nil
 local worldMeetingStones = nil
 local worldCrossings = nil
 local worldSpiritHealers = nil
+local worldConvergences = nil
 local function UpdateWorldPins()
 	local child = GetWorldCanvas()
 	if child == nil or worldPinPool == nil then return end
@@ -2272,12 +2288,14 @@ local function UpdateWorldPins()
 	local meetingStonesOn = MeetingStonesEnabled(true)
 	local crossingsOn = CrossingsEnabled()
 	local spiritHealersOn = MapUtils:IsForever() and MapUtils:GetConfig("SPIRITHEALERWORLDMAPPINS", false) == true
+	local convergencesOn = MapUtils.ConvergencePinsEnabled ~= nil and MapUtils:ConvergencePinsEnabled(true)
 	if MapUtils:IsDebug() then
 		piersOn, dungeonsOn, flightsOn, meetingStonesOn, crossingsOn = true, true, true, true, true
 		spiritHealersOn = MapUtils:IsForever()
+		convergencesOn = MapUtils:IsForever()
 	end
 	local baseLevel = GetWorldPinLevel(child)
-	if mapID == worldMapID and scale == worldScale and piersOn == worldPiers and dungeonsOn == worldDungeons and flightsOn == worldFlights and meetingStonesOn == worldMeetingStones and crossingsOn == worldCrossings and spiritHealersOn == worldSpiritHealers then
+	if mapID == worldMapID and scale == worldScale and piersOn == worldPiers and dungeonsOn == worldDungeons and flightsOn == worldFlights and meetingStonesOn == worldMeetingStones and crossingsOn == worldCrossings and spiritHealersOn == worldSpiritHealers and convergencesOn == worldConvergences then
 		for _, pin in ipairs(worldPins) do
 			pin.baseLevel = baseLevel
 			UpdatePinLevel(pin, pin.entry ~= nil and IsEntryWaypoint(pin.mapID, pin.entry))
@@ -2293,9 +2311,10 @@ local function UpdateWorldPins()
 	worldMeetingStones = meetingStonesOn
 	worldCrossings = crossingsOn
 	worldSpiritHealers = spiritHealersOn
+	worldConvergences = convergencesOn
 	worldPinPool:ReleaseAll()
 	wipe(worldPins)
-	local list = BuildList(mapID, piersOn, dungeonsOn, flightsOn, meetingStonesOn, crossingsOn, spiritHealersOn)
+	local list = BuildList(mapID, piersOn, dungeonsOn, flightsOn, meetingStonesOn, crossingsOn, spiritHealersOn, convergencesOn)
 	if list == nil then return end
 	if scale == nil or scale <= 0 then return end
 	local w = child:GetWidth()
@@ -2349,6 +2368,8 @@ local function GetMinimapYards()
 	return list[zoom] or list[0]
 end
 
+MapUtils.GetMinimapYards = GetMinimapYards
+
 local minimapPins = {}
 local minimapMapID = nil
 local minimapPiers = nil
@@ -2357,16 +2378,19 @@ local minimapFlights = nil
 local minimapMeetingStones = nil
 local minimapList = nil
 local minimapSpiritHealers = nil
+local minimapConvergences = nil
 local function GetMinimapList(mapID, piersOn, dungeonsOn, flightsOn, meetingStonesOn)
 	local spiritHealersOn = MapUtils:IsForever() and MapUtils:GetConfig("SPIRITHEALERMINIMAPPINS", false) == true
-	if mapID == minimapMapID and piersOn == minimapPiers and dungeonsOn == minimapDungeons and flightsOn == minimapFlights and meetingStonesOn == minimapMeetingStones and spiritHealersOn == minimapSpiritHealers then return minimapList end
+	local convergencesOn = MapUtils.ConvergencePinsEnabled ~= nil and MapUtils:ConvergencePinsEnabled(false)
+	if mapID == minimapMapID and piersOn == minimapPiers and dungeonsOn == minimapDungeons and flightsOn == minimapFlights and meetingStonesOn == minimapMeetingStones and spiritHealersOn == minimapSpiritHealers and convergencesOn == minimapConvergences then return minimapList end
 	minimapMapID = mapID
 	minimapPiers = piersOn
 	minimapDungeons = dungeonsOn
 	minimapFlights = flightsOn
 	minimapMeetingStones = meetingStonesOn
 	minimapSpiritHealers = spiritHealersOn
-	minimapList = BuildList(mapID, piersOn, dungeonsOn, flightsOn, meetingStonesOn, false, spiritHealersOn)
+	minimapConvergences = convergencesOn
+	minimapList = BuildList(mapID, piersOn, dungeonsOn, flightsOn, meetingStonesOn, false, spiritHealersOn, convergencesOn)
 
 	return minimapList
 end

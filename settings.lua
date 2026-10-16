@@ -6,6 +6,7 @@ local ADDED_0927 = "2026-09-27"
 local ADDED_0928 = "2026-09-28"
 local ADDED_1003 = "2026-10-03"
 local ADDED_1004 = "2026-10-04"
+local ADDED_1017 = "2026-10-17"
 local SHARED_KEYS = {"DUNGEONWORLDMAPPINS", "MEETINGSTONEWORLDMAPPINS", "DUNGEONMINIMAPPINS", "MEETINGSTONEMINIMAPPINS", "INSTANCEPINS_BOSS", "INSTANCEPINS_ITEM", "INSTANCEPINS_ENTRANCE", "INSTANCEPINS_LEVEL"}
 local maset = nil
 local sharedCheckboxes = {}
@@ -252,7 +253,9 @@ function MapUtils:InitSetting()
 			{value = "NORMAL", label = MapUtils:Trans("LID_NORMAL")},
 			{value = "CHIBI", label = "Chibi"},
 		}, function() MapUtils:RefreshPins() end)
-	end
+		AddCategory("CONVERGENCES", 2, nil, ADDED_1017)
+		AddCheckbox("CONVERGENCEWORLDMAPPINS", true, function() MapUtils:RefreshPins() end, "LID_WORLDMAPPINS", ADDED_1017)
+		AddCheckbox("CONVERGENCEMINIMAPPINS", false, function() MapUtils:RefreshPins() end, "LID_MINIMAPPINS", ADDED_1017)	end
 
 	AddCategory("FLIGHTPOINTS", 2)
 	AddCheckbox("FLIGHTWORLDMAPPINS", true, function() MapUtils:RefreshPins() end, "LID_WORLDMAPPINS")
