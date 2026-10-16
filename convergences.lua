@@ -822,7 +822,8 @@ function MapUtils:IsSkyborne()
 end
 
 function MapUtils:ConvergencePinsEnabled(worldMap)
-	if not MapUtils:IsForever() or not MapUtils:IsSkyborne() then return false end
+	if not MapUtils:IsForever() then return false end
+	if not MapUtils:IsSkyborne() and MapUtils:GetConfig("CONVERGENCENONSKYBORNE", false) ~= true then return false end
 	if worldMap then return MapUtils:GetConfig("CONVERGENCEWORLDMAPPINS", true) == true end
 
 	return MapUtils:GetConfig("CONVERGENCEMINIMAPPINS", false) == true

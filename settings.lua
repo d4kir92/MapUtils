@@ -255,7 +255,9 @@ function MapUtils:InitSetting()
 		}, function() MapUtils:RefreshPins() end)
 		AddCategory("CONVERGENCES", 2, nil, ADDED_1017)
 		AddCheckbox("CONVERGENCEWORLDMAPPINS", true, function() MapUtils:RefreshPins() end, "LID_WORLDMAPPINS", ADDED_1017)
-		AddCheckbox("CONVERGENCEMINIMAPPINS", false, function() MapUtils:RefreshPins() end, "LID_MINIMAPPINS", ADDED_1017)	end
+		AddCheckbox("CONVERGENCEMINIMAPPINS", false, function() MapUtils:RefreshPins() end, "LID_MINIMAPPINS", ADDED_1017)
+		AddCheckbox("CONVERGENCENONSKYBORNE", false, function() MapUtils:RefreshPins() end, "LID_CONVERGENCENONSKYBORNE", ADDED_1017)
+	end
 
 	AddCategory("FLIGHTPOINTS", 2)
 	AddCheckbox("FLIGHTWORLDMAPPINS", true, function() MapUtils:RefreshPins() end, "LID_WORLDMAPPINS")
@@ -305,4 +307,4 @@ loader:SetScript("OnEvent", function(_, event, name)
 		MapUtils:RegisterCompendiumTabs()
 	end
 end)
-MapUtils:RegisterCompendiumTabs()
+MapUtils:RegisterCompendiumTabs()
