@@ -5,14 +5,14 @@ local function IsEnabled(key)
 	return getter ~= nil and getter(key) == true
 end
 
-local function ShowCoords(label, x, y, px, py, width, height)
+local function ShowCoords(label, x, y, px, py, width, height, offsetY)
 	if x == nil or y == nil or px == nil or py == nil or x < 0 or x > 1 or y < 0 or y > 1 then
 		label:Hide()
 		return
 	end
 
 	label:ClearAllPoints()
-	label:SetPoint("CENTER", updater, "TOPLEFT", width * math.max(0.1, math.min(0.9, px)), -height * math.max(0.1, math.min(0.9, py + 0.1)))
+	label:SetPoint("CENTER", updater, "TOPLEFT", width * math.max(0.1, math.min(0.9, px)), -height * math.max(0.1, math.min(0.9, py + offsetY)))
 	local text
 	if IsEnabled("coordsByTenths") then
 		text = format("%.1f, %.1f", x * 100, y * 100)
@@ -100,7 +100,7 @@ function MapUtils:RefreshCoords()
 		local left, top = scroll:GetLeft(), scroll:GetTop()
 		if left ~= nil and top ~= nil then
 			local px, py = (cx / scale - left) / width, (top - cy / scale) / height
-			if px >= 0 and px <= 1 and py >= 0 and py <= 1 then ShowCoords(updater.cursor, x, y, px, py, width, height) end
+			if px >= 0 and px <= 1 and py >= 0 and py <= 1 then ShowCoords(updater.cursor, x, y, px, py, width, height, -0.1) end
 		end
 	end
 
@@ -113,7 +113,7 @@ function MapUtils:RefreshCoords()
 			if left ~= nil and top ~= nil and scrollLeft ~= nil and scrollTop ~= nil then
 				local px = (left * scale - scrollLeft + x * childWidth * scale) / width
 				local py = (scrollTop - top * scale + y * childHeight * scale) / height
-				if px >= 0 and px <= 1 and py >= 0 and py <= 1 then ShowCoords(updater.player, x, y, px, py, width, height) end
+				if px >= 0 and px <= 1 and py >= 0 and py <= 1 then ShowCoords(updater.player, x, y, px, py, width, height, 0.1) end
 			end
 		end
 	end
@@ -131,18 +131,11 @@ local function InitCoords()
 		updater[key]:Hide()
 	end
 
-	local elapsedTotal = 0
 	updater:SetScript("OnShow", function()
-		elapsedTotal = 0
 		updater.player:Hide()
 		updater.cursor:Hide()
 	end)
-	updater:SetScript("OnUpdate", function(_, elapsed)
-		elapsedTotal = elapsedTotal + elapsed
-		if elapsedTotal < 0.05 then return end
-		elapsedTotal = 0
-		MapUtils:RefreshCoords()
-	end)
+	updater:SetScript("OnUpdate", function() MapUtils:RefreshCoords() end)
 end
 
 local events = CreateFrame("Frame")

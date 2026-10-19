@@ -7,9 +7,11 @@ local ADDED_0928 = "2026-09-28"
 local ADDED_1003 = "2026-10-03"
 local ADDED_1004 = "2026-10-04"
 local ADDED_1017 = "2026-10-17"
+local ADDED_1019 = "2026-10-19"
 local SHARED_KEYS = {"DUNGEONWORLDMAPPINS", "MEETINGSTONEWORLDMAPPINS", "DUNGEONMINIMAPPINS", "MEETINGSTONEMINIMAPPINS", "INSTANCEPINS_BOSS", "INSTANCEPINS_ITEM", "INSTANCEPINS_ENTRANCE", "INSTANCEPINS_LEVEL"}
 local maset = nil
 local sharedCheckboxes = {}
+local cvarCheckboxes = {}
 
 function MapUtils:GetConfig(key, value)
 	MAUTTAB = MAUTTAB or {}
@@ -103,6 +105,40 @@ local function AddSharedCheckbox(key, label, added)
 			["func"] = function(value) MapUtils:SetSharedOption(key, value) end
 		}
 	)
+end
+
+local function GetCVarValue(cvar)
+	local getter = C_CVar and C_CVar.GetCVar or GetCVar
+	if getter == nil then return nil end
+
+	return getter(cvar)
+end
+
+local function AddCVarCheckbox(cvar, label, added)
+	if GetCVarValue(cvar) == nil then return end
+	cvarCheckboxes[strlower(cvar)] = maset:AddCheckbox(
+		{
+			["label"] = label,
+			["search"] = cvar,
+			["added"] = added,
+			["value"] = GetCVarValue(cvar) == "1",
+			["func"] = function(value)
+				local setter = C_CVar and C_CVar.SetCVar or SetCVar
+				if setter ~= nil then setter(cvar, value and "1" or "0") end
+				MapUtils:RefreshCoords()
+				maset:UpdateDependencies()
+			end
+		}
+	)
+
+	return cvarCheckboxes[strlower(cvar)]
+end
+
+local function IsAnyCoordsShown()
+	local player, cursor = GetCVarValue("worldMapShowPlayerCoords"), GetCVarValue("worldMapShowCursorCoords")
+	if player == nil and cursor == nil then return true end
+
+	return player == "1" or cursor == "1"
 end
 
 local function AddDropdown(key, default, choices, func, label, added)
@@ -209,7 +245,10 @@ function MapUtils:InitSetting()
 	end
 
 	AddCategory("MAPLABELS", 2)
-	AddCheckbox("COORDSIMPROVEMENTS", true, function() MapUtils:RefreshCoords() end, nil, "2026-10-06")
+	AddCVarCheckbox("worldMapShowPlayerCoords", "LID_SHOWPLAYERCOORDS", ADDED_1019)
+	AddCVarCheckbox("worldMapShowCursorCoords", "LID_SHOWCURSORCOORDS", ADDED_1019)
+	maset:AddDependency(AddCheckbox("COORDSIMPROVEMENTS", true, function() MapUtils:RefreshCoords() end, nil, "2026-10-06"), IsAnyCoordsShown)
+	maset:AddDependency(AddCVarCheckbox("coordsByTenths", "LID_COORDSBYTENTHS", ADDED_1019), IsAnyCoordsShown)
 	AddCheckbox("ZONELEVELS", true)
 	AddCheckbox("ZONERECLEVELS", true, nil, nil, "2026-10-02")
 	AddCheckbox("FISHINGLEVELS", true)
@@ -299,8 +338,15 @@ function MapUtils:RegisterCompendiumTabs()
 end
 
 loader:RegisterEvent("ADDON_LOADED")
+loader:RegisterEvent("CVAR_UPDATE")
 loader:SetScript("OnEvent", function(_, event, name)
-	if event == "PLAYER_LOGIN" then
+	if event == "CVAR_UPDATE" then
+		local checkbox = type(name) == "string" and cvarCheckboxes[strlower(name)]
+		if checkbox then
+			checkbox:SetChecked(GetCVarValue(name) == "1")
+			maset:UpdateDependencies()
+		end
+	elseif event == "PLAYER_LOGIN" then
 		MapUtils:InitSetting()
 		MapUtils:RegisterCompendiumTabs()
 	elseif name == "AzerothCompendium" then
