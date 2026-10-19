@@ -2,6 +2,12 @@ local _, MapUtils = ...
 MapUtils.CONVERGENCES = {
 	[1412] = {
 		{variant = "elemental", x = 0.3859, y = 0.4474},
+		{variant = "elemental", x = 0.5198, y = 0.3417},
+	},
+	[1413] = {
+		{variant = "elemental", x = 0.4697, y = 0.8025},
+		{variant = "elemental", x = 0.5086, y = 0.1455},
+		{variant = "elemental", x = 0.5461, y = 0.1486},
 	},
 }
 local Convergence = {
