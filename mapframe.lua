@@ -451,3 +451,94 @@ if WheelZoom.disabledByBlizzard then
 		C_Timer.After(WheelZoom.installDelay, WheelZoom.Install)
 	end)
 end
+
+local MapLevelZoom = {
+	cooldown = 0.3,
+	lastSwitch = 0,
+	fillShare = 0.9,
+}
+
+function MapLevelZoom.OnUpdate(container)
+	local snap = MapLevelZoom.snap
+	if snap == nil then
+		snap = {}
+		MapLevelZoom.snap = snap
+	end
+
+	snap.mapID = container.mapID
+	snap.scale = container:GetCanvasScale()
+	snap.target = container.targetScale
+end
+
+function MapLevelZoom.AtScale(snap, scale)
+	return scale ~= nil and snap.target ~= nil and math.abs(snap.scale - scale) <= SCALE_EPSILON and math.abs(snap.target - snap.scale) <= SCALE_EPSILON
+end
+
+function MapLevelZoom.ChildAtCursor(container, mapID)
+	local x, y = container:GetNormalizedCursorPosition()
+	if x == nil or y == nil then return nil end
+	local info = C_Map.GetMapInfoAtPosition(mapID, x, y)
+	if info and info.mapID ~= mapID then return info.mapID end
+
+	return nil
+end
+
+function MapLevelZoom.FillsView(container, snap, child, mapID)
+	local left, right, top, bottom = C_Map.GetMapRectOnMap(child, mapID)
+	if left == nil or right == nil or top == nil or bottom == nil then return false end
+	local childWidth, childHeight = container.Child:GetSize()
+	local scale = math.max(snap.scale, snap.target or snap.scale)
+	if childWidth == nil or childHeight == nil or childWidth <= 0 or childHeight <= 0 or scale <= 0 then return false end
+	local viewWidth = container:GetWidth() / scale / childWidth
+	local viewHeight = container:GetHeight() / scale / childHeight
+	if viewWidth <= 0 or viewHeight <= 0 then return false end
+
+	return math.max((right - left) / viewWidth, (bottom - top) / viewHeight) >= MapLevelZoom.fillShare
+end
+
+function MapLevelZoom.Target(container, snap, delta)
+	local mapID = snap.mapID
+	local info = C_Map.GetMapInfo(mapID)
+	if info == nil then return nil end
+	if delta < 0 then
+		if not MapLevelZoom.AtScale(snap, container:GetScaleForMinZoom()) then return nil end
+		if info.parentMapID and info.parentMapID > 0 then return info.parentMapID end
+
+		return nil
+	end
+
+	local child = MapLevelZoom.ChildAtCursor(container, mapID)
+	if child == nil then return nil end
+	if WheelZoom.installed and not IsEnabled("WORLDMAPZOOM") then return child end
+	if MapLevelZoom.AtScale(snap, container:GetScaleForMaxZoom()) or MapLevelZoom.FillsView(container, snap, child, mapID) then return child end
+
+	return nil
+end
+
+function MapLevelZoom.OnMouseWheel(container, delta)
+	local snap = MapLevelZoom.snap
+	if snap == nil or snap.mapID == nil or snap.mapID ~= container.mapID or container.zoomLevels == nil then return end
+	if MapUtils:GetConfig("WORLDMAPLEVELZOOM", false) ~= true or InCombatLockdown() then return end
+	if GetTime() - MapLevelZoom.lastSwitch < MapLevelZoom.cooldown then return end
+	if MapUtils.IsInstanceMapShown ~= nil and MapUtils:IsInstanceMapShown() then return end
+	local target = MapLevelZoom.Target(container, snap, delta)
+	if target == nil or C_Map.GetMapInfo(target) == nil then return end
+	MapLevelZoom.lastSwitch = GetTime()
+	WheelZoom.pending = nil
+	frame:SetMapID(target)
+end
+
+function MapLevelZoom.Install()
+	local container = WheelZoom.container
+	if MapLevelZoom.installed or container == nil then return end
+	MapLevelZoom.installed = true
+	container:HookScript("OnUpdate", MapLevelZoom.OnUpdate)
+	container:HookScript("OnMouseWheel", MapLevelZoom.OnMouseWheel)
+end
+
+MapLevelZoom.loader = CreateFrame("Frame")
+MapLevelZoom.loader:RegisterEvent("PLAYER_LOGIN")
+MapLevelZoom.loader:SetScript("OnEvent", function(sel)
+	sel:UnregisterAllEvents()
+	C_Timer.After(WheelZoom.installDelay, MapLevelZoom.Install)
+end)

@@ -233,6 +233,7 @@ function MapUtils:InitSetting()
 		if byMoveAny then maset:AddDependency(checkbox, function() return false end, 0) end
 	end
 	if MapUtils.IsWorldMapWheelZoomAvailable and MapUtils:IsWorldMapWheelZoomAvailable() then AddCheckbox("WORLDMAPZOOM", true, nil, nil, "2026-10-08") end
+	AddCheckbox("WORLDMAPLEVELZOOM", false, nil, nil, ADDED_1019)
 	AddCategory("NAVIGATION", 2, nil, ADDED_0928)
 	AddCheckbox("ALWAYSSHOWWAYPOINT", false, nil, nil, ADDED_0928)
 	AddCategory("MAPFADE", 2, nil, ADDED_0927)
