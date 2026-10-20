@@ -1,5 +1,8 @@
 local _, MapUtils = ...
 MapUtils.CONVERGENCES = {
+	[1411] = {
+		{variant = "elemental", x = 0.4512, y = 0.1575},
+	},
 	[1412] = {
 		{variant = "elemental", x = 0.3859, y = 0.4474},
 		{variant = "elemental", x = 0.5198, y = 0.3417},
@@ -8,6 +11,46 @@ MapUtils.CONVERGENCES = {
 		{variant = "elemental", x = 0.4697, y = 0.8025},
 		{variant = "elemental", x = 0.5086, y = 0.1455},
 		{variant = "elemental", x = 0.5461, y = 0.1486},
+	},
+	[1417] = {
+		{variant = "elemental", x = 0.2544, y = 0.3001},
+		{variant = "elemental", x = 0.5205, y = 0.5068},
+		{variant = "elemental", x = 0.6833, y = 0.3042},
+	},
+	[1420] = {
+		{variant = "elemental", x = 0.4924, y = 0.6387},
+	},
+	[1421] = {
+		{variant = "elemental", x = 0.4936, y = 0.5277},
+		{variant = "elemental", x = 0.5621, y = 0.1005},
+		{variant = "elemental", x = 0.6125, y = 0.7935},
+	},
+	[1424] = {
+		{variant = "elemental", x = 0.6027, y = 0.1064},
+		{variant = "elemental", x = 0.7294, y = 0.6357},
+		{variant = "elemental", x = 0.8076, y = 0.4533},
+		{variant = "elemental", x = 0.8908, y = 0.5877},
+	},
+	[1432] = {
+		{variant = "elemental", x = 0.2750, y = 0.5207},
+		{variant = "elemental", x = 0.5899, y = 0.3659},
+	},
+	[1434] = {
+		{variant = "elemental", x = 0.1335, y = 0.1502},
+	},
+	[1436] = {
+		{variant = "elemental", x = 0.3482, y = 0.7309},
+		{variant = "elemental", x = 0.4160, y = 0.8201},
+		{variant = "elemental", x = 0.5967, y = 0.3622},
+	},
+	[1437] = {
+		{variant = "elemental", x = 0.5406, y = 0.2688},
+	},
+	[1439] = {
+		{variant = "elemental", x = 0.5842, y = 0.1977},
+	},
+	[1442] = {
+		{variant = "elemental", x = 0.8084, y = 0.9052},
 	},
 }
 local Convergence = {
