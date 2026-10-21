@@ -5,6 +5,7 @@ MapUtils.CONVERGENCES = {
 	},
 	[1412] = {
 		{variant = "elemental", x = 0.3859, y = 0.4474},
+		{variant = "elemental", x = 0.5024, y = 0.5355},
 		{variant = "elemental", x = 0.5198, y = 0.3417},
 	},
 	[1413] = {
@@ -48,6 +49,12 @@ MapUtils.CONVERGENCES = {
 	},
 	[1439] = {
 		{variant = "elemental", x = 0.5842, y = 0.1977},
+	},
+	[1440] = {
+		{variant = "elemental", x = 0.6000, y = 0.6304},
+		{variant = "elemental", x = 0.7631, y = 0.6752},
+		{variant = "elemental", x = 0.8607, y = 0.5867},
+		{variant = "elemental", x = 0.8940, y = 0.4978},
 	},
 	[1442] = {
 		{variant = "elemental", x = 0.8084, y = 0.9052},
@@ -887,9 +894,22 @@ function Convergence.MergeWowhead()
 			for _, point in ipairs(points) do
 				if type(point) == "table" and Convergence.codes[point.variant] ~= nil and type(point.x) == "number" and type(point.y) == "number" then
 					if MapUtils.CONVERGENCES[mapID] == nil then MapUtils.CONVERGENCES[mapID] = {} end
-					if not Convergence.IsShipped(mapID, point, rect) then
+					local list = MapUtils.CONVERGENCES[mapID]
+					local duplicate = false
+					for i = #list, 1, -1 do
+						local other = list[i]
+						if other.variant == point.variant and Convergence.GetDistance(rect, other.x, other.y, point.x, point.y) <= Convergence.mergeYards then
+							if other.wowhead then
+								duplicate = true
+							else
+								tremove(list, i)
+							end
+						end
+					end
+
+					if not duplicate then
 						tinsert(
-							MapUtils.CONVERGENCES[mapID],
+							list,
 							{
 								variant = point.variant,
 								x = point.x,
