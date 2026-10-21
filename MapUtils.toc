@@ -52,6 +52,7 @@ locale\names.lua
 
 core.lua
 pins.lua
+convergences_wowhead.lua
 convergences.lua
 questturnins.lua
 zonelevels.lua

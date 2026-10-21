@@ -878,8 +878,35 @@ function MapUtils:ConvergencePinsEnabled(worldMap)
 	return MapUtils:GetConfig("CONVERGENCEMINIMAPPINS", false) == true
 end
 
+function Convergence.MergeWowhead()
+	if Convergence.wowheadMerged or type(MapUtils.CONVERGENCESWOWHEAD) ~= "table" then return end
+	Convergence.wowheadMerged = true
+	for mapID, points in pairs(MapUtils.CONVERGENCESWOWHEAD) do
+		if type(mapID) == "number" and type(points) == "table" then
+			local rect = MapUtils.GetMapRect ~= nil and MapUtils.GetMapRect(mapID) or nil
+			for _, point in ipairs(points) do
+				if type(point) == "table" and Convergence.codes[point.variant] ~= nil and type(point.x) == "number" and type(point.y) == "number" then
+					if MapUtils.CONVERGENCES[mapID] == nil then MapUtils.CONVERGENCES[mapID] = {} end
+					if not Convergence.IsShipped(mapID, point, rect) then
+						tinsert(
+							MapUtils.CONVERGENCES[mapID],
+							{
+								variant = point.variant,
+								x = point.x,
+								y = point.y,
+								wowhead = true
+							}
+						)
+					end
+				end
+			end
+		end
+	end
+end
+
 function MapUtils:GetConvergencePins(mapID)
 	if mapID == nil then return nil end
+	Convergence.MergeWowhead()
 	local variant = Convergence.factions[UnitFactionGroup("player")]
 	local rect = MapUtils.GetMapRect ~= nil and MapUtils.GetMapRect(mapID) or nil
 	local list = {}
@@ -899,6 +926,9 @@ function MapUtils:GetConvergencePins(mapID)
 	return list
 end
 
+Convergence.loginFrame = CreateFrame("FRAME")
+Convergence.loginFrame:RegisterEvent("PLAYER_LOGIN")
+Convergence.loginFrame:SetScript("OnEvent", Convergence.MergeWowhead)
 if GameTooltip ~= nil and GameTooltip.SetMinimapMouseover ~= nil then hooksecurefunc(GameTooltip, "SetMinimapMouseover", Convergence.OnMinimapMouseover) end
 if MapUtils:IsForever() and Minimap ~= nil and C_Timer ~= nil and C_Timer.NewTicker ~= nil then
 	Convergence.scanFrame = CreateFrame("FRAME")
