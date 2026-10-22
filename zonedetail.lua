@@ -250,6 +250,14 @@ local function ApplyMask(zone, highlight, left, top, width, height)
 	zone.mask:SetPoint("TOPLEFT", zone.frame, "TOPLEFT", (highlight.x - left) * width, -(highlight.y - top) * height)
 end
 
+local function GetArtMask(mapID)
+	local flavor = MapUtils.GetRevealFlavor ~= nil and MapUtils:GetRevealFlavor()
+	local list = flavor and MapUtils.ZONEARTMASKS and MapUtils.ZONEARTMASKS[flavor]
+	local artID = list and C_Map.GetMapArtID(mapID)
+
+	return artID and list[artID] or nil
+end
+
 local function DrawZone(continentID, continentRect, mapID, mode, width, height)
 	local left, right, top, bottom = C_Map.GetMapRectOnMap(mapID, WORLD)
 	if left == nil or right <= left or bottom <= top then return end
@@ -265,12 +273,19 @@ local function DrawZone(continentID, continentRect, mapID, mode, width, height)
 	zone.frame:SetPoint("TOPLEFT", container, "TOPLEFT", left * width, -top * height)
 	zone.frame:SetSize(frameWidth, frameHeight)
 	local highlight = false
-	if mode == MODE_FULL then
+	local artMask = mode == MODE_FULL and GetArtMask(mapID)
+	if mode == MODE_FULL and not artMask then
 		local l, r, t, b = C_Map.GetMapRectOnMap(mapID, continentID)
 		if l ~= nil and r > l and b > t then highlight = GetHighlight(continentID, mapID, l, r, t, b) end
 	end
 
-	if highlight then
+	if artMask then
+		if zone.mask == nil then zone.mask = zone.frame:CreateMaskTexture() end
+		SetMasked(zone, true)
+		zone.mask:SetTexture(MASK_PATH .. artMask, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+		zone.mask:ClearAllPoints()
+		zone.mask:SetAllPoints(zone.frame)
+	elseif highlight then
 		local continentWidth, continentHeight = continentRect[2] - continentRect[1], continentRect[4] - continentRect[3]
 		ApplyMask(
 			zone,
@@ -286,7 +301,9 @@ local function DrawZone(continentID, continentRect, mapID, mode, width, height)
 			width,
 			height
 		)
+	end
 
+	if artMask or highlight then
 		DrawBase(zone, mapID, layer)
 		local under = GetUnder(mapID)
 		local geometry = base.continents[continentID] and base.continents[continentID].maskGeometry

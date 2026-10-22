@@ -35,6 +35,10 @@ function MapUtils:AddRevealData(dataFlavor, artID, data)
 	revealData[artID] = data
 end
 
+function MapUtils:GetRevealFlavor()
+	return flavor
+end
+
 function MapUtils:HasRevealData()
 	return next(revealData) ~= nil
 end

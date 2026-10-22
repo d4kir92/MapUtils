@@ -579,12 +579,19 @@ function SmoothZoom.GetMinScale(container)
 	local minScale = container:GetScaleForMinZoom()
 	local parent = SmoothZoom.IsSpace(container.mapID) and SmoothZoom.GetParent(container.mapID)
 	if not parent then return minScale end
-	local hostLeft, hostRight = MapUtils:GetZoneDetailSpaceRect(container.mapID)
-	local parentLeft, parentRight = MapUtils:GetZoneDetailSpaceRect(parent)
 	local relaxed = minScale * SmoothZoom.leave
-	if hostLeft ~= nil and parentLeft ~= nil and parentRight > parentLeft then relaxed = math.min(relaxed, minScale * (hostRight - hostLeft) / (parentRight - parentLeft) * SmoothZoom.parentFit) end
+	local hostLeft, hostRight, hostTop, hostBottom = MapUtils:GetZoneDetailSpaceRect(container.mapID)
+	local space = MapUtils:GetZoneDetailSpace()
+	local parentLeft, parentRight, parentTop, parentBottom = 0, 1, 0, 1
+	if parent ~= space then parentLeft, parentRight, parentTop, parentBottom = C_Map.GetMapRectOnMap(parent, space) end
+	local width, height = container.Child:GetSize()
+	if hostLeft == nil or parentLeft == nil or width == nil or width <= 0 or height == nil or height <= 0 then return relaxed end
+	local parentWidth = (parentRight - parentLeft) * (hostRight - hostLeft) * width
+	local parentHeight = (parentBottom - parentTop) * (hostBottom - hostTop) * height
+	if parentWidth <= 0 or parentHeight <= 0 then return relaxed end
+	local fit = math.min(container:GetWidth() / parentWidth, container:GetHeight() / parentHeight)
 
-	return relaxed
+	return math.min(relaxed, fit * SmoothZoom.parentFit)
 end
 
 function SmoothZoom.GetMaxScale(container)
