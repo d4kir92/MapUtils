@@ -539,6 +539,8 @@ local SmoothZoom = {
 	leaveArea = 3.3,
 	enterContinentArea = 1.1,
 	cityEnter = 0.85,
+	zoneEnterCover = 0.95,
+	parentFit = 0.8,
 	leaveContinentArea = 1.8,
 	checkInterval = 0.1,
 	lastCheck = 0,
@@ -575,9 +577,14 @@ end
 
 function SmoothZoom.GetMinScale(container)
 	local minScale = container:GetScaleForMinZoom()
-	if SmoothZoom.IsSpace(container.mapID) and SmoothZoom.GetParent(container.mapID) ~= nil then return minScale * SmoothZoom.leave end
+	local parent = SmoothZoom.IsSpace(container.mapID) and SmoothZoom.GetParent(container.mapID)
+	if not parent then return minScale end
+	local hostLeft, hostRight = MapUtils:GetZoneDetailSpaceRect(container.mapID)
+	local parentLeft, parentRight = MapUtils:GetZoneDetailSpaceRect(parent)
+	local relaxed = minScale * SmoothZoom.leave
+	if hostLeft ~= nil and parentLeft ~= nil and parentRight > parentLeft then relaxed = math.min(relaxed, minScale * (hostRight - hostLeft) / (parentRight - parentLeft) * SmoothZoom.parentFit) end
 
-	return minScale
+	return relaxed
 end
 
 function SmoothZoom.GetMaxScale(container)
@@ -709,7 +716,7 @@ function SmoothZoom.PickMap(container)
 		local l, r, t, b = C_Map.GetMapRectOnMap(mapID, space)
 		if l == nil or r <= l or b <= t then return false end
 		local ratio = (viewWidth / (r - l)) * (viewHeight / (b - t))
-		if continent then return ratio <= ((mapID == host) and SmoothZoom.leaveContinentArea or SmoothZoom.enterContinentArea) end
+		if continent then return ratio <= ((mapID == host or MapUtils:GetZoneDetailContinent(host) == mapID) and SmoothZoom.leaveContinentArea or SmoothZoom.enterContinentArea) end
 
 		return ratio <= ((mapID == host) and SmoothZoom.leaveArea or SmoothZoom.enterArea)
 	end
@@ -723,7 +730,13 @@ function SmoothZoom.PickMap(container)
 	local l, r, t, b = C_Map.GetMapRectOnMap(continent, space)
 	if l == nil or r <= l or b <= t then return pick end
 	local zone = C_Map.GetMapInfoAtPosition(continent, (u - l) / (r - l), (v - t) / (b - t))
-	if zone ~= nil and zone.mapID ~= continent and zone.mapType == Enum.UIMapType.Zone and SmoothZoom.IsSpace(zone.mapID) and Fits(zone.mapID, false) then pick = zone.mapID end
+	local cover = (host ~= continent and host ~= space) and 1 or SmoothZoom.zoneEnterCover
+	local continentVisible = viewWidth >= (r - l) * cover and viewHeight >= (b - t) * cover
+	if zone ~= nil and zone.mapID ~= continent and zone.mapType == Enum.UIMapType.Zone and SmoothZoom.IsSpace(zone.mapID) and not continentVisible then pick = zone.mapID end
+	if pick == continent and zone ~= nil and not continentVisible and MapUtils.GetZoneDetailCityZone ~= nil then
+		local around = MapUtils:GetZoneDetailCityZone(zone.mapID)
+		if around ~= nil and SmoothZoom.IsSpace(around) then pick = around end
+	end
 	local city = zone ~= nil and MapUtils.GetZoneDetailCityZone ~= nil and MapUtils:GetZoneDetailCityZone(zone.mapID) ~= nil and zone.mapID or nil
 	if city == nil and pick ~= continent then
 		local zl, zr, zt, zb = C_Map.GetMapRectOnMap(pick, space)
@@ -866,7 +879,9 @@ function SmoothZoom.OnMouseWheel(container, delta)
 	local base = anim and anim.target or container:GetCanvasScale()
 	local before = container:GetCanvasScale()
 	if SmoothZoom.LeaveToParent(container, delta, base) or SmoothZoom.LeaveCity(container, delta, base) then base = base * container:GetCanvasScale() / before end
-	local target = Clamp(base * SmoothZoom.factor ^ delta, SmoothZoom.GetMinScale(container), SmoothZoom.GetMaxScale(container))
+	local minScale, maxScale = SmoothZoom.GetMinScale(container), SmoothZoom.GetMaxScale(container)
+	if delta > 0 then maxScale = math.max(maxScale, base) else minScale = math.min(minScale, base) end
+	local target = Clamp(base * SmoothZoom.factor ^ delta, minScale, maxScale)
 	local cursorX, cursorY, scale, scrollX, scrollY = SmoothZoom.CursorAnchor(container)
 	if cursorX == nil or target <= 0 then return end
 	WheelZoom.pending = nil

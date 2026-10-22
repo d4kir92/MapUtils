@@ -9,8 +9,14 @@ local FRAME_LEVEL_OFFSET = 5
 local NO_TINT = {1, 1, 1, 1}
 local MASK_PATH = "Interface\\AddOns\\MapUtils\\media\\zonemasks\\"
 local EDGE_PATH = MASK_PATH .. "edge"
+local ROUND_PATH = MASK_PATH .. "round"
+local CITY_FADE = {0.05, 0.2}
+local CITY_RING = {0.5, 0.75, 1}
+local CITY_RING_STEPS = 16
 local container = nil
 local zones = {}
+local cities = {}
+local unders = {}
 local masks = {}
 local hooked = false
 local preload = {}
@@ -25,24 +31,52 @@ local function GetMode()
 	return MODE_FULL
 end
 
+local function NewArt()
+	local frame = CreateFrame("FRAME", nil, container)
+	local edge = frame:CreateMaskTexture()
+	edge:SetTexture(EDGE_PATH, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+	edge:SetAllPoints(frame)
+
+	return {
+		["frame"] = frame,
+		["edge"] = edge,
+		["textures"] = {},
+		["count"] = 0
+	}
+end
+
 local function GetZone(mapID)
 	local zone = zones[mapID]
 	if zone == nil then
-		local frame = CreateFrame("FRAME", nil, container)
-		local edge = frame:CreateMaskTexture()
-		edge:SetTexture(EDGE_PATH, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
-		edge:SetAllPoints(frame)
-		zone = {
-			["frame"] = frame,
-			["edge"] = edge,
-			["textures"] = {},
-			["count"] = 0
-		}
-
+		zone = NewArt()
 		zones[mapID] = zone
 	end
 
 	return zone
+end
+
+local function GetUnder(mapID)
+	local under = unders[mapID]
+	if under == nil then
+		under = NewArt()
+		unders[mapID] = under
+	end
+
+	return under
+end
+
+local function GetCity(mapID)
+	local city = cities[mapID]
+	if city == nil then
+		city = NewArt()
+		city.mask = city.frame:CreateMaskTexture()
+		city.mask:SetTexture(ROUND_PATH, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+		city.mask:SetAllPoints(city.frame)
+		city.masked = true
+		cities[mapID] = city
+	end
+
+	return city
 end
 
 local function ClearZone(zone)
@@ -57,6 +91,14 @@ end
 local function ClearAll()
 	for _, zone in pairs(zones) do
 		ClearZone(zone)
+	end
+
+	for _, under in pairs(unders) do
+		ClearZone(under)
+	end
+
+	for _, city in pairs(cities) do
+		ClearZone(city)
 	end
 
 	if container then container:Hide() end
@@ -246,6 +288,22 @@ local function DrawZone(continentID, continentRect, mapID, mode, width, height)
 		)
 
 		DrawBase(zone, mapID, layer)
+		local under = GetUnder(mapID)
+		local geometry = base.continents[continentID] and base.continents[continentID].maskGeometry
+		if geometry ~= nil then
+			if under.mask == nil then under.mask = under.frame:CreateMaskTexture() end
+			under.mask:SetTexture(geometry[1], "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+			under.mask:SetSize(geometry[2], geometry[3])
+			under.mask:ClearAllPoints()
+			under.mask:SetPoint("TOPLEFT", container, "TOPLEFT", geometry[4], geometry[5])
+			SetMasked(under, true)
+		end
+
+		under.scaleX, under.scaleY = zone.scaleX, zone.scaleY
+		under.frame:ClearAllPoints()
+		under.frame:SetAllPoints(zone.frame)
+		DrawBase(under, mapID, layer)
+		under.frame:Show()
 	else
 		SetMasked(zone, false)
 	end
@@ -300,7 +358,7 @@ local function GetSpaceRect(mapID)
 	if mapID ~= WORLD then
 		local continentID = GetContinent(mapID)
 		local entry = continentID and base.continents[continentID]
-		if entry == nil or not entry.drawn then return nil end
+		if not entry or not entry.drawn then return nil end
 		if mapID ~= continentID and not HasArt(mapID) then return nil end
 	end
 
@@ -338,12 +396,32 @@ function MapUtils:GetZoneDetailCityZone(mapID)
 	local info = C_Map.GetMapInfo(mapID)
 	local continentID = info and info.mapType == Enum.UIMapType.Zone and GetContinent(mapID)
 	local entry = continentID and base.continents[continentID]
-	if entry == nil or not entry.drawn or mapID == continentID then return nil end
+	if not entry or not entry.drawn or mapID == continentID then return nil end
 	if info.parentMapID ~= nil and info.parentMapID ~= continentID and HasArt(info.parentMapID) then return info.parentMapID end
 	local left, right, top, bottom = C_Map.GetMapRectOnMap(mapID, continentID)
 	if left == nil then return nil end
+	container.cityZones = container.cityZones or {}
+	if container.cityZones[mapID] ~= nil then return container.cityZones[mapID] or nil end
 	local x, y = (left + right) / 2, (top + bottom) / 2
-	local best, bestArea = nil, nil
+	local votes, best = {}, nil
+	for _, radius in ipairs(CITY_RING) do
+		for step = 0, CITY_RING_STEPS - 1 do
+			local angle = step * 2 * math.pi / CITY_RING_STEPS
+			local at = C_Map.GetMapInfoAtPosition(continentID, x + math.cos(angle) * radius * (right - left) / 2, y + math.sin(angle) * radius * (bottom - top) / 2)
+			if at ~= nil and at.mapID ~= mapID and HasArt(at.mapID) then
+				votes[at.mapID] = (votes[at.mapID] or 0) + 1
+				if best == nil or votes[at.mapID] > votes[best] then best = at.mapID end
+			end
+		end
+	end
+
+	if best ~= nil then
+		container.cityZones[mapID] = best
+
+		return best
+	end
+
+	local bestArea = nil
 	local children = C_Map.GetMapChildrenInfo(continentID, Enum.UIMapType.Zone, false)
 	for _, child in ipairs(children or {}) do
 		if child.mapID ~= mapID and HasArt(child.mapID) then
@@ -354,6 +432,8 @@ function MapUtils:GetZoneDetailCityZone(mapID)
 			end
 		end
 	end
+
+	container.cityZones[mapID] = best or false
 
 	return best
 end
@@ -446,6 +526,41 @@ local function DrawTileLayer(pool, mapID, offsetX, offsetY, scale, drawLayer, ma
 	return true
 end
 
+local function DrawCity(mapID, width, height)
+	local left, right, top, bottom = C_Map.GetMapRectOnMap(mapID, WORLD)
+	if left == nil or right <= left or bottom <= top then return end
+	local layers = C_Map.GetMapArtLayers(mapID)
+	local layer = layers and layers[1]
+	if layer == nil or layer.layerWidth == nil or layer.layerWidth <= 0 or layer.layerHeight <= 0 then return end
+	local city = GetCity(mapID)
+	local frameWidth = (right - left) * width
+	local frameHeight = (bottom - top) * height
+	city.scaleX = frameWidth / layer.layerWidth
+	city.scaleY = frameHeight / layer.layerHeight
+	city.worldWidth = right - left
+	city.frame:ClearAllPoints()
+	city.frame:SetPoint("TOPLEFT", container, "TOPLEFT", left * width, -top * height)
+	city.frame:SetSize(frameWidth, frameHeight)
+	DrawBase(city, mapID, layer)
+	city.frame:SetAlpha(0)
+	city.frame:Show()
+end
+
+local function UpdateCityAlpha()
+	if container == nil or not container:IsShown() or container.refWidth == nil then return end
+	local scrollContainer = WorldMapFrame.ScrollContainer
+	local scale = container:GetScale() * scrollContainer.Child:GetScale()
+	local viewWidth = scrollContainer:GetWidth()
+	if scale == container.cityScale or viewWidth == nil or viewWidth <= 0 then return end
+	container.cityScale = scale
+	for _, city in pairs(cities) do
+		if city.count > 0 and city.worldWidth ~= nil then
+			local share = city.worldWidth * container.refWidth * scale / viewWidth
+			city.frame:SetAlpha(math.max(0, math.min(1, (share - CITY_FADE[1]) / (CITY_FADE[2] - CITY_FADE[1]))))
+		end
+	end
+end
+
 local function DrawContinent(continentID, refWidth, refHeight)
 	local entry = base.continents[continentID]
 	if entry == nil then
@@ -469,6 +584,7 @@ local function DrawContinent(continentID, refWidth, refHeight)
 	entry.mask:SetSize(highlight.width * refWidth, highlight.height * refHeight)
 	entry.mask:ClearAllPoints()
 	entry.mask:SetPoint("TOPLEFT", container, "TOPLEFT", highlight.x * refWidth, -highlight.y * refHeight)
+	entry.maskGeometry = {MASK_PATH .. highlight.fileID, highlight.width * refWidth, highlight.height * refHeight, highlight.x * refWidth, -highlight.y * refHeight}
 	if entry.edge == nil then
 		entry.edge = container:CreateMaskTexture()
 		entry.edge:SetTexture(EDGE_PATH, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
@@ -512,6 +628,7 @@ local function Build(mode)
 	end
 
 	container.built = mode
+	container.cityZones = {}
 	local layers = C_Map.GetMapArtLayers(WORLD)
 	local layer = layers and layers[1]
 	if layer == nil or layer.layerWidth == nil or layer.layerWidth <= 0 then return false end
@@ -529,8 +646,15 @@ local function Build(mode)
 					DrawZone(continentID, continentRect, info.mapID, mode, refWidth, refHeight)
 				end
 			end
+
+			local all = C_Map.GetMapChildrenInfo(continentID, Enum.UIMapType.Zone, true)
+			for _, info in ipairs(all or {}) do
+				if not HasArt(info.mapID) then DrawCity(info.mapID, refWidth, refHeight) end
+			end
 		end
 	end
+
+	container.cityScale = nil
 
 	return true
 end
@@ -599,8 +723,23 @@ local function Update(force)
 		end
 	end
 
-	container:SetFrameLevel(child:GetFrameLevel() + FRAME_LEVEL_OFFSET)
+	local level = child:GetFrameLevel() + FRAME_LEVEL_OFFSET
+	container:SetFrameLevel(level)
+	for _, under in pairs(unders) do
+		under.frame:SetFrameLevel(level + 1)
+	end
+
+	for _, zone in pairs(zones) do
+		zone.frame:SetFrameLevel(level + 2)
+	end
+
+	for _, city in pairs(cities) do
+		city.frame:SetFrameLevel(level + 3)
+	end
+
 	container:Show()
+	container.cityScale = nil
+	UpdateCityAlpha()
 end
 
 function MapUtils:RefreshZoneDetail()
@@ -626,7 +765,13 @@ local function Install()
 	)
 	WorldMapFrame:HookScript("OnShow", function() Update(false) end)
 	child:HookScript("OnSizeChanged", function() Update(false) end)
-	WorldMapFrame.ScrollContainer:HookScript("OnUpdate", SyncBlizzardArt)
+	WorldMapFrame.ScrollContainer:HookScript(
+		"OnUpdate",
+		function()
+			SyncBlizzardArt()
+			UpdateCityAlpha()
+		end
+	)
 
 	return true
 end
