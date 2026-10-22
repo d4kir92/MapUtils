@@ -258,7 +258,7 @@ function MapUtils:InitSetting()
 	MapUtils:IsOneMap()
 	local oneMap = AddCheckbox(
 		"ONEMAP",
-		false,
+		true,
 		function()
 			MapUtils:RefreshZoneDetail()
 			MapUtils.OneMapPinCache = {}

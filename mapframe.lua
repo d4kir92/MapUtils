@@ -551,7 +551,7 @@ local SmoothZoom = {
 
 function MapUtils:IsOneMap()
 	if type(MAUTTAB) ~= "table" then return false end
-	if MAUTTAB["ONEMAP"] == nil then MAUTTAB["ONEMAP"] = MAUTTAB["WORLDMAPLEVELZOOM"] == true or MAUTTAB["ZONEDETAIL"] == "AREAS" or MAUTTAB["ZONEDETAIL"] == "FULL" end
+	if MAUTTAB["ONEMAP"] == nil then MAUTTAB["ONEMAP"] = true end
 
 	return MAUTTAB["ONEMAP"] == true
 end
