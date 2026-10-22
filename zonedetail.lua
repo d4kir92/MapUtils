@@ -703,6 +703,7 @@ local function SyncBlizzardArt()
 	end
 end
 
+local MinimapLayer
 local function Update(force)
 	if container == nil then return end
 	local mode = GetMode()
@@ -750,18 +751,240 @@ local function Update(force)
 		zone.frame:SetFrameLevel(level + 2)
 	end
 
+	if MinimapLayer.frame == nil then MinimapLayer.frame = CreateFrame("FRAME", nil, container) end
+	MinimapLayer.frame:SetAllPoints(container)
+	MinimapLayer.frame:SetFrameLevel(level + 3)
+	MinimapLayer.frame:Show()
 	for _, city in pairs(cities) do
-		city.frame:SetFrameLevel(level + 3)
+		city.frame:SetFrameLevel(level + 4)
 	end
 
 	container:Show()
 	container.cityScale = nil
 	UpdateCityAlpha()
+	MinimapLayer.signature = nil
+	MinimapLayer.Update()
 end
 
 function MapUtils:RefreshZoneDetail()
 	Update(true)
 	SyncBlizzardArt()
+end
+
+MinimapLayer = {
+	tile = 1600 / 3,
+	instances = {
+		[1414] = 1,
+		[1415] = 0
+	},
+	data = {},
+	parsed = {},
+	transforms = {},
+	masks = {},
+	active = {},
+	pools = {},
+	fadeStart = 140,
+	fadeEnd = 320,
+	maxAlpha = 1,
+	maxTiles = 100,
+	desaturation = 0.35,
+	tint = {1, 0.93, 0.8}
+}
+
+function MapUtils:AddMinimapTiles(dataFlavor, instance, data)
+	if MapUtils.GetRevealFlavor == nil or dataFlavor ~= MapUtils:GetRevealFlavor() then return end
+	MinimapLayer.data[instance] = data
+end
+
+function MinimapLayer.GetTiles(instance)
+	if MinimapLayer.parsed[instance] ~= nil then return MinimapLayer.parsed[instance] end
+	local data = MinimapLayer.data[instance]
+	if data == nil then return nil end
+	local tiles = {}
+	for key, fileID in string.gmatch(data, "(%d+)=(%d+)") do
+		tiles[tonumber(key)] = tonumber(fileID)
+	end
+
+	MinimapLayer.parsed[instance] = tiles
+
+	return tiles
+end
+
+function MinimapLayer.GetTransform(continentID)
+	local transform = MinimapLayer.transforms[continentID]
+	if transform ~= nil then return transform or nil end
+	MinimapLayer.transforms[continentID] = false
+	local instance = MinimapLayer.instances[continentID]
+	if instance == nil or C_Map.GetWorldPosFromMapPos == nil or CreateVector2D == nil then return nil end
+	local left, right, top, bottom = C_Map.GetMapRectOnMap(continentID, WORLD)
+	if left == nil or right <= left or bottom <= top then return nil end
+	local points = {}
+	for _, point in ipairs({{0.25, 0.25}, {0.75, 0.25}, {0.25, 0.75}}) do
+		local _, position = C_Map.GetWorldPosFromMapPos(continentID, CreateVector2D(point[1], point[2]))
+		if position == nil then return nil end
+		local yardX, yardY = position:GetXY()
+		tinsert(points, {yardX, yardY, left + point[1] * (right - left), top + point[2] * (bottom - top)})
+	end
+
+	local dX1, dY1 = points[2][1] - points[1][1], points[2][2] - points[1][2]
+	local dX2, dY2 = points[3][1] - points[1][1], points[3][2] - points[1][2]
+	local denominator = dX1 * dY2 - dY1 * dX2
+	if denominator == 0 then return nil end
+	local du1, du2 = points[2][3] - points[1][3], points[3][3] - points[1][3]
+	local dv1, dv2 = points[2][4] - points[1][4], points[3][4] - points[1][4]
+	local a, b = (du1 * dY2 - dY1 * du2) / denominator, (dX1 * du2 - du1 * dX2) / denominator
+	local c, d = (dv1 * dY2 - dY1 * dv2) / denominator, (dX1 * dv2 - dv1 * dX2) / denominator
+	transform = {points[1][3] - a * points[1][1] - b * points[1][2], points[1][4] - c * points[1][1] - d * points[1][2], a, b, c, d}
+	local det = a * d - b * c
+	if det == 0 then return nil end
+	transform[7] = det
+	MinimapLayer.transforms[continentID] = transform
+
+	return transform
+end
+
+function MinimapLayer.ToWorld(transform, x, y)
+	return transform[1] + transform[3] * x + transform[4] * y, transform[2] + transform[5] * x + transform[6] * y
+end
+
+function MinimapLayer.ToYards(transform, u, v)
+	local du, dv = u - transform[1], v - transform[2]
+
+	return (transform[6] * du - transform[4] * dv) / transform[7], (transform[3] * dv - transform[5] * du) / transform[7]
+end
+
+function MinimapLayer.GetMask(continentID)
+	local geometry = base.continents[continentID] and base.continents[continentID].maskGeometry
+	if geometry == nil then return nil end
+	local mask = MinimapLayer.masks[continentID]
+	if mask == nil then
+		mask = MinimapLayer.frame:CreateMaskTexture()
+		MinimapLayer.masks[continentID] = mask
+	end
+
+	mask:SetTexture(geometry[1], "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+	mask:SetSize(geometry[2], geometry[3])
+	mask:ClearAllPoints()
+	mask:SetPoint("TOPLEFT", container, "TOPLEFT", geometry[4], geometry[5])
+
+	return mask
+end
+
+function MinimapLayer.Release(key)
+	local texture = MinimapLayer.active[key]
+	texture:Hide()
+	MinimapLayer.active[key] = nil
+	tinsert(MinimapLayer.pools[texture.continentID], texture)
+end
+
+function MinimapLayer.HideAll()
+	for key in pairs(MinimapLayer.active) do
+		MinimapLayer.Release(key)
+	end
+
+	MinimapLayer.signature = nil
+end
+
+function MinimapLayer.Acquire(continentID, mask)
+	local pool = MinimapLayer.pools[continentID]
+	if pool == nil then
+		pool = {}
+		MinimapLayer.pools[continentID] = pool
+	end
+
+	local texture = tremove(pool)
+	if texture == nil then
+		texture = MinimapLayer.frame:CreateTexture(nil, "ARTWORK")
+		texture.continentID = continentID
+		if texture.SetDesaturation ~= nil then texture:SetDesaturation(MinimapLayer.desaturation) end
+		texture:SetVertexColor(MinimapLayer.tint[1], MinimapLayer.tint[2], MinimapLayer.tint[3])
+	end
+
+	if texture.mask ~= mask then
+		if texture.mask ~= nil then texture:RemoveMaskTexture(texture.mask) end
+		if mask ~= nil then texture:AddMaskTexture(mask) end
+		texture.mask = mask
+	end
+
+	return texture
+end
+
+function MinimapLayer.Update()
+	if container == nil or MinimapLayer.frame == nil then return end
+	if not container:IsShown() or container.refWidth == nil then
+		if MinimapLayer.signature ~= nil then MinimapLayer.HideAll() end
+
+		return
+	end
+
+	local scrollContainer = WorldMapFrame.ScrollContainer
+	local host = WorldMapFrame:GetMapID()
+	local hostLeft, hostRight, hostTop, hostBottom = GetSpaceRect(host)
+	local scale = scrollContainer:GetCanvasScale()
+	local x, y = scrollContainer:GetCurrentScrollX(), scrollContainer:GetCurrentScrollY()
+	local width, height = scrollContainer.Child:GetSize()
+	if hostLeft == nil or x == nil or y == nil or scale == nil or scale <= 0 or width == nil or width <= 0 or height == nil or height <= 0 then return end
+	local signature = format("%s:%.5f:%.5f:%.5f", tostring(host), scale, x, y)
+	if signature == MinimapLayer.signature then return end
+	MinimapLayer.signature = signature
+	local spaceWidth, spaceHeight = hostRight - hostLeft, hostBottom - hostTop
+	local centerU, centerV = (x - hostLeft) / spaceWidth, (y - hostTop) / spaceHeight
+	local halfU = scrollContainer:GetWidth() / (2 * scale * width) / spaceWidth
+	local halfV = scrollContainer:GetHeight() / (2 * scale * height) / spaceHeight
+	local wanted = {}
+	local alpha = 0
+	for _, continentID in ipairs(CONTINENTS) do
+		local entry = base.continents[continentID]
+		local transform = entry and entry.drawn and MinimapLayer.GetTransform(continentID)
+		local tiles = transform and MinimapLayer.GetTiles(MinimapLayer.instances[continentID])
+		if tiles then
+			local tileU = math.abs(transform[4]) * MinimapLayer.tile
+			local tilePixels = tileU * spaceWidth * width * scale
+			local share = (tilePixels - MinimapLayer.fadeStart) / (MinimapLayer.fadeEnd - MinimapLayer.fadeStart)
+			if share > 0 then
+				local minX, maxX, minY, maxY
+				for _, corner in ipairs({{-1, -1}, {1, -1}, {-1, 1}, {1, 1}}) do
+					local yardX, yardY = MinimapLayer.ToYards(transform, centerU + corner[1] * halfU, centerV + corner[2] * halfV)
+					minX, maxX = math.min(minX or yardX, yardX), math.max(maxX or yardX, yardX)
+					minY, maxY = math.min(minY or yardY, yardY), math.max(maxY or yardY, yardY)
+				end
+
+				local x0, x1 = math.max(0, math.floor(32 - maxY / MinimapLayer.tile)), math.min(63, math.floor(32 - minY / MinimapLayer.tile))
+				local y0, y1 = math.max(0, math.floor(32 - maxX / MinimapLayer.tile)), math.min(63, math.floor(32 - minX / MinimapLayer.tile))
+				if x1 >= x0 and y1 >= y0 and (x1 - x0 + 1) * (y1 - y0 + 1) <= MinimapLayer.maxTiles then
+					alpha = math.max(alpha, MinimapLayer.maxAlpha * math.min(1, share))
+					local mask = MinimapLayer.GetMask(continentID)
+					for tileX = x0, x1 do
+						for tileY = y0, y1 do
+							local fileID = tiles[tileX * 64 + tileY]
+							if fileID ~= nil then
+								local key = continentID * 4096 + tileX * 64 + tileY
+								wanted[key] = true
+								if MinimapLayer.active[key] == nil then
+									local texture = MinimapLayer.Acquire(continentID, mask)
+									local northX, westY = (32 - tileY) * MinimapLayer.tile, (32 - tileX) * MinimapLayer.tile
+									local u1, v1 = MinimapLayer.ToWorld(transform, northX, westY)
+									local u2, v2 = MinimapLayer.ToWorld(transform, northX - MinimapLayer.tile, westY - MinimapLayer.tile)
+									texture:SetTexture(fileID, nil, nil, "LINEAR")
+									texture:ClearAllPoints()
+									texture:SetPoint("TOPLEFT", container, "TOPLEFT", math.min(u1, u2) * container.refWidth, -math.min(v1, v2) * container.refHeight)
+									texture:SetSize(math.abs(u2 - u1) * container.refWidth, math.abs(v2 - v1) * container.refHeight)
+									texture:Show()
+									MinimapLayer.active[key] = texture
+								end
+							end
+						end
+					end
+				end
+			end
+		end
+	end
+
+	for key in pairs(MinimapLayer.active) do
+		if not wanted[key] then MinimapLayer.Release(key) end
+	end
+
+	MinimapLayer.frame:SetAlpha(alpha)
 end
 
 local function Install()
@@ -787,6 +1010,7 @@ local function Install()
 		function()
 			SyncBlizzardArt()
 			UpdateCityAlpha()
+			MinimapLayer.Update()
 		end
 	)
 

@@ -65,5 +65,6 @@ reveal.lua
 revealdata.lua
 zonemasks.lua
 zonedetail.lua
+minimaptiles.lua
 debug.lua
 settings.lua
