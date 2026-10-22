@@ -156,7 +156,7 @@ local function AddTooltip(control, titleKey, textKey)
 	end
 
 	for _, region in ipairs({control, control.holder}) do
-		if region.EnableMouse ~= nil and region ~= control then region:EnableMouse(true) end
+		if region.EnableMouse ~= nil and (region ~= control or region.IsMouseEnabled ~= nil and not region:IsMouseEnabled()) then region:EnableMouse(true) end
 		region:HookScript("OnEnter", OnEnter)
 		region:HookScript("OnLeave", OnLeave)
 	end
@@ -263,10 +263,25 @@ function MapUtils:InitSetting()
 			MapUtils:RefreshZoneDetail()
 			MapUtils.OneMapPinCache = {}
 			MapUtils:RefreshPins()
+			MapUtils:InstallCombatPins()
 		end, nil, ADDED_1022
 	)
 	if wheelZoomAvailable then Requires(oneMap, "WORLDMAPZOOM") end
 	AddTooltip(oneMap, "LID_ONEMAP", "LID_ONEMAPDESC")
+	local mapStyles = {}
+	for _, key in ipairs({"MIXED", "MAP", "TERRAIN"}) do
+		tinsert(
+			mapStyles,
+			{
+				["value"] = key,
+				["label"] = MapUtils:Trans("LID_MAPSTYLE" .. key)
+			}
+		)
+	end
+
+	local mapStyle = AddDropdown("MAPSTYLE", "MIXED", mapStyles, function() MapUtils:RefreshZoneDetail() end, nil, ADDED_1022)
+	Requires(mapStyle, "ONEMAP")
+	AddTooltip(mapStyle, "LID_MAPSTYLE", "LID_MAPSTYLEDESC")
 	AddCategory("NAVIGATION", 2, nil, ADDED_0928)
 	AddCheckbox("ALWAYSSHOWWAYPOINT", false, nil, nil, ADDED_0928)
 	AddCategory("MAPFADE", 2, nil, ADDED_0927)

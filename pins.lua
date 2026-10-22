@@ -2595,6 +2595,7 @@ if worldCanvas ~= nil and CreateFramePool ~= nil then
 		end
 	)
 	worldUpdater = CreateUpdater(WorldMapFrame, UpdateWorldPins)
+	MapUtils.UpdateWorldPinsNow = UpdateWorldPins
 	WorldMapFrame:HookScript(
 		"OnHide",
 		function()

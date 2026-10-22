@@ -800,6 +800,7 @@ MinimapLayer = {
 	parsed = {},
 	transforms = {},
 	masks = {},
+	waterMasks = {},
 	active = {},
 	pools = {},
 	fadeStart = 140,
@@ -808,7 +809,11 @@ MinimapLayer = {
 	maxTiles = 100,
 	desaturation = 0.35,
 	tint = {1, 0.93, 0.8},
-	cityFactor = 2.5
+	cityFactor = 2.5,
+	terrainMaxTiles = 400,
+	lodData = {},
+	lodParsed = {},
+	lodPath = "Interface\\AddOns\\MapUtils\\media\\minimaplod\\"
 }
 
 function MapUtils:AddMinimapTiles(dataFlavor, instance, data)
@@ -929,14 +934,82 @@ function MinimapLayer.Acquire(continentID, mask)
 	return texture
 end
 
+function MinimapLayer.Place(texture, transform, northX, westY, size, source)
+	local u1, v1 = MinimapLayer.ToWorld(transform, northX, westY)
+	local u2, v2 = MinimapLayer.ToWorld(transform, northX - size, westY - size)
+	texture:SetTexture(source, nil, nil, "LINEAR")
+	texture:ClearAllPoints()
+	texture:SetPoint("TOPLEFT", container, "TOPLEFT", math.min(u1, u2) * container.refWidth, -math.min(v1, v2) * container.refHeight)
+	texture:SetSize(math.abs(u2 - u1) * container.refWidth, math.abs(v2 - v1) * container.refHeight)
+	texture:Show()
+	MinimapLayer.lastPlaced = texture
+end
+
+function MinimapLayer.GetWaterMask(continentID, tileX, tileY, transform)
+	local lod = MinimapLayer.GetLOD(MinimapLayer.instances[continentID])
+	if lod == nil then return nil end
+	local col, row = math.floor(tileX / lod.group), math.floor(tileY / lod.group)
+	local name = lod.masks[col * 64 + row]
+	if name == nil then return nil end
+	local key = continentID * 4096 + col * 64 + row
+	local mask = MinimapLayer.waterMasks[key]
+	if mask == nil then
+		mask = MinimapLayer.frame:CreateMaskTexture()
+		mask:SetTexture(MinimapLayer.lodPath .. name, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+		local size = lod.group * MinimapLayer.tile
+		local northX, westY = (32 - row * lod.group) * MinimapLayer.tile, (32 - col * lod.group) * MinimapLayer.tile
+		local u1, v1 = MinimapLayer.ToWorld(transform, northX, westY)
+		local u2, v2 = MinimapLayer.ToWorld(transform, northX - size, westY - size)
+		mask:SetPoint("TOPLEFT", container, "TOPLEFT", math.min(u1, u2) * container.refWidth, -math.min(v1, v2) * container.refHeight)
+		mask:SetSize(math.abs(u2 - u1) * container.refWidth, math.abs(v2 - v1) * container.refHeight)
+		MinimapLayer.waterMasks[key] = mask
+	end
+
+	return mask
+end
+
+function MinimapLayer.GetLOD(instance)
+	if MinimapLayer.lodParsed[instance] ~= nil then return MinimapLayer.lodParsed[instance] or nil end
+	local data = MinimapLayer.lodData[instance]
+	if data == nil then
+		MinimapLayer.lodParsed[instance] = false
+
+		return nil
+	end
+
+	local pieces, waterMasks = {}, {}
+	for key, name, mask in string.gmatch(data.pieces, "(%d+)=([%w_]+)/([%w_]+)") do
+		pieces[tonumber(key)] = name
+		waterMasks[tonumber(key)] = mask
+	end
+
+	MinimapLayer.lodParsed[instance] = {
+		["group"] = data.group,
+		["pieces"] = pieces,
+		["masks"] = waterMasks
+	}
+
+	return MinimapLayer.lodParsed[instance]
+end
+
+function MapUtils:AddMinimapLOD(dataFlavor, instance, group, data)
+	if MapUtils.GetRevealFlavor == nil or dataFlavor ~= MapUtils:GetRevealFlavor() then return end
+	MinimapLayer.lodData[instance] = {
+		["group"] = group,
+		["pieces"] = data
+	}
+end
+
 function MinimapLayer.Update()
 	if container == nil or MinimapLayer.frame == nil then return end
-	if not container:IsShown() or container.refWidth == nil then
+	local style = type(MAUTTAB) == "table" and MAUTTAB["MAPSTYLE"] or "MIXED"
+	if not container:IsShown() or container.refWidth == nil or style == "MAP" then
 		if MinimapLayer.signature ~= nil then MinimapLayer.HideAll() end
 
 		return
 	end
 
+	local terrain = style == "TERRAIN"
 	local scrollContainer = WorldMapFrame.ScrollContainer
 	local host = WorldMapFrame:GetMapID()
 	local hostLeft, hostRight, hostTop, hostBottom = GetSpaceRect(host)
@@ -945,7 +1018,7 @@ function MinimapLayer.Update()
 	local x, y = scrollContainer:GetCurrentScrollX(), scrollContainer:GetCurrentScrollY()
 	local width, height = scrollContainer.Child:GetSize()
 	if hostLeft == nil or x == nil or y == nil or scale == nil or scale <= 0 or width == nil or width <= 0 or height == nil or height <= 0 then return end
-	local signature = format("%s:%.5f:%.5f:%.5f", tostring(host), scale, x, y)
+	local signature = format("%s:%s:%.5f:%.5f:%.5f", tostring(host), style, scale, x, y)
 	if signature == MinimapLayer.signature then return end
 	MinimapLayer.signature = signature
 	local spaceWidth, spaceHeight = hostRight - hostLeft, hostBottom - hostTop
@@ -963,6 +1036,7 @@ function MinimapLayer.Update()
 			local tilePixels = tileU * spaceWidth * width * scale
 			local factor = container.cityMode and MinimapLayer.cityFactor or 1
 			local share = (tilePixels - MinimapLayer.fadeStart * factor) / ((MinimapLayer.fadeEnd - MinimapLayer.fadeStart) * factor)
+			if terrain then share = 1 end
 			if share > 0 then
 				local minX, maxX, minY, maxY
 				for _, corner in ipairs({{-1, -1}, {1, -1}, {-1, 1}, {1, 1}}) do
@@ -973,26 +1047,38 @@ function MinimapLayer.Update()
 
 				local x0, x1 = math.max(0, math.floor(32 - maxY / MinimapLayer.tile)), math.min(63, math.floor(32 - minY / MinimapLayer.tile))
 				local y0, y1 = math.max(0, math.floor(32 - maxX / MinimapLayer.tile)), math.min(63, math.floor(32 - minX / MinimapLayer.tile))
-				if x1 >= x0 and y1 >= y0 and (x1 - x0 + 1) * (y1 - y0 + 1) <= MinimapLayer.maxTiles then
+				local count = (x1 - x0 + 1) * (y1 - y0 + 1)
+				local lod = terrain and count > MinimapLayer.terrainMaxTiles and MinimapLayer.GetLOD(MinimapLayer.instances[continentID])
+				if x1 >= x0 and y1 >= y0 and (count <= (terrain and MinimapLayer.terrainMaxTiles or MinimapLayer.maxTiles) or lod) then
 					alpha = math.max(alpha, MinimapLayer.maxAlpha * math.min(1, share))
 					local mask = MinimapLayer.GetMask(continentID)
-					for tileX = x0, x1 do
-						for tileY = y0, y1 do
-							local fileID = tiles[tileX * 64 + tileY]
-							if fileID ~= nil then
-								local key = continentID * 4096 + tileX * 64 + tileY
-								wanted[key] = true
-								if MinimapLayer.active[key] == nil then
-									local texture = MinimapLayer.Acquire(continentID, mask)
-									local northX, westY = (32 - tileY) * MinimapLayer.tile, (32 - tileX) * MinimapLayer.tile
-									local u1, v1 = MinimapLayer.ToWorld(transform, northX, westY)
-									local u2, v2 = MinimapLayer.ToWorld(transform, northX - MinimapLayer.tile, westY - MinimapLayer.tile)
-									texture:SetTexture(fileID, nil, nil, "LINEAR")
-									texture:ClearAllPoints()
-									texture:SetPoint("TOPLEFT", container, "TOPLEFT", math.min(u1, u2) * container.refWidth, -math.min(v1, v2) * container.refHeight)
-									texture:SetSize(math.abs(u2 - u1) * container.refWidth, math.abs(v2 - v1) * container.refHeight)
-									texture:Show()
-									MinimapLayer.active[key] = texture
+					if lod then
+						local group = lod.group
+						for col = math.floor(x0 / group), math.floor(x1 / group) do
+							for row = math.floor(y0 / group), math.floor(y1 / group) do
+								local name = lod.pieces[col * 64 + row]
+								if name ~= nil then
+									local key = -(continentID * 4096 + col * 64 + row)
+									wanted[key] = true
+									if MinimapLayer.active[key] == nil then
+										local northX, westY = (32 - row * group) * MinimapLayer.tile, (32 - col * group) * MinimapLayer.tile
+										MinimapLayer.Place(MinimapLayer.Acquire(continentID, mask), transform, northX, westY, group * MinimapLayer.tile, MinimapLayer.lodPath .. name)
+										MinimapLayer.active[key] = MinimapLayer.lastPlaced
+									end
+								end
+							end
+						end
+					else
+						for tileX = x0, x1 do
+							for tileY = y0, y1 do
+								local fileID = tiles[tileX * 64 + tileY]
+								if fileID ~= nil then
+									local key = continentID * 4096 + tileX * 64 + tileY
+									wanted[key] = true
+									if MinimapLayer.active[key] == nil then
+										MinimapLayer.Place(MinimapLayer.Acquire(continentID, MinimapLayer.GetWaterMask(continentID, tileX, tileY, transform) or mask), transform, (32 - tileY) * MinimapLayer.tile, (32 - tileX) * MinimapLayer.tile, MinimapLayer.tile, fileID)
+										MinimapLayer.active[key] = MinimapLayer.lastPlaced
+									end
 								end
 							end
 						end

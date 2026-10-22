@@ -676,6 +676,7 @@ function SmoothZoom.Switch(container, target)
 	if container.mapID ~= target then return false end
 	SmoothZoom.SetView(container, scale * factor, mapX(x), mapY(y), targetScale * factor, mapX(targetX), mapY(targetY))
 	SmoothZoom.ShowLoadedArt()
+	if MapUtils.UpdateWorldPinsNow ~= nil then MapUtils.UpdateWorldPinsNow() end
 
 	return true
 end
@@ -906,6 +907,126 @@ function SmoothZoom.OnMouseWheel(container, delta)
 	}
 end
 
+local CombatPins = {
+	waiting = setmetatable({}, {
+		__mode = "k"
+	}),
+	seen = setmetatable({}, {
+		__mode = "k"
+	}),
+}
+
+function CombatPins.Wait(pin, key, ...)
+	local entry = CombatPins.waiting[pin] or {}
+	CombatPins.waiting[pin] = entry
+	entry[key] = {
+		["n"] = select("#", ...),
+		...
+	}
+end
+
+function CombatPins.Done(pin, key)
+	local entry = CombatPins.waiting[pin]
+	if entry == nil then return end
+	entry[key] = nil
+	if entry.passthrough == nil and entry.propagation == nil then CombatPins.waiting[pin] = nil end
+end
+
+function CombatPins.Passthrough(pin, ...)
+	if InCombatLockdown() then return CombatPins.Wait(pin, "passthrough", ...) end
+	CombatPins.Done(pin, "passthrough")
+
+	return CombatPins.passthrough(pin, ...)
+end
+
+function CombatPins.Propagation(pin, ...)
+	if InCombatLockdown() then return CombatPins.Wait(pin, "propagation", ...) end
+	CombatPins.Done(pin, "propagation")
+
+	return CombatPins.propagation(pin, ...)
+end
+
+function CombatPins.Point(value)
+	if type(value) ~= "table" then return end
+	local ok, method = pcall(rawget, value, "CheckMouseButtonPassthrough")
+	if ok and method == CombatPins.passthrough then value.CheckMouseButtonPassthrough = CombatPins.Passthrough end
+	if CombatPins.propagation ~= nil then
+		ok, method = pcall(rawget, value, "UpdateMousePropagation")
+		if ok and method == CombatPins.propagation then value.UpdateMousePropagation = CombatPins.Propagation end
+	end
+end
+
+function CombatPins.PointPool(pool)
+	for _, enumerate in ipairs({"EnumerateActive", "EnumerateInactive"}) do
+		if type(pool[enumerate]) == "function" then
+			local ok, iterator, state, start = pcall(pool[enumerate], pool)
+			if ok and iterator then
+				for pin in iterator, state, start do
+					CombatPins.Point(pin)
+				end
+			end
+		end
+	end
+end
+
+function CombatPins.ScanPools()
+	for _, pool in pairs(frame.pinPools or {}) do
+		if not CombatPins.seen[pool] then
+			CombatPins.seen[pool] = true
+			CombatPins.PointPool(pool)
+		end
+	end
+end
+
+function CombatPins.Sweep()
+	CombatPins.sweepSoon = false
+	for _, value in pairs(_G) do
+		CombatPins.Point(value)
+	end
+
+	for _, pool in pairs(frame.pinPools or {}) do
+		CombatPins.PointPool(pool)
+	end
+end
+
+function CombatPins.Flush()
+	if InCombatLockdown() then return end
+	for pin, entry in pairs(CombatPins.waiting) do
+		CombatPins.waiting[pin] = nil
+		if pin.IsForbidden ~= nil and not pin:IsForbidden() and (pin.GetMap == nil or pin:GetMap() ~= nil) then
+			if entry.passthrough then pcall(CombatPins.passthrough, pin, unpack(entry.passthrough, 1, entry.passthrough.n)) end
+			if entry.propagation then pcall(CombatPins.propagation, pin, unpack(entry.propagation, 1, entry.propagation.n)) end
+		end
+	end
+end
+
+function MapUtils:InstallCombatPins()
+	if CombatPins.installed or frame == nil or not MapUtils:IsOneMap() then return end
+	CombatPins.passthrough = MapCanvasPinMixin and MapCanvasPinMixin.CheckMouseButtonPassthrough
+	if type(CombatPins.passthrough) ~= "function" then return end
+	local propagation = SuperTrackablePinMixin and SuperTrackablePinMixin.UpdateMousePropagation
+	CombatPins.propagation = type(propagation) == "function" and propagation or nil
+	CombatPins.installed = true
+	CombatPins.Sweep()
+	CombatPins.ScanPools()
+	frame:HookScript("OnShow", function() for _, pool in pairs(frame.pinPools or {}) do CombatPins.PointPool(pool) end end)
+	if frame.ScrollContainer ~= nil and frame.ScrollContainer.MarkCanvasDirty ~= nil then hooksecurefunc(frame.ScrollContainer, "MarkCanvasDirty", CombatPins.ScanPools) end
+	CombatPins.events = CreateFrame("Frame")
+	CombatPins.events:RegisterEvent("ADDON_LOADED")
+	CombatPins.events:RegisterEvent("PLAYER_REGEN_ENABLED")
+	CombatPins.events:SetScript(
+		"OnEvent",
+		function(_, event)
+			if event == "PLAYER_REGEN_ENABLED" then
+				CombatPins.Flush()
+			elseif not CombatPins.sweepSoon then
+				CombatPins.sweepSoon = true
+				C_Timer.After(0, CombatPins.Sweep)
+			end
+		end
+	)
+end
+
 function MapLevelZoom.Install()
 	local container = WheelZoom.container
 	if MapLevelZoom.installed or container == nil then return end
@@ -921,4 +1042,5 @@ MapLevelZoom.loader:RegisterEvent("PLAYER_LOGIN")
 MapLevelZoom.loader:SetScript("OnEvent", function(sel)
 	sel:UnregisterAllEvents()
 	C_Timer.After(WheelZoom.installDelay, MapLevelZoom.Install)
+	MapUtils:InstallCombatPins()
 end)
