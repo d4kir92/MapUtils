@@ -8,6 +8,7 @@ local ADDED_1003 = "2026-10-03"
 local ADDED_1004 = "2026-10-04"
 local ADDED_1017 = "2026-10-17"
 local ADDED_1019 = "2026-10-19"
+local ADDED_1022 = "2026-10-22"
 local SHARED_KEYS = {"DUNGEONWORLDMAPPINS", "MEETINGSTONEWORLDMAPPINS", "DUNGEONMINIMAPPINS", "MEETINGSTONEMINIMAPPINS", "INSTANCEPINS_BOSS", "INSTANCEPINS_ITEM", "INSTANCEPINS_ENTRANCE", "INSTANCEPINS_LEVEL"}
 local maset = nil
 local sharedCheckboxes = {}
@@ -141,6 +142,26 @@ local function IsAnyCoordsShown()
 	return player == "1" or cursor == "1"
 end
 
+local function AddTooltip(control, titleKey, textKey)
+	if control == nil then return end
+	local function OnEnter(sel)
+		GameTooltip:SetOwner(sel, "ANCHOR_RIGHT")
+		GameTooltip:SetText(MapUtils:Trans(titleKey), 1, 1, 1)
+		GameTooltip:AddLine(MapUtils:Trans(textKey), nil, nil, nil, true)
+		GameTooltip:Show()
+	end
+
+	local function OnLeave(sel)
+		if GameTooltip:GetOwner() == sel then GameTooltip:Hide() end
+	end
+
+	for _, region in ipairs({control, control.holder}) do
+		if region.EnableMouse ~= nil and region ~= control then region:EnableMouse(true) end
+		region:HookScript("OnEnter", OnEnter)
+		region:HookScript("OnLeave", OnLeave)
+	end
+end
+
 local function AddDropdown(key, default, choices, func, label, added)
 	return maset:AddDropdown({
 		["label"] = label or ("LID_" .. key),
@@ -232,8 +253,20 @@ function MapUtils:InitSetting()
 		local checkbox = AddCheckbox(key, true, function() MapUtils:RefreshWorldMapFrame() end, label, ADDED_0927)
 		if byMoveAny then maset:AddDependency(checkbox, function() return false end, 0) end
 	end
-	if MapUtils.IsWorldMapWheelZoomAvailable and MapUtils:IsWorldMapWheelZoomAvailable() then AddCheckbox("WORLDMAPZOOM", true, nil, nil, "2026-10-08") end
-	AddCheckbox("WORLDMAPLEVELZOOM", false, nil, nil, ADDED_1019)
+	local wheelZoomAvailable = MapUtils.IsWorldMapWheelZoomAvailable and MapUtils:IsWorldMapWheelZoomAvailable()
+	if wheelZoomAvailable then AddCheckbox("WORLDMAPZOOM", true, nil, nil, "2026-10-08") end
+	MapUtils:IsOneMap()
+	local oneMap = AddCheckbox(
+		"ONEMAP",
+		false,
+		function()
+			MapUtils:RefreshZoneDetail()
+			MapUtils.OneMapPinCache = {}
+			MapUtils:RefreshPins()
+		end, nil, ADDED_1022
+	)
+	if wheelZoomAvailable then Requires(oneMap, "WORLDMAPZOOM") end
+	AddTooltip(oneMap, "LID_ONEMAP", "LID_ONEMAPDESC")
 	AddCategory("NAVIGATION", 2, nil, ADDED_0928)
 	AddCheckbox("ALWAYSSHOWWAYPOINT", false, nil, nil, ADDED_0928)
 	AddCategory("MAPFADE", 2, nil, ADDED_0927)
@@ -257,8 +290,8 @@ function MapUtils:InitSetting()
 		AddCategory("REVEAL", 2, nil, ADDED_0928)
 		local revealLabel = nil
 		if MapUtils:IsRevealedByLeatrix() then revealLabel = MapUtils:Trans("LID_REVEALMAP") .. " |cffff8000(" .. MapUtils:Trans("LID_REVEALLEATRIX") .. ")|r" end
-		AddCheckbox("REVEALMAP", true, function() MapUtils:RefreshReveal() end, revealLabel, ADDED_0928)
-		Requires(AddDropdown("REVEALTINT", "BLUE", MapUtils:GetRevealTintChoices(), function() MapUtils:RefreshReveal() end, nil, ADDED_0928), "REVEALMAP")
+		AddCheckbox("REVEALMAP", true, function() MapUtils:RefreshReveal() MapUtils:RefreshZoneDetail() end, revealLabel, ADDED_0928)
+		Requires(AddDropdown("REVEALTINT", "BLUE", MapUtils:GetRevealTintChoices(), function() MapUtils:RefreshReveal() MapUtils:RefreshZoneDetail() end, nil, ADDED_0928), "REVEALMAP")
 	end
 
 	AddCategory("BATTLEFIELDMAP", nil, nil, ADDED_0927)

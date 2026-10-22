@@ -114,6 +114,16 @@ local function GetOverlays(artID)
 	return overlays
 end
 
+function MapUtils:GetRevealOverlays(artID)
+	return GetOverlays(artID)
+end
+
+function MapUtils:GetRevealTint(mapID)
+	if not IsEnabled() then return nil end
+
+	return GetTint(mapID)
+end
+
 local function GetState(pin)
 	local state = states[pin]
 	if state == nil then

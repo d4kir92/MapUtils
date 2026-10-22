@@ -63,5 +63,7 @@ coords.lua
 battlefieldmap.lua
 reveal.lua
 revealdata.lua
+zonemasks.lua
+zonedetail.lua
 debug.lua
 settings.lua

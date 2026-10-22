@@ -1249,14 +1249,18 @@ local function ApplyIcon(pin, icon)
 	pin.icon = icon
 	pin.splitIcon = icon == SPLIT_ICON
 	if pin.splitIcon then
+		if pin.textureLeft == nil then pin.textureLeft = pin:CreateTexture(nil, "OVERLAY") end
 		if pin.textureRight == nil then pin.textureRight = pin:CreateTexture(nil, "OVERLAY") end
-		SetTextureIcon(pin.texture, GetDungeonIcon(), "left")
+		pin.texture:Hide()
+		SetTextureIcon(pin.textureLeft, GetDungeonIcon(), "left")
 		SetTextureIcon(pin.textureRight, GetRaidIcon(), "right")
 
 		return
 	end
 
+	if pin.textureLeft ~= nil then pin.textureLeft:Hide() end
 	if pin.textureRight ~= nil then pin.textureRight:Hide() end
+	pin.texture:Show()
 	SetTextureIcon(pin.texture, icon)
 end
 
@@ -1269,8 +1273,10 @@ local function LayoutPinIcon(pin, size, x, y)
 		return
 	end
 
-	pin.texture:SetPoint("RIGHT", pin, "CENTER", x, y)
-	pin.texture:SetSize(size / 2, size)
+	pin.textureLeft:ClearAllPoints()
+	pin.textureLeft:SetPoint("RIGHT", pin, "CENTER", x, y)
+	pin.textureLeft:SetSize(size / 2, size)
+	pin.textureLeft:Show()
 	pin.textureRight:ClearAllPoints()
 	pin.textureRight:SetPoint("LEFT", pin, "CENTER", x, y)
 	pin.textureRight:SetSize(size / 2, size)
@@ -1287,9 +1293,9 @@ local function ApplyEntryTint(pin, entry)
 		pin.texture:SetVertexColor(1, 1, 1)
 	end
 
-	if pin.textureRight ~= nil then
-		pin.textureRight:SetDesaturated(pin.texture:IsDesaturated())
-		pin.textureRight:SetVertexColor(pin.texture:GetVertexColor())
+	for _, half in ipairs({pin.textureLeft, pin.textureRight}) do
+		half:SetDesaturated(pin.texture:IsDesaturated())
+		half:SetVertexColor(pin.texture:GetVertexColor())
 	end
 end
 
@@ -1795,7 +1801,7 @@ local function ShowAreaLabel(pin)
 end
 
 function MapUtils:ShowPinHighlight(pin)
-	local sources = pin.row ~= nil and {pin.portrait:IsShown() and pin.portrait or pin.icon} or {pin.texture, pin.splitIcon and pin.textureRight or nil}
+	local sources = pin.row ~= nil and {pin.portrait:IsShown() and pin.portrait or pin.icon} or (pin.splitIcon and {pin.textureLeft, pin.textureRight} or {pin.texture})
 	pin.hoverTextures = pin.hoverTextures or {}
 	MapUtils:HidePinHighlight(pin)
 	for _, source in ipairs(sources) do
@@ -2239,6 +2245,73 @@ local function BuildList(mapID, piersOn, dungeonsOn, flightsOn, meetingStonesOn,
 	return list
 end
 
+MapUtils.OneMapPinCache = {}
+function MapUtils:GetOneMapForeignPins(mapID, piersOn, dungeonsOn, convergencesOn)
+	if not (piersOn or dungeonsOn or convergencesOn) or MapUtils.IsOneMap == nil or not MapUtils:IsOneMap() or MapUtils.IsZoneDetailMap == nil or not MapUtils:IsZoneDetailMap(mapID) then return nil end
+	local space = MapUtils:GetZoneDetailSpace()
+	if mapID == space then dungeonsOn = false end
+	local hostInfo = C_Map.GetMapInfo(mapID)
+	if hostInfo == nil or hostInfo.mapType ~= Enum.UIMapType.Zone then convergencesOn = false end
+	if not piersOn and not dungeonsOn and not convergencesOn then return nil end
+	local key = format("%d:%s:%s:%s:%d", mapID, tostring(piersOn), tostring(dungeonsOn), tostring(convergencesOn), convergencesOn and math.floor(GetTime() / 5) or 0)
+	local cache = MapUtils.OneMapPinCache
+	if cache.key == key then return cache.items end
+	local hostLeft, hostRight, hostTop, hostBottom = 0, 1, 0, 1
+	if mapID ~= space then hostLeft, hostRight, hostTop, hostBottom = C_Map.GetMapRectOnMap(mapID, space) end
+	if hostLeft == nil or hostRight <= hostLeft or hostBottom <= hostTop then return nil end
+	local items = {}
+	local seen = {}
+	local function Remember(entry, u, v)
+		tinsert(seen, {entry.kind, entry.name, u, v})
+	end
+
+	local function IsSeen(entry, u, v)
+		for _, other in ipairs(seen) do
+			if other[1] == entry.kind and other[2] == entry.name and math.abs(other[3] - u) < 0.004 and math.abs(other[4] - v) < 0.004 then return true end
+		end
+
+		return false
+	end
+
+	local own = BuildList(mapID, piersOn, dungeonsOn, false, false, false, false, false)
+	if own ~= nil then
+		for _, entry in ipairs(own) do
+			Remember(entry, hostLeft + entry.x * (hostRight - hostLeft), hostTop + entry.y * (hostBottom - hostTop))
+		end
+	end
+
+	for _, sourceID in ipairs(MapUtils:GetZoneDetailSources()) do
+		if sourceID ~= mapID then
+			local left, right, top, bottom = C_Map.GetMapRectOnMap(sourceID, space)
+			local list = left ~= nil and right > left and bottom > top and BuildList(sourceID, piersOn, dungeonsOn, false, false, false, false, convergencesOn)
+			if list then
+				for _, entry in ipairs(list) do
+					if entry.kind == nil or entry.kind == "dungeon" and dungeonsOn or entry.kind == "convergence" and convergencesOn then
+						local u, v = left + entry.x * (right - left), top + entry.y * (bottom - top)
+						if entry.kind ~= "dungeon" or not IsSeen(entry, u, v) then
+							Remember(entry, u, v)
+							tinsert(
+								items,
+								{
+									["entry"] = entry,
+									["mapID"] = sourceID,
+									["x"] = (u - hostLeft) / (hostRight - hostLeft),
+									["y"] = (v - hostTop) / (hostBottom - hostTop)
+								}
+							)
+						end
+					end
+				end
+			end
+		end
+	end
+
+	cache.key = key
+	cache.items = items
+
+	return items
+end
+
 function MapUtils:PrimeDebugPinMap(mapID)
 	if type(mapID) == "string" then
 		local key = mapID:match("^instance:(.+)$")
@@ -2314,22 +2387,36 @@ local function UpdateWorldPins()
 	worldConvergences = convergencesOn
 	worldPinPool:ReleaseAll()
 	wipe(worldPins)
-	local list = BuildList(mapID, piersOn, dungeonsOn, flightsOn, meetingStonesOn, crossingsOn, spiritHealersOn, convergencesOn)
-	if list == nil then return end
+	local list = {}
+	for _, entry in ipairs(BuildList(mapID, piersOn, dungeonsOn, flightsOn, meetingStonesOn, crossingsOn, spiritHealersOn, convergencesOn) or {}) do
+		tinsert(list, entry)
+	end
+
+	local foreign = MapUtils:GetOneMapForeignPins(mapID, piersOn, dungeonsOn, convergencesOn)
+	local ownCount = #list
+	if foreign ~= nil then
+		for _, item in ipairs(foreign) do
+			tinsert(list, item)
+		end
+	end
+
+	if #list == 0 then return end
 	if scale == nil or scale <= 0 then return end
 	local w = child:GetWidth()
 	local h = child:GetHeight()
 	local size = ICON_SIZE / scale
 	local poiScale = GetPoiScale()
 	local dungeonSize = DUNGEON_ICON_SIZE * poiScale / scale
-	for i, entry in ipairs(list) do
+	for i, listed in ipairs(list) do
+		local entry, entryMapID, entryX, entryY = listed, mapID, listed.x, listed.y
+		if i > ownCount then entry, entryMapID, entryX, entryY = listed.entry, listed.mapID, listed.x, listed.y end
 		local pin = worldPinPool:Acquire()
 		SetupPin(pin, child, WORLD_PIN_LEVEL, true)
 		pin.worldMap = true
 		worldPins[i] = pin
 
 		pin.entry = entry
-		pin.mapID = mapID
+		pin.mapID = entryMapID
 		pin.pixel = 1 / scale
 		pin.minCircleSize = dungeonSize
 		pin.baseLevel = baseLevel
@@ -2350,7 +2437,7 @@ local function UpdateWorldPins()
 
 		UpdatePinStyle(pin)
 		pin:ClearAllPoints()
-		pin:SetPoint("CENTER", child, "TOPLEFT", w * entry.x, -h * entry.y)
+		pin:SetPoint("CENTER", child, "TOPLEFT", w * entryX, -h * entryY)
 		pin:SetAlpha(MapUtils:GetDebugPinAlpha(entry))
 		pin:Show()
 	end
