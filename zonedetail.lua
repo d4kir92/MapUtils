@@ -11,6 +11,10 @@ local MASK_PATH = "Interface\\AddOns\\MapUtils\\media\\zonemasks\\"
 local EDGE_PATH = MASK_PATH .. "edge"
 local ROUND_PATH = MASK_PATH .. "round"
 local CITY_FADE = {0.05, 0.2}
+local UNDERGROUND = {
+	[1455] = true,
+	[1458] = true
+}
 local CITY_RING = {0.5, 0.75, 1}
 local CITY_RING_STEPS = 16
 local container = nil
@@ -616,16 +620,28 @@ local function DrawContinent(continentID, refWidth, refHeight)
 	return {left, right, top, bottom}
 end
 
-local function ShowBase()
+local function ShowBase(shown)
 	for _, entry in pairs(base.continents) do
 		for _, texture in pairs(entry.pool) do
-			texture:SetShown(entry.drawn and texture.used == true)
+			texture:SetShown(shown and entry.drawn and texture.used == true)
 		end
 	end
 
 	for _, texture in pairs(base.world) do
-		texture:SetShown(texture.used == true)
+		texture:SetShown(shown and texture.used == true)
 	end
+
+	for _, list in ipairs({unders, zones, cities}) do
+		for _, art in pairs(list) do
+			art.frame:SetShown(shown and art.count > 0)
+		end
+	end
+end
+
+local function GetCityHostRect(mapID)
+	if UNDERGROUND[mapID] or MapUtils:GetZoneDetailCityZone(mapID) == nil then return nil end
+
+	return RawSpaceRect(mapID)
 end
 
 local function Build(mode)
@@ -678,6 +694,7 @@ end
 
 local function Layout(mapID, width, height)
 	local left, right, top = GetSpaceRect(mapID)
+	if left == nil then left, right, top = GetCityHostRect(mapID) end
 	if left == nil or container.refWidth == nil then return false end
 	local scale = (right - left) * width / container.refWidth
 	if scale <= 0 then return false end
@@ -689,7 +706,7 @@ local function Layout(mapID, width, height)
 end
 
 local function SyncBlizzardArt()
-	local hide = container ~= nil and container:IsShown()
+	local hide = container ~= nil and container:IsShown() and not container.cityMode
 	if not hide and not container.blizzardHidden then return end
 	container.blizzardHidden = hide
 	if WorldMapFrame.detailLayerPool ~= nil then
@@ -722,14 +739,16 @@ local function Update(force)
 		if not Build(mode) then return end
 	end
 
-	if GetSpaceRect(mapID) == nil then
+	container.cityMode = GetSpaceRect(mapID) == nil
+	if container.cityMode and GetCityHostRect(mapID) == nil then
 		container.signature = nil
+		container.cityMode = false
 		container:Hide()
 
 		return
 	end
 
-	ShowBase()
+	ShowBase(not container.cityMode)
 
 	local signature = format("%s:%.1f:%.1f", tostring(mapID), width, height)
 	if signature ~= container.signature then
@@ -753,10 +772,10 @@ local function Update(force)
 
 	if MinimapLayer.frame == nil then MinimapLayer.frame = CreateFrame("FRAME", nil, container) end
 	MinimapLayer.frame:SetAllPoints(container)
-	MinimapLayer.frame:SetFrameLevel(level + 3)
+	MinimapLayer.frame:SetFrameLevel(level + 4)
 	MinimapLayer.frame:Show()
 	for _, city in pairs(cities) do
-		city.frame:SetFrameLevel(level + 4)
+		city.frame:SetFrameLevel(level + 3)
 	end
 
 	container:Show()
@@ -788,7 +807,8 @@ MinimapLayer = {
 	maxAlpha = 1,
 	maxTiles = 100,
 	desaturation = 0.35,
-	tint = {1, 0.93, 0.8}
+	tint = {1, 0.93, 0.8},
+	cityFactor = 2.5
 }
 
 function MapUtils:AddMinimapTiles(dataFlavor, instance, data)
@@ -920,6 +940,7 @@ function MinimapLayer.Update()
 	local scrollContainer = WorldMapFrame.ScrollContainer
 	local host = WorldMapFrame:GetMapID()
 	local hostLeft, hostRight, hostTop, hostBottom = GetSpaceRect(host)
+	if hostLeft == nil and container.cityMode then hostLeft, hostRight, hostTop, hostBottom = GetCityHostRect(host) end
 	local scale = scrollContainer:GetCanvasScale()
 	local x, y = scrollContainer:GetCurrentScrollX(), scrollContainer:GetCurrentScrollY()
 	local width, height = scrollContainer.Child:GetSize()
@@ -940,7 +961,8 @@ function MinimapLayer.Update()
 		if tiles then
 			local tileU = math.abs(transform[4]) * MinimapLayer.tile
 			local tilePixels = tileU * spaceWidth * width * scale
-			local share = (tilePixels - MinimapLayer.fadeStart) / (MinimapLayer.fadeEnd - MinimapLayer.fadeStart)
+			local factor = container.cityMode and MinimapLayer.cityFactor or 1
+			local share = (tilePixels - MinimapLayer.fadeStart * factor) / ((MinimapLayer.fadeEnd - MinimapLayer.fadeStart) * factor)
 			if share > 0 then
 				local minX, maxX, minY, maxY
 				for _, corner in ipairs({{-1, -1}, {1, -1}, {-1, 1}, {1, 1}}) do
