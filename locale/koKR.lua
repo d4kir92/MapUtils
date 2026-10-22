@@ -98,3 +98,5 @@ MapUtils:AddTrans("koKR", "LID_CONVERGENCERECEIVED", "%d개의 수렴점을 %s�
 MapUtils:AddTrans("koKR", "LID_CONVERGENCE_ELEMENTAL", "정령 수렴점")
 MapUtils:AddTrans("koKR", "LID_CONVERGENCE_LEYLINE", "지맥")
 MapUtils:AddTrans("koKR", "LID_NORMAL", "기본")
+MapUtils:AddTrans("koKR", "LID_SHOWUNEXPLORED", "탐험하지 않은 항목 표시")
+MapUtils:AddTrans("koKR", "LID_SHOWUNEXPLOREDDESC", "끄면 이 캐릭터가 가까이 가 본 아이콘만 표시됩니다. 방문한 아이콘은 이 옵션이 켜져 있어도 항상 캐릭터별로 기록됩니다.")

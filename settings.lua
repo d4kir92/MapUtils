@@ -162,6 +162,10 @@ local function AddTooltip(control, titleKey, textKey)
 	end
 end
 
+local function AddExploreCheckbox(prefix)
+	AddTooltip(AddCheckbox(prefix .. "SHOWUNEXPLORED", true, function() MapUtils:RefreshExploredPins() end, "LID_SHOWUNEXPLORED", ADDED_1022), "LID_SHOWUNEXPLORED", "LID_SHOWUNEXPLOREDDESC")
+end
+
 local function AddDropdown(key, default, choices, func, label, added)
 	return maset:AddDropdown({
 		["label"] = label or ("LID_" .. key),
@@ -319,12 +323,15 @@ function MapUtils:InitSetting()
 	AddCategory("PIERS", 2)
 	AddCheckbox("WORLDMAPPINS", true, function() MapUtils:RefreshPins() end)
 	AddCheckbox("MINIMAPPINS", true, function() MapUtils:RefreshPins() end)
+	AddExploreCheckbox("PIER")
 	AddCategory("DUNGEONS", 2)
 	AddSharedCheckbox("DUNGEONWORLDMAPPINS", "LID_WORLDMAPPINS")
 	AddSharedCheckbox("DUNGEONMINIMAPPINS", "LID_MINIMAPPINS")
+	AddExploreCheckbox("DUNGEON")
 	AddCategory("MEETINGSTONES", 2, nil, ADDED_0928)
 	AddSharedCheckbox("MEETINGSTONEWORLDMAPPINS", "LID_WORLDMAPPINS", ADDED_0928)
 	AddSharedCheckbox("MEETINGSTONEMINIMAPPINS", "LID_MINIMAPPINS", ADDED_0928)
+	AddExploreCheckbox("MEETINGSTONE")
 	if not MapUtils.nativeInstanceMaps then
 		AddCategory("INSTANCEMAPPINS", 2, "LID_INSTANCEMAPS", ADDED_1004)
 		AddSharedCheckbox("INSTANCEPINS_BOSS", "LID_SHOWBOSSPINS", ADDED_1004)
@@ -341,17 +348,21 @@ function MapUtils:InitSetting()
 			{value = "NORMAL", label = MapUtils:Trans("LID_NORMAL")},
 			{value = "CHIBI", label = "Chibi"},
 		}, function() MapUtils:RefreshPins() end)
+		AddExploreCheckbox("SPIRITHEALER")
 		AddCategory("CONVERGENCES", 2, nil, ADDED_1017)
 		AddCheckbox("CONVERGENCEWORLDMAPPINS", true, function() MapUtils:RefreshPins() end, "LID_WORLDMAPPINS", ADDED_1017)
 		AddCheckbox("CONVERGENCEMINIMAPPINS", false, function() MapUtils:RefreshPins() end, "LID_MINIMAPPINS", ADDED_1017)
 		AddCheckbox("CONVERGENCENONSKYBORNE", false, function() MapUtils:RefreshPins() end, "LID_CONVERGENCENONSKYBORNE", ADDED_1017)
+		AddExploreCheckbox("CONVERGENCE")
 	end
 
 	AddCategory("FLIGHTPOINTS", 2)
 	AddCheckbox("FLIGHTWORLDMAPPINS", true, function() MapUtils:RefreshPins() end, "LID_WORLDMAPPINS")
 	AddCheckbox("FLIGHTMINIMAPPINS", true, function() MapUtils:RefreshPins() end, "LID_MINIMAPPINS")
+	AddExploreCheckbox("FLIGHT")
 	AddCategory("ZONECROSSINGS", 2, nil, ADDED_1003)
 	AddCheckbox("CROSSINGWORLDMAPPINS", true, function() MapUtils:RefreshPins() end, "LID_WORLDMAPPINS", ADDED_1003)
+	AddExploreCheckbox("CROSSING")
 	maset:UpdateDependencies()
 	maset:ResumeLayout()
 	MapUtils:CreateMinimapButton({

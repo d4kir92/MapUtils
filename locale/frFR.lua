@@ -98,3 +98,5 @@ MapUtils:AddTrans("frFR", "LID_CONVERGENCERECEIVED", "%d convergence(s) reçue(s
 MapUtils:AddTrans("frFR", "LID_CONVERGENCE_ELEMENTAL", "Convergence élémentaire")
 MapUtils:AddTrans("frFR", "LID_CONVERGENCE_LEYLINE", "Ligne tellurique")
 MapUtils:AddTrans("frFR", "LID_NORMAL", "Normal")
+MapUtils:AddTrans("frFR", "LID_SHOWUNEXPLORED", "Afficher les non explorés")
+MapUtils:AddTrans("frFR", "LID_SHOWUNEXPLOREDDESC", "Si désactivé, seules les icônes près desquelles ce personnage est passé sont affichées. Les icônes visitées sont toujours enregistrées par personnage, même lorsque cette option est activée.")

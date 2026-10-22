@@ -98,3 +98,5 @@ MapUtils:AddTrans("itIT", "LID_CONVERGENCERECEIVED", "%d convergenza/e ricevuta/
 MapUtils:AddTrans("itIT", "LID_CONVERGENCE_ELEMENTAL", "Convergenza elementale")
 MapUtils:AddTrans("itIT", "LID_CONVERGENCE_LEYLINE", "Linea di prana")
 MapUtils:AddTrans("itIT", "LID_NORMAL", "Normale")
+MapUtils:AddTrans("itIT", "LID_SHOWUNEXPLORED", "Mostra inesplorati")
+MapUtils:AddTrans("itIT", "LID_SHOWUNEXPLOREDDESC", "Se disattivato, vengono mostrate solo le icone vicino alle quali questo personaggio è già stato. Le icone visitate vengono sempre salvate per personaggio, anche quando questa opzione è attiva.")

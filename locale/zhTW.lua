@@ -98,3 +98,5 @@ MapUtils:AddTrans("zhTW", "LID_CONVERGENCERECEIVED", "收到%d個匯聚點，來
 MapUtils:AddTrans("zhTW", "LID_CONVERGENCE_ELEMENTAL", "元素匯聚點")
 MapUtils:AddTrans("zhTW", "LID_CONVERGENCE_LEYLINE", "地脈")
 MapUtils:AddTrans("zhTW", "LID_NORMAL", "一般")
+MapUtils:AddTrans("zhTW", "LID_SHOWUNEXPLORED", "顯示未探索的")
+MapUtils:AddTrans("zhTW", "LID_SHOWUNEXPLOREDDESC", "關閉後，只顯示此角色到過附近的圖示。即使開啟此選項，造訪過的圖示也會始終按角色記錄。")

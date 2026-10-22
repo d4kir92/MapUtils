@@ -98,3 +98,5 @@ MapUtils:AddTrans("zhCN", "LID_CONVERGENCERECEIVED", "收到%d个汇聚点，来
 MapUtils:AddTrans("zhCN", "LID_CONVERGENCE_ELEMENTAL", "元素汇聚点")
 MapUtils:AddTrans("zhCN", "LID_CONVERGENCE_LEYLINE", "魔网能量线")
 MapUtils:AddTrans("zhCN", "LID_NORMAL", "普通")
+MapUtils:AddTrans("zhCN", "LID_SHOWUNEXPLORED", "显示未探索的")
+MapUtils:AddTrans("zhCN", "LID_SHOWUNEXPLOREDDESC", "关闭后，只显示此角色到过附近的图标。即使开启此选项，访问过的图标也会始终按角色记录。")

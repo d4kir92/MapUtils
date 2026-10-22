@@ -2184,7 +2184,7 @@ local function CrossingsEnabled()
 	return MapUtils:GetConfig("CROSSINGWORLDMAPPINS", true) == true
 end
 
-local function BuildList(mapID, piersOn, dungeonsOn, flightsOn, meetingStonesOn, crossingsOn, spiritHealersOn, convergencesOn)
+local function BuildList(mapID, piersOn, dungeonsOn, flightsOn, meetingStonesOn, crossingsOn, spiritHealersOn, convergencesOn, unfiltered)
 	if mapID == nil then return nil end
 	local list = nil
 	if spiritHealersOn and MapUtils.SPIRITHEALERS[mapID] ~= nil then
@@ -2242,9 +2242,13 @@ local function BuildList(mapID, piersOn, dungeonsOn, flightsOn, meetingStonesOn,
 		end
 	end
 
+	if not unfiltered and MapUtils.FilterUnexploredPins ~= nil then list = MapUtils:FilterUnexploredPins(mapID, list) end
+
 	return list
 end
 
+MapUtils.BuildPinList = BuildList
+MapUtils.GetEntryWorldPos = GetEntryWorldPos
 MapUtils.OneMapPinCache = {}
 function MapUtils:GetOneMapForeignPins(mapID, piersOn, dungeonsOn, convergencesOn)
 	if not (piersOn or dungeonsOn or convergencesOn) or MapUtils.IsOneMap == nil or not MapUtils:IsOneMap() or MapUtils.IsZoneDetailMap == nil or not MapUtils:IsZoneDetailMap(mapID) then return nil end

@@ -98,3 +98,5 @@ MapUtils:AddTrans("ruRU", "LID_CONVERGENCERECEIVED", "Получено сред�
 MapUtils:AddTrans("ruRU", "LID_CONVERGENCE_ELEMENTAL", "Средоточие стихий")
 MapUtils:AddTrans("ruRU", "LID_CONVERGENCE_LEYLINE", "Лей-линия")
 MapUtils:AddTrans("ruRU", "LID_NORMAL", "Обычный")
+MapUtils:AddTrans("ruRU", "LID_SHOWUNEXPLORED", "Показывать неисследованные")
+MapUtils:AddTrans("ruRU", "LID_SHOWUNEXPLOREDDESC", "Если выключено, показываются только значки, рядом с которыми этот персонаж уже был. Посещённые значки всегда сохраняются для каждого персонажа, даже когда опция включена.")

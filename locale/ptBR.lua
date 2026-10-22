@@ -98,3 +98,5 @@ MapUtils:AddTrans("ptBR", "LID_CONVERGENCERECEIVED", "%d convergência(s) recebi
 MapUtils:AddTrans("ptBR", "LID_CONVERGENCE_ELEMENTAL", "Convergência elemental")
 MapUtils:AddTrans("ptBR", "LID_CONVERGENCE_LEYLINE", "Linha de Ley")
 MapUtils:AddTrans("ptBR", "LID_NORMAL", "Normal")
+MapUtils:AddTrans("ptBR", "LID_SHOWUNEXPLORED", "Mostrar inexplorados")
+MapUtils:AddTrans("ptBR", "LID_SHOWUNEXPLOREDDESC", "Se desativado, só são mostrados os ícones dos quais este personagem já esteve perto. Ícones visitados são sempre salvos por personagem, mesmo com esta opção ativada.")
