@@ -249,7 +249,8 @@ local COVERED_PIN_LEVELS = {"PIN_FRAME_LEVEL_DUNGEON_ENTRANCE", "PIN_FRAME_LEVEL
 local PinCache = {
 	["templates"] = {"LeaMapsGlobalPinTemplate", "FlightPointPinTemplate"},
 	["atlas"] = {},
-	["atlasWidth"] = {}
+	["atlasWidth"] = {},
+	["halfCoords"] = {}
 }
 
 local MINIMAP_YARDS = {}
@@ -1499,7 +1500,12 @@ local function SetTextureIcon(texture, icon, half)
 	end
 
 	if half == nil then return end
-	local left, top, _, bottom, right = texture:GetTexCoord()
+	if PinCache.halfCoords[icon] == nil then
+		local ulx, uly, _, lly, urx = texture:GetTexCoord()
+		PinCache.halfCoords[icon] = {ulx, uly, urx, lly}
+	end
+
+	local left, top, right, bottom = unpack(PinCache.halfCoords[icon])
 	local middle = (left + right) / 2
 	if half == "right" then
 		texture:SetTexCoord(middle, right, top, bottom)
