@@ -207,6 +207,8 @@ local function HandleSlash(args)
 		MapUtils:PrintPlayerPosition()
 	elseif sub == "fade" then
 		MapUtils:PrintFadeDebug()
+	elseif sub == "tiles" and MapUtils.PrintMinimapTileDebug ~= nil then
+		MapUtils:PrintMinimapTileDebug()
 	elseif sub == "map" then
 		MapUtils:ToggleInstanceMap()
 	else

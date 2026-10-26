@@ -865,7 +865,9 @@ MinimapLayer = {
 	data = {},
 	parsed = {},
 	sources = {},
+	debugInfo = {},
 	transforms = {},
+	samplePoints = {{0.25, 0.25}, {0.75, 0.25}, {0.25, 0.75}, {0.75, 0.75}, {0.5, 0.5}, {0.5, 0.9}, {0.9, 0.5}, {0.1, 0.5}, {0.5, 0.1}, {0.9, 0.9}, {0.1, 0.9}},
 	masks = {},
 	waterMasks = {},
 	active = {},
@@ -961,13 +963,21 @@ function MinimapLayer.GetTransform(source)
 	local left, right, top, bottom = RectOn(source.mapID, SPACE_OF[source.continentID])
 	if left == nil or right <= left or bottom <= top then return nil end
 	local points = {}
-	for _, point in ipairs({{0.25, 0.25}, {0.75, 0.25}, {0.25, 0.75}}) do
-		local _, position = C_Map.GetWorldPosFromMapPos(source.mapID, CreateVector2D(point[1], point[2]))
-		if position == nil then return nil end
-		local yardX, yardY = position:GetXY()
-		tinsert(points, {yardX, yardY, left + point[1] * (right - left), top + point[2] * (bottom - top)})
+	for _, point in ipairs(MinimapLayer.samplePoints) do
+		local instance, position = C_Map.GetWorldPosFromMapPos(source.mapID, CreateVector2D(point[1], point[2]))
+		if position ~= nil and instance == source.instance then
+			local count = #points
+			local usable = count < 2
+			if count == 2 then usable = (points[2][5] - points[1][5]) * (point[2] - points[1][6]) - (points[2][6] - points[1][6]) * (point[1] - points[1][5]) ~= 0 end
+			if usable then
+				local yardX, yardY = position:GetXY()
+				tinsert(points, {yardX, yardY, left + point[1] * (right - left), top + point[2] * (bottom - top), point[1], point[2]})
+				if #points == 3 then break end
+			end
+		end
 	end
 
+	if #points < 3 then return nil end
 	local dX1, dY1 = points[2][1] - points[1][1], points[2][2] - points[1][2]
 	local dX2, dY2 = points[3][1] - points[1][1], points[3][2] - points[1][2]
 	local denominator = dX1 * dY2 - dY1 * dX2
@@ -1149,6 +1159,12 @@ function MinimapLayer.Update()
 		for _, source in ipairs(entry and entry.drawn and MinimapLayer.GetSources(continentID) or {}) do
 			local transform = MinimapLayer.GetTransform(source)
 			local tiles = transform and MinimapLayer.GetTiles(source.instance)
+			local info = {
+				["transform"] = transform ~= nil,
+				["tiles"] = tiles ~= nil
+			}
+
+			MinimapLayer.debugInfo[source.id] = info
 			if tiles then
 				local tileU = math.abs(transform[4]) * MinimapLayer.tile
 				local tilePixels = tileU * spaceWidth * width * scale
@@ -1162,6 +1178,7 @@ function MinimapLayer.Update()
 
 				local share = (tilePixels - fadeStart) / (fadeEnd - fadeStart)
 				if terrain then share = 1 end
+				info.tilePixels, info.share = tilePixels, share
 				if share > 0 then
 					local minX, maxX, minY, maxY
 					for _, corner in ipairs({{-1, -1}, {1, -1}, {-1, 1}, {1, 1}}) do
@@ -1179,9 +1196,11 @@ function MinimapLayer.Update()
 					local x0, x1 = math.max(0, math.floor(32 - maxY / MinimapLayer.tile)), math.min(63, math.floor(32 - minY / MinimapLayer.tile))
 					local y0, y1 = math.max(0, math.floor(32 - maxX / MinimapLayer.tile)), math.min(63, math.floor(32 - minX / MinimapLayer.tile))
 					local count = (x1 - x0 + 1) * (y1 - y0 + 1)
+					info.range = format("x %d-%d y %d-%d (%d)", x0, x1, y0, y1, count)
 					local lod = terrain and count > MinimapLayer.terrainMaxTiles and MinimapLayer.GetLOD(source.instance)
 					if minX <= maxX and minY <= maxY and x1 >= x0 and y1 >= y0 and (count <= (terrain and MinimapLayer.terrainMaxTiles or MinimapLayer.maxTiles) or lod) then
 						alpha = math.max(alpha, MinimapLayer.maxAlpha * math.min(1, share))
+						info.drawn = lod and "lod" or "tiles"
 						local mask = MinimapLayer.GetMask(continentID)
 						if lod then
 							local group = lod.group
@@ -1225,6 +1244,70 @@ function MinimapLayer.Update()
 	end
 
 	MinimapLayer.frame:SetAlpha(alpha)
+end
+
+function MapUtils:GetZoneDetailTilePixelsPerScale(mapID)
+	local style = type(MAUTTAB) == "table" and MAUTTAB["MAPSTYLE"] or "MIXED"
+	if container == nil or container.refWidth == nil or style == "MAP" then return nil end
+	local left, right = GetSpaceRect(mapID)
+	local continentID = left and GetContinent(mapID)
+	local entry = continentID and base.continents[continentID]
+	if not entry or not entry.drawn then return nil end
+	local source = MinimapLayer.GetSources(continentID)[1]
+	local transform = source and MinimapLayer.GetTransform(source)
+	if transform == nil or MinimapLayer.GetTiles(source.instance) == nil then return nil end
+	local width = WorldMapFrame.ScrollContainer.Child:GetWidth()
+	if width == nil or width <= 0 then return nil end
+
+	return math.abs(transform[4]) * MinimapLayer.tile * (right - left) * width
+end
+
+function MapUtils:GetZoneDetailTileFullPixels()
+	return MinimapLayer.fadeEnd
+end
+
+function MapUtils:PrintMinimapTileDebug()
+	local host = WorldMapFrame and WorldMapFrame:GetMapID()
+	local scrollContainer = WorldMapFrame and WorldMapFrame.ScrollContainer
+	local style = type(MAUTTAB) == "table" and MAUTTAB["MAPSTYLE"] or "MIXED"
+	MinimapLayer.debugLines = {}
+	MinimapLayer.DebugLine(format("Tiles: host %s, flavor %s, style %s, mode %s, space %s", tostring(host), tostring(MapUtils.GetRevealFlavor and MapUtils:GetRevealFlavor()), tostring(style), GetMode(), tostring(container and container.space)))
+	if container == nil then return end
+	MinimapLayer.DebugLine(format("container shown %s, cityMode %s, hostRect %s, scale %s, frame alpha %s", tostring(container:IsShown()), tostring(container.cityMode), tostring(GetSpaceRect(host) ~= nil), scrollContainer and format("%.3f", scrollContainer:GetCanvasScale()) or "?", MinimapLayer.frame and format("%.2f", MinimapLayer.frame:GetAlpha()) or "?"))
+	for _, continentID in ipairs(CONTINENTS) do
+		local entry = base.continents[continentID]
+		if entry ~= nil and entry.drawn then
+			local geometry = entry.maskGeometry
+			MinimapLayer.DebugLine(format("continent %s mask %s", tostring(continentID), geometry and format("%s size %.1f x %.1f at %.1f, %.1f (ref %s x %s)", tostring(geometry[1]):match("[^\\]+$") or "?", geometry[2], geometry[3], geometry[4], geometry[5], tostring(container.refWidth), tostring(container.refHeight)) or "none"))
+			for _, source in ipairs(MinimapLayer.GetSources(continentID)) do
+				local info = MinimapLayer.debugInfo[source.id] or {}
+				local samples = {}
+				for _, point in ipairs(MinimapLayer.samplePoints) do
+					local instance = C_Map.GetWorldPosFromMapPos(source.mapID, CreateVector2D(point[1], point[2]))
+					tinsert(samples, tostring(instance))
+				end
+
+				MinimapLayer.DebugLine(format("source %s: map %s instance %s data %s, transform %s, px/tile %s, share %s, %s, drawn %s", tostring(source.id), tostring(source.mapID), tostring(source.instance), tostring(MinimapLayer.data[source.instance] ~= nil), tostring(info.transform), info.tilePixels and format("%.1f", info.tilePixels) or "-", info.share and format("%.2f", info.share) or "-", info.range or "no range", tostring(info.drawn or false)))
+				MinimapLayer.DebugLine("  sample instances: " .. table.concat(samples, ","))
+				local transform = MinimapLayer.transforms[source.id]
+				if transform then MinimapLayer.DebugLine(format("  transform %.6g %.6g %.6g %.6g %.6g %.6g", transform[1], transform[2], transform[3], transform[4], transform[5], transform[6])) end
+			end
+		end
+	end
+
+	local active = 0
+	for _ in pairs(MinimapLayer.active) do
+		active = active + 1
+	end
+
+	local left, right, top, bottom = GetSpaceRect(host)
+	MinimapLayer.DebugLine(format("active textures %d, spaceRect %s, maxZoom %s, view %s", active, left and format("%.4f %.4f %.4f %.4f", left, right, top, bottom) or "nil", scrollContainer and scrollContainer.GetScaleForMaxZoom and format("%.3f", scrollContainer:GetScaleForMaxZoom()) or "?", scrollContainer and format("%.0fx%.0f", scrollContainer:GetWidth(), scrollContainer:GetHeight()) or "?"))
+	if type(MAUTTAB) == "table" then MAUTTAB["TILEDEBUG"] = MinimapLayer.debugLines end
+end
+
+function MinimapLayer.DebugLine(text)
+	tinsert(MinimapLayer.debugLines, text)
+	MapUtils:INFO(text)
 end
 
 local function Install()

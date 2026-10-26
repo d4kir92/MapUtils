@@ -534,6 +534,7 @@ local SmoothZoom = {
 	factor = 1.2,
 	spaceZoom = 12,
 	zoneZoom = 6,
+	tileFullMargin = 1.15,
 	leave = 0.5,
 	enterArea = 2,
 	leaveArea = 3.3,
@@ -599,8 +600,13 @@ function SmoothZoom.GetMaxScale(container)
 	if not SmoothZoom.IsSpace(container.mapID) then return maxScale end
 	local info = C_Map.GetMapInfo(container.mapID)
 	local zoom = (info and info.mapType == Enum.UIMapType.Zone) and SmoothZoom.zoneZoom or SmoothZoom.spaceZoom
+	maxScale = math.max(maxScale, container:GetScaleForMinZoom() * zoom)
+	if info and info.mapType == Enum.UIMapType.Zone and MapUtils.GetZoneDetailTilePixelsPerScale ~= nil then
+		local perScale = MapUtils:GetZoneDetailTilePixelsPerScale(container.mapID)
+		if perScale ~= nil and perScale > 0 then maxScale = math.max(maxScale, MapUtils:GetZoneDetailTileFullPixels() * SmoothZoom.tileFullMargin / perScale) end
+	end
 
-	return math.max(maxScale, container:GetScaleForMinZoom() * zoom)
+	return maxScale
 end
 
 function SmoothZoom.GetPanRect(mapID)
