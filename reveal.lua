@@ -15,20 +15,10 @@ local TINTS = {
 	["NONE"] = {1, 1, 1, 1}
 }
 
-local flavor = nil
+local flavor = MapUtils:GetFlavor()
 local revealData = {}
 local overlayCache = {}
 local states = {}
-do
-	local toc = select(4, GetBuildInfo()) or 0
-	if toc >= 20000 and toc < 30000 then
-		flavor = "tbc"
-	elseif toc >= 16000 and toc < 20000 then
-		flavor = "forever"
-	elseif toc >= 11000 and toc < 16000 then
-		flavor = "era"
-	end
-end
 
 function MapUtils:AddRevealData(dataFlavor, artID, data)
 	if dataFlavor ~= flavor then return end

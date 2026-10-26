@@ -1,0 +1,70 @@
+## Interface: 40402
+
+## Version: 1.4.5
+## Title: MapUtils by |cff55d2ffD4KiR |T132115:16:16:0:0|t 
+## Notes: Better world map: boats, zeppelins, flight points and dungeon entrances as clickable waypoints, dungeon & raid maps, unexplored areas, zone levels and a movable, scalable map
+## Notes-deDE: Bessere Weltkarte: Schiffe, Zeppeline, Flugpunkte und Dungeon-Eingänge als anklickbare Wegpunkte, Dungeon- & Raidkarten, unerforschte Gebiete, Zonenlevel und eine verschieb- und skalierbare Karte
+## Notes-esES: Mejor mapa del mundo: barcos, zepelines, puntos de vuelo y entradas de mazmorras como puntos de ruta, mapas de mazmorras y bandas, zonas inexploradas, niveles de zona y un mapa movible y escalable
+## Notes-esMX: Mejor mapa del mundo: barcos, zepelines, puntos de vuelo y entradas de mazmorras como puntos de ruta, mapas de mazmorras y bandas, zonas inexploradas, niveles de zona y un mapa movible y escalable
+## Notes-frFR: Meilleure carte du monde : bateaux, zeppelins, points de vol et entrées de donjon comme points de passage, cartes de donjon et de raid, zones inexplorées, niveaux de zone et carte déplaçable et redimensionnable
+## Notes-itIT: Mappa del mondo migliorata: navi, zeppelin, punti di volo e ingressi dei dungeon come punti di riferimento, mappe di dungeon e incursioni, aree inesplorate, livelli delle zone e mappa spostabile e scalabile
+## Notes-koKR: 더 나은 월드맵: 배, 비행선, 비행 지점, 던전 입구를 클릭 가능한 경유지로 표시, 던전 및 공격대 지도, 미탐험 지역, 지역 레벨, 이동 및 크기 조절 가능한 지도
+## Notes-ptBR: Mapa mundial melhorado: navios, zepelins, pontos de voo e entradas de masmorras como pontos de referência, mapas de masmorras e raides, áreas inexploradas, níveis de zona e mapa móvel e redimensionável
+## Notes-ruRU: Улучшенная карта мира: корабли, дирижабли, точки полета и входы в подземелья как путевые точки, карты подземелий и рейдов, неисследованные области, уровни зон и перемещаемая масштабируемая карта
+## Notes-zhCN: 更好的世界地图：船只、飞艇、飞行点和副本入口可点击设为路径点，地下城与团队副本地图，未探索区域，区域等级，可移动和缩放的地图
+## Notes-zhTW: 更好的世界地圖：船隻、飛艇、飛行點和副本入口可點擊設為路徑點，地城與團隊副本地圖，未探索區域，區域等級，可移動和縮放的地圖
+## Author: D4KiR |T132115:16:16:0:0|t
+## Category: Map
+## Category-deDE: Karte
+## Category-esES: Mapa
+## Category-esMX: Mapa
+## Category-frFR: Carte
+## Category-itIT: Mappa
+## Category-koKR: 지도
+## Category-ptBR: Mapa
+## Category-ruRU: Карта
+## Category-zhCN: 地图
+## Category-zhTW: 地圖
+## OptionalDeps: AzerothCompendium
+## DefaultState: enabled
+## SavedVariables: MAUTTAB
+## SavedVariablesPerCharacter: MAUTTABPC
+## X-Curse-Project-ID: 1463967
+## X-Wago-ID: ANzkwg64
+## IconTexture: 134269
+
+libs\D4Lib\D4Lib.xml
+
+locale\enUS.lua
+locale\deDE.lua
+locale\esES.lua
+locale\esMX.lua
+locale\frFR.lua
+locale\itIT.lua
+locale\koKR.lua
+locale\ptBR.lua
+locale\ruRU.lua
+locale\zhCN.lua
+locale\zhTW.lua
+locale\names.lua
+
+flavor.lua
+data\classic\instances.lua
+data\tbc\instances.lua
+data\wrath\instances.lua
+data\cata\instances.lua
+core.lua
+pins.lua
+discovery.lua
+gathernodes.lua
+questturnins.lua
+zonelevels.lua
+data\classic\instancepins.lua
+instancemap.lua
+mapframe.lua
+coords.lua
+battlefieldmap.lua
+reveal.lua
+zonedetail.lua
+debug.lua
+settings.lua

@@ -41,14 +41,29 @@ jobs:
       - name: Package and release for Forever
         uses: BigWigsMods/packager@master
         with:
-          args: -g forever -w 0
+          args: -g forever -w 0 -m .pkgmeta-forever
+
+      - name: Package and release for Mists of Pandaria Classic
+        uses: BigWigsMods/packager@master
+        with:
+          args: -g mists -w 0 -m .pkgmeta-mists
+
+      - name: Package and release for Cataclysm Classic
+        uses: BigWigsMods/packager@master
+        with:
+          args: -g cata -w 0 -m .pkgmeta-cata
+
+      - name: Package and release for Wrath of the Lich King Classic
+        uses: BigWigsMods/packager@master
+        with:
+          args: -g wrath -w 0 -m .pkgmeta-wrath
 
       - name: Package and release for Burning Crusade Classic
         uses: BigWigsMods/packager@master
         with:
-          args: -g bcc -w 0
+          args: -g bcc -w 0 -m .pkgmeta-bcc
 
       - name: Package and release for Classic Era
         uses: BigWigsMods/packager@master
         with:
-          args: -g classic -w 0
+          args: -g classic -w 0 -m .pkgmeta-classic

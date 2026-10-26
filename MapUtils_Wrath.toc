@@ -1,6 +1,4 @@
-## Interface-Classic: 11509
-## Interface-Forever: 16001
-## Interface-BCC: 20506
+## Interface: 38002, 30403
 
 ## Version: 1.4.5
 ## Title: MapUtils by |cff55d2ffD4KiR |T132115:16:16:0:0|t 
@@ -50,24 +48,22 @@ locale\zhCN.lua
 locale\zhTW.lua
 locale\names.lua
 
+flavor.lua
+data\classic\instances.lua
+data\tbc\instances.lua
+data\wrath\instances.lua
 core.lua
 pins.lua
-convergences_wowhead.lua
-convergences.lua
 discovery.lua
 gathernodes.lua
 questturnins.lua
 zonelevels.lua
-instancepins.lua
+data\classic\instancepins.lua
 instancemap.lua
 mapframe.lua
 coords.lua
 battlefieldmap.lua
 reveal.lua
-revealdata.lua
-zonemasks.lua
 zonedetail.lua
-minimaptiles.lua
-minimaplod.lua
 debug.lua
 settings.lua
