@@ -68,7 +68,7 @@ function GatherNodes.CanScan()
 end
 
 function MapUtils:CanShowGatherNodes()
-	return GatherNodes.CanScan()
+	return GatherNodes.CanScan() or GatherNodes.UsesBlips ~= nil and GatherNodes.UsesBlips()
 end
 
 function GatherNodes.IsEnabled()
@@ -497,6 +497,7 @@ end
 
 function MapUtils:RefreshGatherNodes()
 	GatherNodes.Refresh()
+	GatherNodes.UpdateBlips()
 end
 
 function GatherNodes.IsGatherSpell(spellID)
@@ -583,4 +584,66 @@ if GatherNodes.CanScan() then
 	GatherNodes.eventFrame:RegisterEvent("LOOT_OPENED")
 	GatherNodes.eventFrame:RegisterEvent("GET_ITEM_INFO_RECEIVED")
 	GatherNodes.eventFrame:SetScript("OnEvent", GatherNodes.OnEvent)
+end
+
+GatherNodes.blipFiles = {
+	herbs = "Interface\\AddOns\\MapUtils\\media\\blipherbs",
+	ore = "Interface\\AddOns\\MapUtils\\media\\blipore",
+	default = "Interface\\Minimap\\ObjectIconsAtlas"
+}
+
+GatherNodes.blipSpells = {
+	herbs = 2383,
+	ore = 2580
+}
+
+function GatherNodes.UsesBlips()
+	return not GatherNodes.CanScan() and Minimap ~= nil and Minimap.SetBlipTexture ~= nil and WOW_PROJECT_ID ~= nil and WOW_PROJECT_ID == WOW_PROJECT_CLASSIC
+end
+
+function GatherNodes.GetSpellTexture(spellID)
+	if C_Spell ~= nil and C_Spell.GetSpellTexture ~= nil then return C_Spell.GetSpellTexture(spellID) end
+	if GetSpellTexture ~= nil then return GetSpellTexture(spellID) end
+
+	return nil
+end
+
+function GatherNodes.GetTrackedKind()
+	if C_Minimap ~= nil and C_Minimap.GetNumTrackingTypes ~= nil and C_Minimap.GetTrackingInfo ~= nil then
+		for index = 1, C_Minimap.GetNumTrackingTypes() do
+			local info = C_Minimap.GetTrackingInfo(index)
+			if type(info) == "table" and info.active then
+				for kind, spellID in pairs(GatherNodes.blipSpells) do
+					if info.spellID == spellID then return kind end
+				end
+			end
+		end
+	end
+
+	local texture = GetTrackingTexture ~= nil and GetTrackingTexture() or nil
+	if texture == nil then return nil end
+	for kind, spellID in pairs(GatherNodes.blipSpells) do
+		if GatherNodes.GetSpellTexture(spellID) == texture then return kind end
+	end
+
+	return nil
+end
+
+function GatherNodes.UpdateBlips()
+	if not GatherNodes.UsesBlips() then return end
+	local kind = nil
+	if MapUtils:GetConfig(GatherNodes.optionKey, true) == true then kind = GatherNodes.GetTrackedKind() end
+	local file = GatherNodes.blipFiles[kind or "default"]
+	if file == GatherNodes.blipCurrent or kind == nil and GatherNodes.blipCurrent == nil then return end
+	GatherNodes.blipCurrent = file
+	Minimap:SetBlipTexture(file)
+	if Minimap.UpdateBlips ~= nil then Minimap:UpdateBlips() end
+end
+
+if GatherNodes.UsesBlips() then
+	GatherNodes.blipFrame = CreateFrame("Frame")
+	GatherNodes.blipFrame:RegisterEvent("PLAYER_LOGIN")
+	GatherNodes.blipFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
+	GatherNodes.blipFrame:RegisterEvent("MINIMAP_UPDATE_TRACKING")
+	GatherNodes.blipFrame:SetScript("OnEvent", GatherNodes.UpdateBlips)
 end
