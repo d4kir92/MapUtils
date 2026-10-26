@@ -231,6 +231,10 @@ CROSSING_ICON_CANDIDATES["down"] = {"CaveUnderground-Down", "Garr_LevelUpgradeAr
 CROSSING_ICON_CANDIDATES["up"] = {"CaveUnderground-Up", "Garr_LevelUpgradeArrow"}
 local DEFAULT_CROSSING_ICON = "Interface\\Icons\\INV_Misc_Map_01"
 local MEETING_STONE_ICON = "Interface\\AddOns\\MapUtils\\media\\meetingstone"
+local TRANSPORT_ICONS = {}
+TRANSPORT_ICONS["ship"] = "Interface\\AddOns\\MapUtils\\media\\transport_ship"
+TRANSPORT_ICONS["zeppelin"] = "Interface\\AddOns\\MapUtils\\media\\transport_zeppelin"
+TRANSPORT_ICONS["tram"] = "Interface\\AddOns\\MapUtils\\media\\transport_tram"
 local DEFAULT_FLIGHT_ICON = "Interface\\TaxiFrame\\UI-Taxi-Icon-Green"
 local FLIGHT_ICONS = {}
 FLIGHT_ICONS["Alliance"] = "TaxiNode_Alliance"
@@ -1222,6 +1226,7 @@ local function GetEntryIcon(entry)
 	if entry.kind == "meetingstone" then return MEETING_STONE_ICON end
 	if entry.kind == "spirithealer" then return "Interface\\AddOns\\MapUtils\\media\\" .. (MapUtils:GetConfig("SPIRITHEALERSTYLE", "NORMAL") == "CHIBI" and "spirithealer_chibi" or "spirithealer") end
 	if entry.kind == "crossing" then return GetCrossingIcon(entry.up) end
+	if entry.kind == nil and (MAUTTAB == nil or MAUTTAB["icon"] == nil or MAUTTAB["icon"] == "") then return TRANSPORT_ICONS[entry.transport or "ship"] or GetIcon(entry.faction) end
 
 	return GetIcon(entry.faction)
 end
