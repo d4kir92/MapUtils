@@ -581,7 +581,7 @@ function SmoothZoom.GetMinScale(container)
 	if not parent then return minScale end
 	local relaxed = minScale * SmoothZoom.leave
 	local hostLeft, hostRight, hostTop, hostBottom = MapUtils:GetZoneDetailSpaceRect(container.mapID)
-	local space = MapUtils:GetZoneDetailSpace()
+	local space = MapUtils:GetZoneDetailSpace(container.mapID)
 	local parentLeft, parentRight, parentTop, parentBottom = 0, 1, 0, 1
 	if parent ~= space then parentLeft, parentRight, parentTop, parentBottom = C_Map.GetMapRectOnMap(parent, space) end
 	local width, height = container.Child:GetSize()
@@ -674,6 +674,7 @@ function SmoothZoom.Switch(container, target)
 	frame:SetMapID(target)
 	WheelZoom.own = false
 	if container.mapID ~= target then return false end
+	SmoothZoom.pickMapID = target
 	SmoothZoom.SetView(container, scale * factor, mapX(x), mapY(y), targetScale * factor, mapX(targetX), mapY(targetY))
 	SmoothZoom.ShowLoadedArt()
 	if MapUtils.UpdateWorldPinsNow ~= nil then MapUtils.UpdateWorldPinsNow() end
@@ -708,6 +709,12 @@ function SmoothZoom.IsSettled(container)
 	return true
 end
 
+function SmoothZoom.RectOn(mapID, space)
+	if mapID == space then return 0, 1, 0, 1 end
+
+	return C_Map.GetMapRectOnMap(mapID, space)
+end
+
 function SmoothZoom.PickMap(container)
 	local host = container.mapID
 	local left, right, top, bottom = MapUtils:GetZoneDetailSpaceRect(host)
@@ -719,9 +726,9 @@ function SmoothZoom.PickMap(container)
 	local u, v = (x - left) / spaceWidth, (y - top) / spaceHeight
 	local viewWidth = container:GetWidth() / (scale * width) / spaceWidth
 	local viewHeight = container:GetHeight() / (scale * height) / spaceHeight
-	local space = MapUtils:GetZoneDetailSpace()
+	local space = MapUtils:GetZoneDetailSpace(host)
 	local function Fits(mapID, continent)
-		local l, r, t, b = C_Map.GetMapRectOnMap(mapID, space)
+		local l, r, t, b = SmoothZoom.RectOn(mapID, space)
 		if l == nil or r <= l or b <= t then return false end
 		local ratio = (viewWidth / (r - l)) * (viewHeight / (b - t))
 		if continent then return ratio <= ((mapID == host or MapUtils:GetZoneDetailContinent(host) == mapID) and SmoothZoom.leaveContinentArea or SmoothZoom.enterContinentArea) end
@@ -731,13 +738,11 @@ function SmoothZoom.PickMap(container)
 
 	local pick = space
 	if u < 0 or u > 1 or v < 0 or v > 1 then return pick end
-	local info = C_Map.GetMapInfoAtPosition(space, u, v)
-	local continent = info and MapUtils:GetZoneDetailContinent(info.mapID)
+	local continent, zone = SmoothZoom.ContinentAt(space, u, v)
 	if continent == nil or not SmoothZoom.IsSpace(continent) or not Fits(continent, true) then return pick end
 	pick = continent
-	local l, r, t, b = C_Map.GetMapRectOnMap(continent, space)
+	local l, r, t, b = SmoothZoom.RectOn(continent, space)
 	if l == nil or r <= l or b <= t then return pick end
-	local zone = C_Map.GetMapInfoAtPosition(continent, (u - l) / (r - l), (v - t) / (b - t))
 	local cover = (host ~= continent and host ~= space) and 1 or SmoothZoom.zoneEnterCover
 	local continentVisible = viewWidth >= (r - l) * cover and viewHeight >= (b - t) * cover
 	if zone ~= nil and zone.mapID ~= continent and zone.mapType == Enum.UIMapType.Zone and SmoothZoom.IsSpace(zone.mapID) and not continentVisible then pick = zone.mapID end
@@ -761,10 +766,57 @@ function SmoothZoom.PickMap(container)
 	return pick
 end
 
+function SmoothZoom.ContinentAt(space, u, v)
+	if MapUtils.GetZoneDetailContinents == nil then return nil end
+	local fallback = nil
+	for _, continent in ipairs(MapUtils:GetZoneDetailContinents(space)) do
+		local l, r, t, b = SmoothZoom.RectOn(continent, space)
+		if l ~= nil and r > l and b > t and u >= l and u <= r and v >= t and v <= b then
+			local zone = C_Map.GetMapInfoAtPosition(continent, (u - l) / (r - l), (v - t) / (b - t))
+			if zone ~= nil and zone.mapID ~= continent and MapUtils.IsMapInside(zone.mapID, continent) then return continent, zone end
+			fallback = fallback or continent
+		end
+	end
+
+	return fallback, nil
+end
+
+function SmoothZoom.ClickTarget(host, x, y)
+	local left, right, top, bottom = MapUtils:GetZoneDetailSpaceRect(host)
+	if left == nil or x == nil or y == nil or right <= left or bottom <= top then return nil end
+	local space = MapUtils:GetZoneDetailSpace(host)
+	local continent, zone = SmoothZoom.ContinentAt(space, (x - left) / (right - left), (y - top) / (bottom - top))
+	if continent == nil or zone == nil or zone.mapType ~= Enum.UIMapType.Zone then return nil end
+	if host == space and continent ~= space then return continent end
+
+	return zone.mapID
+end
+
+function SmoothZoom.OnCanvasClick(map, button, x, y)
+	if button ~= "LeftButton" or not MapUtils:IsOneMap() or MapUtils.GetZoneDetailContinents == nil then return false end
+	if MapUtils.IsInstanceMapShown ~= nil and MapUtils:IsInstanceMapShown() then return false end
+	local host = map:GetMapID()
+	if not SmoothZoom.IsSpace(host) then return false end
+	local target = SmoothZoom.ClickTarget(host, x, y)
+	if target == nil or target == host then return false end
+	SmoothZoom.anim = nil
+	MapLevelZoom.lastSwitch = GetTime()
+	WheelZoom.pending = nil
+	map:SetMapID(target)
+
+	return true
+end
+
 function SmoothZoom.CheckPick(container)
 	if GetTime() - SmoothZoom.lastCheck < SmoothZoom.checkInterval then return end
 	SmoothZoom.lastCheck = GetTime()
 	if not SmoothZoom.CanSwitch(container) or not SmoothZoom.IsSettled(container) then return end
+	if SmoothZoom.pickMapID ~= container.mapID then
+		SmoothZoom.pickMapID = container.mapID
+		SmoothZoom.userMoved = false
+	end
+
+	if not SmoothZoom.userMoved then return end
 	local pick = SmoothZoom.PickMap(container)
 	if pick ~= nil and pick ~= container.mapID and (SmoothZoom.IsSpace(pick) or MapUtils:GetZoneDetailCityZone(pick) ~= nil) then SmoothZoom.Switch(container, pick) end
 end
@@ -824,6 +876,7 @@ function SmoothZoom.SyncCanPan(container)
 end
 
 function SmoothZoom.OnUpdate(container, elapsed)
+	if container.mouseButtonInfo and container.mouseButtonInfo.LeftButton and container.mouseButtonInfo.LeftButton.down then SmoothZoom.userMoved = true end
 	SmoothZoom.SyncWheelMode(container)
 	SmoothZoom.SyncCanPan(container)
 	SmoothZoom.WidenExtents(container)
@@ -875,6 +928,7 @@ function SmoothZoom.OnMouseWheel(container, delta)
 	if not MapUtils:IsOneMap() or container.zoomLevels == nil or container.mapID == nil then return end
 	if WheelZoom.installed and (not IsEnabled("WORLDMAPZOOM") or WheelZoom.foreignTime == GetTime()) then return end
 	if MapUtils.IsInstanceMapShown ~= nil and MapUtils:IsInstanceMapShown() then return end
+	SmoothZoom.userMoved = true
 	local currentX, currentY = container:GetCurrentScrollX(), container:GetCurrentScrollY()
 	if currentX ~= nil and currentY ~= nil then
 		container.targetScale = container:GetCanvasScale()
@@ -1027,6 +1081,20 @@ function MapUtils:InstallCombatPins()
 	)
 end
 
+function SmoothZoom.ScaledCursorPosition(container)
+	local x, y = GetCursorPosition()
+	local effective = container:GetEffectiveScale()
+	if effective == nil or effective <= 0 then return x, y end
+
+	return x / effective, y / effective
+end
+
+function SmoothZoom.InstallCursorFix()
+	local container = WheelZoom.container
+	if container == nil or type(container.GetCursorPosition) ~= "function" then return end
+	container.GetCursorPosition = SmoothZoom.ScaledCursorPosition
+end
+
 function MapLevelZoom.Install()
 	local container = WheelZoom.container
 	if MapLevelZoom.installed or container == nil then return end
@@ -1035,12 +1103,14 @@ function MapLevelZoom.Install()
 	container:HookScript("OnMouseWheel", MapLevelZoom.OnMouseWheel)
 	container:HookScript("OnUpdate", SmoothZoom.OnUpdate)
 	container:HookScript("OnMouseWheel", SmoothZoom.OnMouseWheel)
+	if frame ~= nil and frame.AddCanvasClickHandler ~= nil then frame:AddCanvasClickHandler(SmoothZoom.OnCanvasClick, 100) end
 end
 
 MapLevelZoom.loader = CreateFrame("Frame")
 MapLevelZoom.loader:RegisterEvent("PLAYER_LOGIN")
 MapLevelZoom.loader:SetScript("OnEvent", function(sel)
 	sel:UnregisterAllEvents()
+	SmoothZoom.InstallCursorFix()
 	C_Timer.After(WheelZoom.installDelay, MapLevelZoom.Install)
 	MapUtils:InstallCombatPins()
 end)

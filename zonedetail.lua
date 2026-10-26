@@ -1,6 +1,11 @@
 local _, MapUtils = ...
 local WORLD = 947
-local CONTINENTS = {1414, 1415}
+local CONTINENTS = {1414, 1415, 1945}
+local SPACE_OF = {
+	[1414] = WORLD,
+	[1415] = WORLD,
+	[1945] = 1945
+}
 local MODE_OFF = "OFF"
 local MODE_AREAS = "AREAS"
 local MODE_FULL = "FULL"
@@ -116,6 +121,7 @@ local function AcquireTexture(zone)
 		zone.textures[zone.count] = texture
 		texture:AddMaskTexture(zone.edge)
 		if zone.masked then texture:AddMaskTexture(zone.mask) end
+		if zone.hmasked then texture:AddMaskTexture(zone.hmask) end
 	end
 
 	return texture
@@ -201,6 +207,22 @@ local function DrawOverlays(zone, mapID, layer)
 	end
 end
 
+local function GetMaskName(fileID)
+	local flavor = MapUtils.GetRevealFlavor ~= nil and MapUtils:GetRevealFlavor()
+	local files = flavor and MapUtils.ZONEMASKFILES and MapUtils.ZONEMASKFILES[flavor]
+	local name = files and files[fileID]
+	if name ~= nil then return name or nil end
+	if MapUtils.ZONEMASKS and MapUtils.ZONEMASKS[fileID] then return tostring(fileID) end
+
+	return nil
+end
+
+local function RectOn(mapID, space)
+	if mapID == space then return 0, 1, 0, 1 end
+
+	return C_Map.GetMapRectOnMap(mapID, space)
+end
+
 local function FindHighlight(continentID, mapID, left, right, top, bottom)
 	for i = 0, SAMPLE_STEPS * SAMPLE_STEPS - 1 do
 		local step = (i % 2 == 0) and (i / 2) or (SAMPLE_STEPS * SAMPLE_STEPS - 1 - (i - 1) / 2)
@@ -209,9 +231,10 @@ local function FindHighlight(continentID, mapID, left, right, top, bottom)
 		local info = C_Map.GetMapInfoAtPosition(continentID, x, y)
 		if info ~= nil and (info.mapID == mapID or (MapUtils.IsMapInside ~= nil and MapUtils.IsMapInside(info.mapID, mapID))) then
 			local fileDataID, _, texPercentageX, texPercentageY, textureX, textureY, scrollChildX, scrollChildY = C_Map.GetMapHighlightInfoAtPosition(continentID, x, y)
-			if fileDataID and MapUtils.ZONEMASKS and MapUtils.ZONEMASKS[fileDataID] and textureX > 0 and textureY > 0 and texPercentageX > 0 and texPercentageY > 0 then
+			local file = fileDataID and GetMaskName(fileDataID)
+			if file and textureX > 0 and textureY > 0 and texPercentageX > 0 and texPercentageY > 0 then
 				return {
-					["fileID"] = fileDataID,
+					["file"] = file,
 					["x"] = scrollChildX,
 					["y"] = scrollChildY,
 					["width"] = textureX / texPercentageX,
@@ -245,13 +268,25 @@ local function SetMasked(zone, masked)
 	end
 end
 
+local function SetHighlightMasked(zone, masked)
+	if zone.hmasked == masked then return end
+	zone.hmasked = masked
+	for i = 1, #zone.textures do
+		if masked then
+			zone.textures[i]:AddMaskTexture(zone.hmask)
+		else
+			zone.textures[i]:RemoveMaskTexture(zone.hmask)
+		end
+	end
+end
+
 local function ApplyMask(zone, highlight, left, top, width, height)
-	if zone.mask == nil then zone.mask = zone.frame:CreateMaskTexture() end
-	SetMasked(zone, true)
-	zone.mask:SetTexture(MASK_PATH .. highlight.fileID, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
-	zone.mask:SetSize(highlight.width * width, highlight.height * height)
-	zone.mask:ClearAllPoints()
-	zone.mask:SetPoint("TOPLEFT", zone.frame, "TOPLEFT", (highlight.x - left) * width, -(highlight.y - top) * height)
+	if zone.hmask == nil then zone.hmask = zone.frame:CreateMaskTexture() end
+	SetHighlightMasked(zone, true)
+	zone.hmask:SetTexture(MASK_PATH .. highlight.file, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+	zone.hmask:SetSize(highlight.width * width, highlight.height * height)
+	zone.hmask:ClearAllPoints()
+	zone.hmask:SetPoint("TOPLEFT", zone.frame, "TOPLEFT", (highlight.x - left) * width, -(highlight.y - top) * height)
 end
 
 local function GetArtMask(mapID)
@@ -263,7 +298,7 @@ local function GetArtMask(mapID)
 end
 
 local function DrawZone(continentID, continentRect, mapID, mode, width, height)
-	local left, right, top, bottom = C_Map.GetMapRectOnMap(mapID, WORLD)
+	local left, right, top, bottom = RectOn(mapID, container.space)
 	if left == nil or right <= left or bottom <= top then return end
 	local layers = C_Map.GetMapArtLayers(mapID)
 	local layer = layers and layers[1]
@@ -278,7 +313,7 @@ local function DrawZone(continentID, continentRect, mapID, mode, width, height)
 	zone.frame:SetSize(frameWidth, frameHeight)
 	local highlight = false
 	local artMask = mode == MODE_FULL and GetArtMask(mapID)
-	if mode == MODE_FULL and not artMask then
+	if mode == MODE_FULL then
 		local l, r, t, b = C_Map.GetMapRectOnMap(mapID, continentID)
 		if l ~= nil and r > l and b > t then highlight = GetHighlight(continentID, mapID, l, r, t, b) end
 	end
@@ -289,12 +324,18 @@ local function DrawZone(continentID, continentRect, mapID, mode, width, height)
 		zone.mask:SetTexture(MASK_PATH .. artMask, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
 		zone.mask:ClearAllPoints()
 		zone.mask:SetAllPoints(zone.frame)
-	elseif highlight then
+	else
+		SetMasked(zone, false)
+	end
+
+	if not highlight then
+		SetHighlightMasked(zone, false)
+	else
 		local continentWidth, continentHeight = continentRect[2] - continentRect[1], continentRect[4] - continentRect[3]
 		ApplyMask(
 			zone,
 			{
-				["fileID"] = highlight.fileID,
+				["file"] = highlight.file,
 				["x"] = continentRect[1] + highlight.x * continentWidth,
 				["y"] = continentRect[3] + highlight.y * continentHeight,
 				["width"] = highlight.width * continentWidth,
@@ -309,24 +350,21 @@ local function DrawZone(continentID, continentRect, mapID, mode, width, height)
 
 	if artMask or highlight then
 		DrawBase(zone, mapID, layer)
-		local under = GetUnder(mapID)
 		local geometry = base.continents[continentID] and base.continents[continentID].maskGeometry
 		if geometry ~= nil then
+			local under = GetUnder(mapID)
 			if under.mask == nil then under.mask = under.frame:CreateMaskTexture() end
 			under.mask:SetTexture(geometry[1], "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
 			under.mask:SetSize(geometry[2], geometry[3])
 			under.mask:ClearAllPoints()
 			under.mask:SetPoint("TOPLEFT", container, "TOPLEFT", geometry[4], geometry[5])
 			SetMasked(under, true)
+			under.scaleX, under.scaleY = zone.scaleX, zone.scaleY
+			under.frame:ClearAllPoints()
+			under.frame:SetAllPoints(zone.frame)
+			DrawBase(under, mapID, layer)
+			under.frame:Show()
 		end
-
-		under.scaleX, under.scaleY = zone.scaleX, zone.scaleY
-		under.frame:ClearAllPoints()
-		under.frame:SetAllPoints(zone.frame)
-		DrawBase(under, mapID, layer)
-		under.frame:Show()
-	else
-		SetMasked(zone, false)
 	end
 
 	DrawOverlays(zone, mapID, layer)
@@ -360,14 +398,23 @@ local function GetContinent(mapID)
 	return nil
 end
 
+local function GetSpace(mapID)
+	if mapID == WORLD then return WORLD end
+	local continentID = mapID and GetContinent(mapID)
+
+	return continentID and SPACE_OF[continentID]
+end
+
 local function RawSpaceRect(mapID)
 	if mapID == nil then return nil end
-	if mapID == WORLD then return 0, 1, 0, 1 end
+	local space = GetSpace(mapID)
+	if space == nil then return nil end
+	if mapID == space then return 0, 1, 0, 1 end
 	local info = C_Map.GetMapInfo(mapID)
 	if info == nil then return nil end
 	local continentID = GetContinent(mapID)
 	if continentID == nil or (mapID ~= continentID and info.mapType ~= Enum.UIMapType.Zone) then return nil end
-	local left, right, top, bottom = C_Map.GetMapRectOnMap(mapID, WORLD)
+	local left, right, top, bottom = C_Map.GetMapRectOnMap(mapID, space)
 	if left == nil or right <= left or bottom <= top then return nil end
 	local width, height = right - left, bottom - top
 
@@ -375,7 +422,7 @@ local function RawSpaceRect(mapID)
 end
 
 local function GetSpaceRect(mapID)
-	if container == nil or container.built == nil then return nil end
+	if container == nil or container.built == nil or GetSpace(mapID) ~= container.space then return nil end
 	if mapID ~= WORLD then
 		local continentID = GetContinent(mapID)
 		local entry = continentID and base.continents[continentID]
@@ -399,12 +446,22 @@ function MapUtils:GetZoneDetailSpaceRect(mapID)
 	return GetSpaceRect(mapID)
 end
 
-function MapUtils:GetZoneDetailSpace()
-	return WORLD
+function MapUtils:GetZoneDetailSpace(mapID)
+	return GetSpace(mapID) or WORLD
 end
 
 function MapUtils:GetZoneDetailContinent(mapID)
 	return GetContinent(mapID)
+end
+
+function MapUtils:GetZoneDetailContinents(space)
+	local list = {}
+	for _, continentID in ipairs(CONTINENTS) do
+		local entry = base.continents[continentID]
+		if SPACE_OF[continentID] == space and entry ~= nil and entry.drawn then tinsert(list, continentID) end
+	end
+
+	return list
 end
 
 function MapUtils:GetZoneDetailRawRect(mapID)
@@ -548,7 +605,7 @@ local function DrawTileLayer(pool, mapID, offsetX, offsetY, scale, drawLayer, ma
 end
 
 local function DrawCity(mapID, width, height)
-	local left, right, top, bottom = C_Map.GetMapRectOnMap(mapID, WORLD)
+	local left, right, top, bottom = RectOn(mapID, container.space)
 	if left == nil or right <= left or bottom <= top then return end
 	local layers = C_Map.GetMapArtLayers(mapID)
 	local layer = layers and layers[1]
@@ -594,18 +651,24 @@ local function DrawContinent(continentID, refWidth, refHeight)
 
 	entry.drawn = false
 	if MapUtils.ZONEMASKS == nil then return nil end
-	local left, right, top, bottom = C_Map.GetMapRectOnMap(continentID, WORLD)
+	local space = container.space
+	local left, right, top, bottom = RectOn(continentID, space)
 	if left == nil or right <= left or bottom <= top then return nil end
-	local highlight = FindHighlight(WORLD, continentID, left, right, top, bottom)
+	local own = continentID == space
+	local highlight = not own and FindHighlight(space, continentID, left, right, top, bottom)
 	local layers = C_Map.GetMapArtLayers(continentID)
 	local layer = layers and layers[1]
-	if not highlight or layer == nil or layer.layerWidth == nil or layer.layerWidth <= 0 then return nil end
-	if entry.mask == nil then entry.mask = container:CreateMaskTexture() end
-	entry.mask:SetTexture(MASK_PATH .. highlight.fileID, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
-	entry.mask:SetSize(highlight.width * refWidth, highlight.height * refHeight)
-	entry.mask:ClearAllPoints()
-	entry.mask:SetPoint("TOPLEFT", container, "TOPLEFT", highlight.x * refWidth, -highlight.y * refHeight)
-	entry.maskGeometry = {MASK_PATH .. highlight.fileID, highlight.width * refWidth, highlight.height * refHeight, highlight.x * refWidth, -highlight.y * refHeight}
+	if (not own and not highlight) or layer == nil or layer.layerWidth == nil or layer.layerWidth <= 0 then return nil end
+	entry.maskGeometry = nil
+	if highlight then
+		if entry.mask == nil then entry.mask = container:CreateMaskTexture() end
+		entry.mask:SetTexture(MASK_PATH .. highlight.file, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+		entry.mask:SetSize(highlight.width * refWidth, highlight.height * refHeight)
+		entry.mask:ClearAllPoints()
+		entry.mask:SetPoint("TOPLEFT", container, "TOPLEFT", highlight.x * refWidth, -highlight.y * refHeight)
+		entry.maskGeometry = {MASK_PATH .. highlight.file, highlight.width * refWidth, highlight.height * refHeight, highlight.x * refWidth, -highlight.y * refHeight}
+	end
+
 	if entry.edge == nil then
 		entry.edge = container:CreateMaskTexture()
 		entry.edge:SetTexture(EDGE_PATH, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
@@ -614,7 +677,7 @@ local function DrawContinent(continentID, refWidth, refHeight)
 	entry.edge:SetSize((right - left) * refWidth, (bottom - top) * refHeight)
 	entry.edge:ClearAllPoints()
 	entry.edge:SetPoint("TOPLEFT", container, "TOPLEFT", left * refWidth, -top * refHeight)
-	if not DrawTileLayer(entry.pool, continentID, left * refWidth, top * refHeight, (right - left) * refWidth / layer.layerWidth, "BORDER", entry.mask, entry.edge) then return nil end
+	if not DrawTileLayer(entry.pool, continentID, left * refWidth, top * refHeight, (right - left) * refWidth / layer.layerWidth, "BORDER", highlight and entry.mask or nil, entry.edge) then return nil end
 	entry.drawn = true
 
 	return {left, right, top, bottom}
@@ -644,7 +707,7 @@ local function GetCityHostRect(mapID)
 	return RawSpaceRect(mapID)
 end
 
-local function Build(mode)
+local function Build(mode, space)
 	Preload()
 	ClearAll()
 	for _, entry in pairs(base.continents) do
@@ -661,17 +724,18 @@ local function Build(mode)
 	end
 
 	container.built = mode
+	container.space = space
 	container.cityZones = {}
-	local layers = C_Map.GetMapArtLayers(WORLD)
+	local layers = C_Map.GetMapArtLayers(space)
 	local layer = layers and layers[1]
 	if layer == nil or layer.layerWidth == nil or layer.layerWidth <= 0 then return false end
 	local refWidth, refHeight = layer.layerWidth, layer.layerHeight
 	container.refWidth = refWidth
 	container.refHeight = refHeight
 	container:SetSize(refWidth, refHeight)
-	if mode == MODE_FULL then DrawTileLayer(base.world, WORLD, 0, 0, 1, "BACKGROUND") end
+	if mode == MODE_FULL and space == WORLD then DrawTileLayer(base.world, WORLD, 0, 0, 1, "BACKGROUND") end
 	for _, continentID in ipairs(CONTINENTS) do
-		local continentRect = mode == MODE_FULL and DrawContinent(continentID, refWidth, refHeight)
+		local continentRect = mode == MODE_FULL and SPACE_OF[continentID] == space and DrawContinent(continentID, refWidth, refHeight)
 		if continentRect then
 			local children = C_Map.GetMapChildrenInfo(continentID, Enum.UIMapType.Zone, false)
 			if children ~= nil then
@@ -734,9 +798,10 @@ local function Update(force)
 		return
 	end
 
-	if force or container.built ~= mode then
+	local space = GetSpace(mapID)
+	if force or container.built ~= mode or container.space ~= space then
 		container.signature = nil
-		if not Build(mode) then return end
+		if not Build(mode, space) then return end
 	end
 
 	container.cityMode = GetSpaceRect(mapID) == nil
@@ -794,10 +859,12 @@ MinimapLayer = {
 	tile = 1600 / 3,
 	instances = {
 		[1414] = 1,
-		[1415] = 0
+		[1415] = 0,
+		[1945] = 530
 	},
 	data = {},
 	parsed = {},
+	sources = {},
 	transforms = {},
 	masks = {},
 	waterMasks = {},
@@ -835,17 +902,67 @@ function MinimapLayer.GetTiles(instance)
 	return tiles
 end
 
-function MinimapLayer.GetTransform(continentID)
-	local transform = MinimapLayer.transforms[continentID]
-	if transform ~= nil then return transform or nil end
-	MinimapLayer.transforms[continentID] = false
+function MinimapLayer.GetSources(continentID)
+	local list = MinimapLayer.sources[continentID]
+	if list ~= nil then return list end
+	list = {}
+	MinimapLayer.sources[continentID] = list
 	local instance = MinimapLayer.instances[continentID]
-	if instance == nil or C_Map.GetWorldPosFromMapPos == nil or CreateVector2D == nil then return nil end
-	local left, right, top, bottom = C_Map.GetMapRectOnMap(continentID, WORLD)
+	if instance == nil then return list end
+	tinsert(
+		list,
+		{
+			["id"] = continentID,
+			["continentID"] = continentID,
+			["instance"] = instance,
+			["mapID"] = continentID
+		}
+	)
+
+	if C_Map.GetWorldPosFromMapPos == nil or CreateVector2D == nil then return list end
+	local extra = {}
+	for _, child in ipairs(C_Map.GetMapChildrenInfo(continentID, Enum.UIMapType.Zone, false) or {}) do
+		local childInstance = C_Map.GetWorldPosFromMapPos(child.mapID, CreateVector2D(0.5, 0.5))
+		if childInstance ~= nil and childInstance ~= instance and MinimapLayer.data[childInstance] ~= nil then
+			local source = extra[childInstance]
+			if source == nil then
+				source = {
+					["id"] = continentID * 1000 + childInstance,
+					["continentID"] = continentID,
+					["instance"] = childInstance,
+					["mapID"] = child.mapID,
+					["bounds"] = {}
+				}
+
+				extra[childInstance] = source
+				tinsert(list, source)
+			end
+
+			local bounds = source.bounds
+			for _, corner in ipairs({{0, 0}, {1, 1}}) do
+				local _, position = C_Map.GetWorldPosFromMapPos(child.mapID, CreateVector2D(corner[1], corner[2]))
+				if position ~= nil then
+					local yardX, yardY = position:GetXY()
+					bounds[1], bounds[2] = math.min(bounds[1] or yardX, yardX), math.max(bounds[2] or yardX, yardX)
+					bounds[3], bounds[4] = math.min(bounds[3] or yardY, yardY), math.max(bounds[4] or yardY, yardY)
+				end
+			end
+		end
+	end
+
+	return list
+end
+
+function MinimapLayer.GetTransform(source)
+	local transform = MinimapLayer.transforms[source.id]
+	if transform ~= nil then return transform or nil end
+	MinimapLayer.transforms[source.id] = false
+	if C_Map.GetWorldPosFromMapPos == nil or CreateVector2D == nil then return nil end
+	local left, right, top, bottom = RectOn(source.mapID, SPACE_OF[source.continentID])
 	if left == nil or right <= left or bottom <= top then return nil end
 	local points = {}
 	for _, point in ipairs({{0.25, 0.25}, {0.75, 0.25}, {0.25, 0.75}}) do
-		local _, position = C_Map.GetWorldPosFromMapPos(continentID, CreateVector2D(point[1], point[2]))
+		local _, position = C_Map.GetWorldPosFromMapPos(source.mapID, CreateVector2D(point[1], point[2]))
 		if position == nil then return nil end
 		local yardX, yardY = position:GetXY()
 		tinsert(points, {yardX, yardY, left + point[1] * (right - left), top + point[2] * (bottom - top)})
@@ -863,7 +980,7 @@ function MinimapLayer.GetTransform(continentID)
 	local det = a * d - b * c
 	if det == 0 then return nil end
 	transform[7] = det
-	MinimapLayer.transforms[continentID] = transform
+	MinimapLayer.transforms[source.id] = transform
 
 	return transform
 end
@@ -945,13 +1062,13 @@ function MinimapLayer.Place(texture, transform, northX, westY, size, source)
 	MinimapLayer.lastPlaced = texture
 end
 
-function MinimapLayer.GetWaterMask(continentID, tileX, tileY, transform)
-	local lod = MinimapLayer.GetLOD(MinimapLayer.instances[continentID])
+function MinimapLayer.GetWaterMask(source, tileX, tileY, transform)
+	local lod = MinimapLayer.GetLOD(source.instance)
 	if lod == nil then return nil end
 	local col, row = math.floor(tileX / lod.group), math.floor(tileY / lod.group)
 	local name = lod.masks[col * 64 + row]
 	if name == nil then return nil end
-	local key = continentID * 4096 + col * 64 + row
+	local key = source.id * 4096 + col * 64 + row
 	local mask = MinimapLayer.waterMasks[key]
 	if mask == nil then
 		mask = MinimapLayer.frame:CreateMaskTexture()
@@ -1029,62 +1146,70 @@ function MinimapLayer.Update()
 	local alpha = 0
 	for _, continentID in ipairs(CONTINENTS) do
 		local entry = base.continents[continentID]
-		local transform = entry and entry.drawn and MinimapLayer.GetTransform(continentID)
-		local tiles = transform and MinimapLayer.GetTiles(MinimapLayer.instances[continentID])
-		if tiles then
-			local tileU = math.abs(transform[4]) * MinimapLayer.tile
-			local tilePixels = tileU * spaceWidth * width * scale
-			local factor = container.cityMode and MinimapLayer.cityFactor or 1
-			local fadeStart, fadeEnd = MinimapLayer.fadeStart * factor, MinimapLayer.fadeEnd * factor
-			local maxScale = container.cityMode and scrollContainer.GetScaleForMaxZoom ~= nil and scrollContainer:GetScaleForMaxZoom()
-			if maxScale and maxScale > 0 then
-				local maxPixels = tilePixels * maxScale / scale
-				if maxPixels < fadeEnd then fadeStart, fadeEnd = fadeStart * maxPixels / fadeEnd, maxPixels end
-			end
-
-			local share = (tilePixels - fadeStart) / (fadeEnd - fadeStart)
-			if terrain then share = 1 end
-			if share > 0 then
-				local minX, maxX, minY, maxY
-				for _, corner in ipairs({{-1, -1}, {1, -1}, {-1, 1}, {1, 1}}) do
-					local yardX, yardY = MinimapLayer.ToYards(transform, centerU + corner[1] * halfU, centerV + corner[2] * halfV)
-					minX, maxX = math.min(minX or yardX, yardX), math.max(maxX or yardX, yardX)
-					minY, maxY = math.min(minY or yardY, yardY), math.max(maxY or yardY, yardY)
+		for _, source in ipairs(entry and entry.drawn and MinimapLayer.GetSources(continentID) or {}) do
+			local transform = MinimapLayer.GetTransform(source)
+			local tiles = transform and MinimapLayer.GetTiles(source.instance)
+			if tiles then
+				local tileU = math.abs(transform[4]) * MinimapLayer.tile
+				local tilePixels = tileU * spaceWidth * width * scale
+				local factor = container.cityMode and MinimapLayer.cityFactor or 1
+				local fadeStart, fadeEnd = MinimapLayer.fadeStart * factor, MinimapLayer.fadeEnd * factor
+				local maxScale = container.cityMode and scrollContainer.GetScaleForMaxZoom ~= nil and scrollContainer:GetScaleForMaxZoom()
+				if maxScale and maxScale > 0 then
+					local maxPixels = tilePixels * maxScale / scale
+					if maxPixels < fadeEnd then fadeStart, fadeEnd = fadeStart * maxPixels / fadeEnd, maxPixels end
 				end
 
-				local x0, x1 = math.max(0, math.floor(32 - maxY / MinimapLayer.tile)), math.min(63, math.floor(32 - minY / MinimapLayer.tile))
-				local y0, y1 = math.max(0, math.floor(32 - maxX / MinimapLayer.tile)), math.min(63, math.floor(32 - minX / MinimapLayer.tile))
-				local count = (x1 - x0 + 1) * (y1 - y0 + 1)
-				local lod = terrain and count > MinimapLayer.terrainMaxTiles and MinimapLayer.GetLOD(MinimapLayer.instances[continentID])
-				if x1 >= x0 and y1 >= y0 and (count <= (terrain and MinimapLayer.terrainMaxTiles or MinimapLayer.maxTiles) or lod) then
-					alpha = math.max(alpha, MinimapLayer.maxAlpha * math.min(1, share))
-					local mask = MinimapLayer.GetMask(continentID)
-					if lod then
-						local group = lod.group
-						for col = math.floor(x0 / group), math.floor(x1 / group) do
-							for row = math.floor(y0 / group), math.floor(y1 / group) do
-								local name = lod.pieces[col * 64 + row]
-								if name ~= nil then
-									local key = -(continentID * 4096 + col * 64 + row)
-									wanted[key] = true
-									if MinimapLayer.active[key] == nil then
-										local northX, westY = (32 - row * group) * MinimapLayer.tile, (32 - col * group) * MinimapLayer.tile
-										MinimapLayer.Place(MinimapLayer.Acquire(continentID, mask), transform, northX, westY, group * MinimapLayer.tile, MinimapLayer.lodPath .. name)
-										MinimapLayer.active[key] = MinimapLayer.lastPlaced
+				local share = (tilePixels - fadeStart) / (fadeEnd - fadeStart)
+				if terrain then share = 1 end
+				if share > 0 then
+					local minX, maxX, minY, maxY
+					for _, corner in ipairs({{-1, -1}, {1, -1}, {-1, 1}, {1, 1}}) do
+						local yardX, yardY = MinimapLayer.ToYards(transform, centerU + corner[1] * halfU, centerV + corner[2] * halfV)
+						minX, maxX = math.min(minX or yardX, yardX), math.max(maxX or yardX, yardX)
+						minY, maxY = math.min(minY or yardY, yardY), math.max(maxY or yardY, yardY)
+					end
+
+					local bounds = source.bounds
+					if bounds ~= nil and bounds[1] ~= nil and bounds[3] ~= nil then
+						minX, maxX = math.max(minX, bounds[1]), math.min(maxX, bounds[2])
+						minY, maxY = math.max(minY, bounds[3]), math.min(maxY, bounds[4])
+					end
+
+					local x0, x1 = math.max(0, math.floor(32 - maxY / MinimapLayer.tile)), math.min(63, math.floor(32 - minY / MinimapLayer.tile))
+					local y0, y1 = math.max(0, math.floor(32 - maxX / MinimapLayer.tile)), math.min(63, math.floor(32 - minX / MinimapLayer.tile))
+					local count = (x1 - x0 + 1) * (y1 - y0 + 1)
+					local lod = terrain and count > MinimapLayer.terrainMaxTiles and MinimapLayer.GetLOD(source.instance)
+					if minX <= maxX and minY <= maxY and x1 >= x0 and y1 >= y0 and (count <= (terrain and MinimapLayer.terrainMaxTiles or MinimapLayer.maxTiles) or lod) then
+						alpha = math.max(alpha, MinimapLayer.maxAlpha * math.min(1, share))
+						local mask = MinimapLayer.GetMask(continentID)
+						if lod then
+							local group = lod.group
+							for col = math.floor(x0 / group), math.floor(x1 / group) do
+								for row = math.floor(y0 / group), math.floor(y1 / group) do
+									local name = lod.pieces[col * 64 + row]
+									if name ~= nil then
+										local key = -(source.id * 4096 + col * 64 + row)
+										wanted[key] = true
+										if MinimapLayer.active[key] == nil then
+											local northX, westY = (32 - row * group) * MinimapLayer.tile, (32 - col * group) * MinimapLayer.tile
+											MinimapLayer.Place(MinimapLayer.Acquire(continentID, mask), transform, northX, westY, group * MinimapLayer.tile, MinimapLayer.lodPath .. name)
+											MinimapLayer.active[key] = MinimapLayer.lastPlaced
+										end
 									end
 								end
 							end
-						end
-					else
-						for tileX = x0, x1 do
-							for tileY = y0, y1 do
-								local fileID = tiles[tileX * 64 + tileY]
-								if fileID ~= nil then
-									local key = continentID * 4096 + tileX * 64 + tileY
-									wanted[key] = true
-									if MinimapLayer.active[key] == nil then
-										MinimapLayer.Place(MinimapLayer.Acquire(continentID, MinimapLayer.GetWaterMask(continentID, tileX, tileY, transform) or mask), transform, (32 - tileY) * MinimapLayer.tile, (32 - tileX) * MinimapLayer.tile, MinimapLayer.tile, fileID)
-										MinimapLayer.active[key] = MinimapLayer.lastPlaced
+						else
+							for tileX = x0, x1 do
+								for tileY = y0, y1 do
+									local fileID = tiles[tileX * 64 + tileY]
+									if fileID ~= nil then
+										local key = source.id * 4096 + tileX * 64 + tileY
+										wanted[key] = true
+										if MinimapLayer.active[key] == nil then
+											MinimapLayer.Place(MinimapLayer.Acquire(continentID, MinimapLayer.GetWaterMask(source, tileX, tileY, transform) or mask), transform, (32 - tileY) * MinimapLayer.tile, (32 - tileX) * MinimapLayer.tile, MinimapLayer.tile, fileID)
+											MinimapLayer.active[key] = MinimapLayer.lastPlaced
+										end
 									end
 								end
 							end
