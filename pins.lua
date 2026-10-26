@@ -646,6 +646,7 @@ end
 local dungeons = {}
 local function AddDungeon(info, positions)
 	if info.foreverOnly and not MapUtils:IsForever() then return end
+	if info.tbc and (MapUtils:IsForever() or MapUtils:GetFlavor() == "era") then return end
 	for mapID, pos in pairs(positions) do
 		local entry = {}
 		for key, value in pairs(info) do
@@ -1068,6 +1069,264 @@ AddDungeon(
 	}
 )
 
+AddDungeon(
+	{
+		["name"] = "Hellfire Citadel",
+		["tbc"] = true,
+		["instanceMap"] = {543, 542, 540, 544},
+		["entrance"] = "both",
+		["contains"] = {"Hellfire Ramparts", "The Blood Furnace", "The Shattered Halls", "Magtheridon's Lair"},
+		["minLevel"] = 59,
+		["maxLevel"] = 70,
+	},
+	{
+		[1944] = {0.468, 0.533},
+	}
+)
+
+AddDungeon(
+	{
+		["name"] = "Coilfang Reservoir",
+		["tbc"] = true,
+		["instanceMap"] = {547, 546, 545, 548},
+		["entrance"] = "both",
+		["contains"] = {"The Slave Pens", "The Underbog", "The Steamvault", "Serpentshrine Cavern"},
+		["minLevel"] = 61,
+		["maxLevel"] = 70,
+	},
+	{
+		[1946] = {0.5, 0.41},
+	}
+)
+
+AddDungeon(
+	{
+		["name"] = "Mana-Tombs",
+		["tbc"] = true,
+		["instanceMap"] = 557,
+		["minLevel"] = 63,
+		["maxLevel"] = 70,
+	},
+	{
+		[1952] = {0.3964, 0.5745},
+	}
+)
+
+AddDungeon(
+	{
+		["name"] = "Auchenai Crypts",
+		["tbc"] = true,
+		["instanceMap"] = 558,
+		["minLevel"] = 64,
+		["maxLevel"] = 70,
+	},
+	{
+		[1952] = {0.3419, 0.656},
+	}
+)
+
+AddDungeon(
+	{
+		["name"] = "Sethekk Halls",
+		["tbc"] = true,
+		["instanceMap"] = 556,
+		["minLevel"] = 66,
+		["maxLevel"] = 70,
+	},
+	{
+		[1952] = {0.4506, 0.6562},
+	}
+)
+
+AddDungeon(
+	{
+		["name"] = "Shadow Labyrinth",
+		["tbc"] = true,
+		["instanceMap"] = 555,
+		["minLevel"] = 69,
+		["maxLevel"] = 70,
+	},
+	{
+		[1952] = {0.3963, 0.7378},
+	}
+)
+
+AddDungeon(
+	{
+		["name"] = "Old Hillsbrad Foothills",
+		["tbc"] = true,
+		["instanceMap"] = 560,
+		["minLevel"] = 66,
+		["maxLevel"] = 70,
+	},
+	{
+		[1446] = {0.5549, 0.5329},
+	}
+)
+
+AddDungeon(
+	{
+		["name"] = "The Black Morass",
+		["tbc"] = true,
+		["instanceMap"] = 269,
+		["minLevel"] = 68,
+		["maxLevel"] = 70,
+	},
+	{
+		[1446] = {0.5707, 0.631},
+	}
+)
+
+AddDungeon(
+	{
+		["name"] = "Hyjal Summit",
+		["tbc"] = true,
+		["instanceMap"] = 534,
+		["entrance"] = "raid",
+		["minLevel"] = 70,
+		["maxLevel"] = 70,
+	},
+	{
+		[1446] = {0.5706, 0.4965},
+	}
+)
+
+AddDungeon(
+	{
+		["name"] = "The Arcatraz",
+		["tbc"] = true,
+		["instanceMap"] = 552,
+		["minLevel"] = 69,
+		["maxLevel"] = 70,
+	},
+	{
+		[1953] = {0.7457, 0.5762},
+	}
+)
+
+AddDungeon(
+	{
+		["name"] = "The Botanica",
+		["tbc"] = true,
+		["instanceMap"] = 553,
+		["minLevel"] = 69,
+		["maxLevel"] = 70,
+	},
+	{
+		[1953] = {0.7183, 0.5482},
+	}
+)
+
+AddDungeon(
+	{
+		["name"] = "The Mechanar",
+		["tbc"] = true,
+		["instanceMap"] = 554,
+		["minLevel"] = 68,
+		["maxLevel"] = 70,
+	},
+	{
+		[1953] = {0.7064, 0.6982},
+	}
+)
+
+AddDungeon(
+	{
+		["name"] = "Tempest Keep",
+		["tbc"] = true,
+		["instanceMap"] = 550,
+		["entrance"] = "raid",
+		["minLevel"] = 70,
+		["maxLevel"] = 70,
+	},
+	{
+		[1953] = {0.7388, 0.6374},
+	}
+)
+
+AddDungeon(
+	{
+		["name"] = "Magisters' Terrace",
+		["tbc"] = true,
+		["instanceMap"] = 585,
+		["minLevel"] = 69,
+		["maxLevel"] = 70,
+	},
+	{
+		[1957] = {0.6152, 0.311},
+	}
+)
+
+AddDungeon(
+	{
+		["name"] = "Sunwell Plateau",
+		["tbc"] = true,
+		["instanceMap"] = 580,
+		["entrance"] = "raid",
+		["minLevel"] = 70,
+		["maxLevel"] = 70,
+	},
+	{
+		[1957] = {0.4428, 0.4587},
+	}
+)
+
+AddDungeon(
+	{
+		["name"] = "Karazhan",
+		["tbc"] = true,
+		["instanceMap"] = 532,
+		["entrance"] = "raid",
+		["minLevel"] = 70,
+		["maxLevel"] = 70,
+	},
+	{
+		[1430] = {0.4659, 0.7411},
+	}
+)
+
+AddDungeon(
+	{
+		["name"] = "Zul'Aman",
+		["tbc"] = true,
+		["instanceMap"] = 568,
+		["entrance"] = "raid",
+		["minLevel"] = 70,
+		["maxLevel"] = 70,
+	},
+	{
+		[1942] = {0.8259, 0.6431},
+	}
+)
+
+AddDungeon(
+	{
+		["name"] = "Gruul's Lair",
+		["tbc"] = true,
+		["instanceMap"] = 565,
+		["entrance"] = "raid",
+		["minLevel"] = 70,
+		["maxLevel"] = 70,
+	},
+	{
+		[1949] = {0.6935, 0.2354},
+	}
+)
+
+AddDungeon(
+	{
+		["name"] = "Black Temple",
+		["tbc"] = true,
+		["instanceMap"] = 564,
+		["entrance"] = "raid",
+		["minLevel"] = 70,
+		["maxLevel"] = 70,
+	},
+	{
+		[1948] = {0.7103, 0.4702},
+	}
+)
+
 local meetingStones = {}
 meetingStones[1434] = {
 	{
@@ -1254,8 +1513,15 @@ local function ApplyIcon(pin, icon)
 	pin.icon = icon
 	pin.splitIcon = icon == SPLIT_ICON
 	if pin.splitIcon then
-		if pin.textureLeft == nil then pin.textureLeft = pin:CreateTexture(nil, "OVERLAY") end
-		if pin.textureRight == nil then pin.textureRight = pin:CreateTexture(nil, "OVERLAY") end
+		if pin.textureLeft == nil then
+			pin.textureLeft = pin:CreateTexture(nil, "OVERLAY")
+			pin.textureRight = pin:CreateTexture(nil, "OVERLAY")
+			for _, half in ipairs({pin.textureLeft, pin.textureRight}) do
+				if half.SetSnapToPixelGrid ~= nil then half:SetSnapToPixelGrid(false) end
+				if half.SetTexelSnappingBias ~= nil then half:SetTexelSnappingBias(0) end
+			end
+		end
+
 		pin.texture:Hide()
 		SetTextureIcon(pin.textureLeft, GetDungeonIcon(), "left")
 		SetTextureIcon(pin.textureRight, GetRaidIcon(), "right")
