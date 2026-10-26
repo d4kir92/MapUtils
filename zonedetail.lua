@@ -1035,7 +1035,14 @@ function MinimapLayer.Update()
 			local tileU = math.abs(transform[4]) * MinimapLayer.tile
 			local tilePixels = tileU * spaceWidth * width * scale
 			local factor = container.cityMode and MinimapLayer.cityFactor or 1
-			local share = (tilePixels - MinimapLayer.fadeStart * factor) / ((MinimapLayer.fadeEnd - MinimapLayer.fadeStart) * factor)
+			local fadeStart, fadeEnd = MinimapLayer.fadeStart * factor, MinimapLayer.fadeEnd * factor
+			local maxScale = container.cityMode and scrollContainer.GetScaleForMaxZoom ~= nil and scrollContainer:GetScaleForMaxZoom()
+			if maxScale and maxScale > 0 then
+				local maxPixels = tilePixels * maxScale / scale
+				if maxPixels < fadeEnd then fadeStart, fadeEnd = fadeStart * maxPixels / fadeEnd, maxPixels end
+			end
+
+			local share = (tilePixels - fadeStart) / (fadeEnd - fadeStart)
 			if terrain then share = 1 end
 			if share > 0 then
 				local minX, maxX, minY, maxY
