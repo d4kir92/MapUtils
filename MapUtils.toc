@@ -55,6 +55,7 @@ pins.lua
 convergences_wowhead.lua
 convergences.lua
 discovery.lua
+gathernodes.lua
 questturnins.lua
 zonelevels.lua
 instancepins.lua

@@ -308,7 +308,7 @@ if frame ~= nil then
 	fader = MapUtils:CreateMoveFader(
 		frame,
 		{
-			["isEnabled"] = function() return type(MAUTTAB) == "table" and MAUTTAB["WORLDMAPFADE"] == true end,
+			["isEnabled"] = function() return type(MAUTTAB) == "table" and MAUTTAB["WORLDMAPFADE"] ~= false end,
 			["getOpacity"] = function() return MAUTTAB["WORLDMAPFADEOPACITY"] end,
 			["hookSetAlpha"] = true,
 			["isBusy"] = function() return dragging or sizing ~= nil end

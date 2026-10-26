@@ -287,9 +287,9 @@ function MapUtils:InitSetting()
 	Requires(mapStyle, "ONEMAP")
 	AddTooltip(mapStyle, "LID_MAPSTYLE", "LID_MAPSTYLEDESC")
 	AddCategory("NAVIGATION", 2, nil, ADDED_0928)
-	AddCheckbox("ALWAYSSHOWWAYPOINT", false, nil, nil, ADDED_0928)
+	AddTooltip(AddCheckbox("ALWAYSSHOWWAYPOINT", false, nil, nil, ADDED_0928), "LID_ALWAYSSHOWWAYPOINT", "LID_ALWAYSSHOWWAYPOINTDESC")
 	AddCategory("MAPFADE", 2, nil, ADDED_0927)
-	AddCheckbox("WORLDMAPFADE", false, function() MapUtils:RefreshWorldMapFrame() end, nil, ADDED_0927)
+	AddCheckbox("WORLDMAPFADE", true, function() MapUtils:RefreshWorldMapFrame() end, nil, ADDED_0927)
 	Requires(AddSlider("WORLDMAPFADEOPACITY", 50, 0, 100, 5, nil, nil, ADDED_0927), "WORLDMAPFADE")
 	if MapUtils.nativeInstanceMaps then
 		AddCategory("INSTANCEMAPS", 2, nil, ADDED_0927)
@@ -317,7 +317,7 @@ function MapUtils:InitSetting()
 	AddCategory("BATTLEFIELDMAPWINDOW", 2, "LID_MAPWINDOW", ADDED_0927)
 	AddCheckbox("BATTLEFIELDMAPSCALE", true, function() MapUtils:RefreshBattlefieldMap() end, nil, ADDED_0927)
 	AddCategory("BATTLEFIELDMAPFADECAT", 2, "LID_MAPFADE", ADDED_0927)
-	AddCheckbox("BATTLEFIELDMAPFADE", false, function() MapUtils:RefreshBattlefieldMap() end, nil, ADDED_0927)
+	AddCheckbox("BATTLEFIELDMAPFADE", true, function() MapUtils:RefreshBattlefieldMap() end, nil, ADDED_0927)
 	Requires(AddSlider("BATTLEFIELDMAPFADEOPACITY", 50, 0, 100, 5, function() MapUtils:RefreshBattlefieldMap() end, "LID_WORLDMAPFADEOPACITY", ADDED_0927), "BATTLEFIELDMAPFADE")
 	AddCategory("MAPICONS")
 	AddCategory("PIERS", 2)
@@ -354,6 +354,11 @@ function MapUtils:InitSetting()
 		AddCheckbox("CONVERGENCEMINIMAPPINS", false, function() MapUtils:RefreshPins() end, "LID_MINIMAPPINS", ADDED_1017)
 		AddCheckbox("CONVERGENCENONSKYBORNE", false, function() MapUtils:RefreshPins() end, "LID_CONVERGENCENONSKYBORNE", ADDED_1017)
 		AddExploreCheckbox("CONVERGENCE")
+	end
+
+	if MapUtils.CanShowGatherNodes ~= nil and MapUtils:CanShowGatherNodes() then
+		AddCategory("GATHERNODES", 2, nil, "2026-10-26")
+		AddCheckbox("GATHERNODEMINIMAPICONS", true, function() MapUtils:RefreshGatherNodes() end, "LID_MINIMAPPINS", "2026-10-26")
 	end
 
 	AddCategory("FLIGHTPOINTS", 2)
