@@ -6,6 +6,7 @@ ignore:
   - MapUtils_Mists.toc
   - MapUtils_TBC.toc
   - MapUtils_Vanilla.toc
+  - areapois.lua
   - convergences.lua
   - convergences_wowhead.lua
   - data/cata/instances.lua
@@ -18,6 +19,7 @@ ignore:
   - data/forever/minimaplod.lua
   - data/forever/minimaptiles.lua
   - data/forever/revealdata.lua
+  - data/forever/transports.lua
   - data/forever/zonemasks.lua
   - data/mists/instances.lua
   - data/tbc/minimaplod.lua

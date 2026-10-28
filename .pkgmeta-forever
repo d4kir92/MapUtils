@@ -6,6 +6,7 @@ ignore:
   - MapUtils_TBC.toc
   - MapUtils_Vanilla.toc
   - MapUtils_Wrath.toc
+  - areapois.lua
   - data/cata/instances.lua
   - data/era/minimaplod.lua
   - data/era/minimaptiles.lua

@@ -232,8 +232,8 @@ CROSSING_ICON_CANDIDATES["up"] = {"CaveUnderground-Up", "Garr_LevelUpgradeArrow"
 local DEFAULT_CROSSING_ICON = "Interface\\Icons\\INV_Misc_Map_01"
 local MEETING_STONE_ICON = "Interface\\AddOns\\MapUtils\\media\\meetingstone"
 local TRANSPORT_ICONS = {}
-TRANSPORT_ICONS["ship"] = "Interface\\AddOns\\MapUtils\\media\\transport_ship"
-TRANSPORT_ICONS["zeppelin"] = "Interface\\AddOns\\MapUtils\\media\\transport_zeppelin"
+TRANSPORT_ICONS["ship"] = "ShipMissionIcon-Training-Map"
+TRANSPORT_ICONS["zeppelin"] = "ShipMissionIcon-Training-Map"
 TRANSPORT_ICONS["tram"] = "Interface\\AddOns\\MapUtils\\media\\transport_tram"
 local DEFAULT_FLIGHT_ICON = "Interface\\TaxiFrame\\UI-Taxi-Icon-Green"
 local FLIGHT_ICONS = {}
@@ -250,7 +250,8 @@ local PinCache = {
 	["templates"] = {"LeaMapsGlobalPinTemplate", "FlightPointPinTemplate"},
 	["atlas"] = {},
 	["atlasWidth"] = {},
-	["halfCoords"] = {}
+	["halfCoords"] = {},
+	["mergePixels"] = 16
 }
 
 local MINIMAP_YARDS = {}
@@ -591,6 +592,7 @@ piers[1453] = {
 		["y"] = 0.107,
 		["forever"] = {0.6901, 0.3071},
 		["transport"] = "tram",
+		["platform"] = 1,
 		["routes"] = {
 			{
 				["dest"] = "Tinker Town",
@@ -606,6 +608,7 @@ piers[1455] = {
 		["x"] = 0.76676,
 		["y"] = 0.51133,
 		["transport"] = "tram",
+		["platform"] = 2,
 		["routes"] = {
 			{
 				["dest"] = "Dwarven District",
@@ -1486,7 +1489,12 @@ local function GetEntryIcon(entry)
 	if entry.kind == "meetingstone" then return MEETING_STONE_ICON end
 	if entry.kind == "spirithealer" then return "Interface\\AddOns\\MapUtils\\media\\" .. (MapUtils:GetConfig("SPIRITHEALERSTYLE", "NORMAL") == "CHIBI" and "spirithealer_chibi" or "spirithealer") end
 	if entry.kind == "crossing" then return GetCrossingIcon(entry.up) end
-	if entry.kind == nil and (MAUTTAB == nil or MAUTTAB["icon"] == nil or MAUTTAB["icon"] == "") then return TRANSPORT_ICONS[entry.transport or "ship"] or GetIcon(entry.faction) end
+	if entry.kind == nil and (MAUTTAB == nil or MAUTTAB["icon"] == nil or MAUTTAB["icon"] == "") then
+		local icon = TRANSPORT_ICONS[entry.transport or "ship"]
+		if icon ~= nil and (IsAtlas(icon) or string.find(icon, "\\", 1, true)) then return icon end
+
+		return GetIcon(entry.faction)
+	end
 
 	return GetIcon(entry.faction)
 end
@@ -1978,7 +1986,12 @@ local function GetAreaLabel()
 		"OnUpdate",
 		function(self)
 			local owner = self.owner
-			if owner == nil or not owner:IsVisible() or not IsPinMouseOver(owner) then self:Hide() end
+			if owner == nil or not owner:IsVisible() or not IsPinMouseOver(owner) then
+				self:Hide()
+			elseif self.refresh ~= nil and GetTime() - (self.refreshed or 0) >= 1 then
+				self.refreshed = GetTime()
+				self.refresh(self)
+			end
 		end
 	)
 
@@ -1994,10 +2007,45 @@ local function GetRouteHeader(entry)
 	return MapUtils:Trans("LID_SHIPTO")
 end
 
-local function GetPierLabel(entry)
-	local lines = {GetRouteHeader(entry)}
+local function GetPierTimes(mapID, entry)
+	if MapUtils.GetTransportPierLines == nil or mapID == nil then return {} end
+	if entry.platform ~= nil then return MapUtils:GetTransportPlatformLines(entry.transport or "ship", entry.platform) end
+	local rect = GetMapRect(mapID)
+	local pos = rect ~= nil and GetEntryWorldPos(mapID, entry) or nil
+	if pos == nil then return {} end
+
+	return MapUtils:GetTransportPierLines(rect.continentID, pos.x, pos.y, entry.transport or "ship")
+end
+
+local function GetPierParts(entry, mapID)
+	if entry.merged ~= nil then return entry.merged end
+
+	return {
+		{
+			["entry"] = entry,
+			["mapID"] = mapID
+		}
+	}
+end
+
+local function AddPierLines(lines, entry, mapID)
+	tinsert(lines, GetRouteHeader(entry))
 	for i, route in ipairs(entry.routes) do
 		tinsert(lines, format("|cffffd100%s|r", GetRouteText(route, i)))
+	end
+
+	for _, line in ipairs(GetPierTimes(mapID, entry)) do
+		tinsert(lines, line)
+	end
+end
+
+local function GetPierLabel(entry, mapID)
+	local lines = {}
+	local parts = GetPierParts(entry, mapID)
+	for i, part in ipairs(parts) do
+		if i > 1 then tinsert(lines, " ") end
+		if #parts > 1 and entry.sameName ~= true then tinsert(lines, format("|cffffffff%s|r", part.entry.name)) end
+		AddPierLines(lines, part.entry, part.mapID)
 	end
 
 	return entry.name, table.concat(lines, "\n")
@@ -2060,7 +2108,16 @@ local function ShowAreaLabel(pin)
 		name = pin.entry.name
 		description = format("%s\n|cff%02x%02x%02x%s|r", GetFlightDescription(), math.floor(r * 255), math.floor(g * 255), math.floor(b * 255), status)
 	else
-		name, description = GetPierLabel(pin.entry)
+		name, description = GetPierLabel(pin.entry, pin.mapID)
+	end
+
+	label.refresh = nil
+	if pin.entry.kind == nil then
+		label.refreshed = GetTime()
+		label.refresh = function(self)
+			local _, text = GetPierLabel(pin.entry, pin.mapID)
+			self.description:SetText(text)
+		end
 	end
 
 	label.name:SetText(name)
@@ -2154,10 +2211,10 @@ local function OnPinEnter(pin)
 		GameTooltip:AddLine(GetFlightDescription(), 0.6, 0.6, 0.6)
 		GameTooltip:AddLine(GetFlightStatus(entry))
 	else
-		GameTooltip:AddLine(entry.name, 1, 1, 1)
-		GameTooltip:AddLine(GetRouteHeader(entry), 0.6, 0.6, 0.6)
-		for i, route in ipairs(entry.routes) do
-			GameTooltip:AddLine(GetRouteText(route, i), 1, 0.82, 0)
+		local name, description = GetPierLabel(entry, pin.mapID or C_Map.GetBestMapForUnit("player"))
+		GameTooltip:AddLine(name, 1, 1, 1)
+		for line in (description .. "\n"):gmatch("(.-)\n") do
+			GameTooltip:AddLine(line, 0.6, 0.6, 0.6)
 		end
 	end
 
@@ -2620,6 +2677,97 @@ local function GetWorldCanvas()
 	return WorldMapFrame.ScrollContainer.Child
 end
 
+function PinCache.CreateMergedPier(parts, x, y)
+	local first = parts[1].entry
+	local merged = {
+		["transport"] = first.transport,
+		["faction"] = first.faction,
+		["x"] = x,
+		["y"] = y,
+		["routes"] = {},
+		["merged"] = parts,
+		["sameName"] = true
+	}
+
+	local names = {}
+	for _, part in ipairs(parts) do
+		if part.entry.name ~= first.name then merged.sameName = false end
+		if not tContains(names, part.entry.name) then tinsert(names, part.entry.name) end
+		for _, route in ipairs(part.entry.routes or {}) do
+			tinsert(merged.routes, route)
+		end
+	end
+
+	merged.name = table.concat(names, " / ")
+
+	return merged
+end
+
+function PinCache.MergePiers(list, ownCount, mapID, pixelWidth, pixelHeight)
+	local info = C_Map.GetMapInfo(mapID)
+	if info == nil or info.mapType == nil or info.mapType > Enum.UIMapType.Continent then return list, ownCount end
+	local items = {}
+	local clusters = {}
+	for i, listed in ipairs(list) do
+		local item = listed
+		if i <= ownCount then
+			item = {
+				["entry"] = listed,
+				["mapID"] = mapID,
+				["x"] = listed.x,
+				["y"] = listed.y
+			}
+		end
+
+		if item.entry.kind == nil then
+			local target = nil
+			for _, cluster in ipairs(clusters) do
+				local dx, dy = (cluster.x - item.x) * pixelWidth, (cluster.y - item.y) * pixelHeight
+				if dx * dx + dy * dy <= PinCache.mergePixels * PinCache.mergePixels then
+					target = cluster
+					break
+				end
+			end
+
+			if target == nil then
+				target = {
+					["x"] = item.x,
+					["y"] = item.y,
+					["parts"] = {}
+				}
+
+				tinsert(clusters, target)
+				tinsert(items, target)
+			end
+
+			tinsert(target.parts, item)
+			target.x = target.x + (item.x - target.x) / #target.parts
+			target.y = target.y + (item.y - target.y) / #target.parts
+		else
+			tinsert(items, item)
+		end
+	end
+
+	local result = {}
+	for _, item in ipairs(items) do
+		if item.parts == nil or #item.parts == 1 then
+			tinsert(result, item.parts ~= nil and item.parts[1] or item)
+		else
+			tinsert(
+				result,
+				{
+					["entry"] = PinCache.CreateMergedPier(item.parts, item.x, item.y),
+					["mapID"] = mapID,
+					["x"] = item.x,
+					["y"] = item.y
+				}
+			)
+		end
+	end
+
+	return result, 0
+end
+
 local worldPins = {}
 local worldPinPool = nil
 local worldMapID = nil
@@ -2685,6 +2833,7 @@ local function UpdateWorldPins()
 	if scale == nil or scale <= 0 then return end
 	local w = child:GetWidth()
 	local h = child:GetHeight()
+	list, ownCount = PinCache.MergePiers(list, ownCount, mapID, w * scale, h * scale)
 	local size = ICON_SIZE / scale
 	local poiScale = GetPoiScale()
 	local dungeonSize = DUNGEON_ICON_SIZE * poiScale / scale

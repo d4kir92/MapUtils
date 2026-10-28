@@ -51,8 +51,12 @@ locale\names.lua
 flavor.lua
 data\classic\instances.lua
 data\forever\instances.lua
+data\classic\transports.lua
+data\forever\transports.lua
 core.lua
+comm.lua
 pins.lua
+transports.lua
 convergences_wowhead.lua
 convergences.lua
 discovery.lua

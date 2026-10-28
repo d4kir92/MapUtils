@@ -51,8 +51,12 @@ locale\names.lua
 flavor.lua
 data\classic\instances.lua
 data\tbc\instances.lua
+data\classic\transports.lua
 core.lua
+comm.lua
 pins.lua
+transports.lua
+areapois.lua
 discovery.lua
 gathernodes.lua
 questturnins.lua

@@ -55,7 +55,9 @@ data\wrath\instances.lua
 data\cata\instances.lua
 data\mists\instances.lua
 core.lua
+comm.lua
 pins.lua
+transports.lua
 discovery.lua
 gathernodes.lua
 questturnins.lua

@@ -211,6 +211,8 @@ local function HandleSlash(args)
 		MapUtils:PrintMinimapTileDebug()
 	elseif sub == "map" then
 		MapUtils:ToggleInstanceMap()
+	elseif sub == "transports" and MapUtils.PrintTransports ~= nil then
+		MapUtils:PrintTransports()
 	else
 		MapUtils:ToggleSettings()
 	end
@@ -248,6 +250,7 @@ function MapUtils:InitSetting()
 		end
 	end)
 
+	if MapUtils.RefreshCommChannel then AddTooltip(AddCheckbox("COMMCHANNEL", true, function() MapUtils:RefreshCommChannel() end, nil, "2026-10-28"), "LID_COMMCHANNEL", "LID_COMMCHANNELDESC") end
 	AddCategory("WORLDMAP", nil, nil, ADDED_0927)
 	if MapUtils.RefreshQuestTurnIns then AddCheckbox("QUESTTURNINWORLDMAPPINS", true, function() MapUtils:RefreshQuestTurnIns() end, nil, "2026-10-07") end
 	if MapUtils:IsForever() then AddCheckbox("REMEMBERQUESTCATEGORIES", true, function() MapUtils:RestoreQuestCategories() end) end
@@ -325,6 +328,11 @@ function MapUtils:InitSetting()
 	AddCategory("PIERS", 2)
 	AddCheckbox("WORLDMAPPINS", true, function() MapUtils:RefreshPins() end)
 	AddCheckbox("MINIMAPPINS", true, function() MapUtils:RefreshPins() end)
+	if MapUtils.TRANSPORTROUTES ~= nil then
+		AddCheckbox("VESSELWORLDMAPPINS", true, function() MapUtils:RefreshTransports() end, nil, "2026-10-28")
+		AddCheckbox("VESSELMINIMAPPINS", true, function() MapUtils:RefreshTransports() end, nil, "2026-10-28")
+	end
+
 	AddExploreCheckbox("PIER")
 	AddCategory("DUNGEONS", 2)
 	AddSharedCheckbox("DUNGEONWORLDMAPPINS", "LID_WORLDMAPPINS")
@@ -370,6 +378,11 @@ function MapUtils:InitSetting()
 	AddCategory("ZONECROSSINGS", 2, nil, ADDED_1003)
 	AddCheckbox("CROSSINGWORLDMAPPINS", true, function() MapUtils:RefreshPins() end, "LID_WORLDMAPPINS", ADDED_1003)
 	AddExploreCheckbox("CROSSING")
+	if MapUtils.RefreshAreaPOIs ~= nil then
+		AddCategory("AREAPOIS", 2, nil, "2026-10-28")
+		AddCheckbox("TOWNPOIS", false, function() MapUtils:RefreshAreaPOIs() end, nil, "2026-10-28")
+		AddCheckbox("CAPITALPOIS", false, function() MapUtils:RefreshAreaPOIs() end, nil, "2026-10-28")
+	end
 	maset:UpdateDependencies()
 	maset:ResumeLayout()
 	MapUtils:CreateMinimapButton({
