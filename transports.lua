@@ -4,7 +4,7 @@ local Transport = {
 	icons = {
 		ship = "vessel_ship",
 		zeppelin = "vessel_zeppelin",
-		tram = "transport_tram"
+		tram = "vessel_tram"
 	},
 	rects = {
 		[0] = {44688.53, 29795.11, 32601.04, 9894.93},
@@ -212,6 +212,30 @@ function Transport.GetPosition(id)
 	local instance, wx, wy = Transport.ToWorld(route, d, index, x, y)
 
 	return instance, wx, wy, angle, zoning
+end
+
+function Transport.GetPlatformWorld(kind, number)
+	Transport.platformWorld = Transport.platformWorld or {}
+	local key = kind .. number
+	if Transport.platformWorld[key] == nil then
+		local instance, pos = nil, nil
+		if MapUtils.GetTransportPlatformWorldPos ~= nil then instance, pos = MapUtils:GetTransportPlatformWorldPos(kind, number) end
+		Transport.platformWorld[key] = instance ~= nil and {instance, pos.y, pos.x} or false
+	end
+
+	return Transport.platformWorld[key] or nil
+end
+
+function Transport.GetWorldMapPosition(id)
+	local instance, wx, wy, angle, zoning = Transport.GetPosition(id)
+	local route, d = Transport.GetRoutes()[id], Transport.decoded[id]
+	if instance == nil or route.kind ~= "tram" or d.plat[1] == nil or d.plat[2] == nil then return instance, wx, wy, angle, zoning end
+	local from, to = Transport.GetPlatformWorld(route.kind, 1), Transport.GetPlatformWorld(route.kind, 2)
+	local x1, x2 = d.x[d.plat[1]], d.x[d.plat[2]]
+	if from == nil or to == nil or from[1] ~= to[1] or x1 == x2 then return nil end
+	local f = math.min(1, math.max(0, (wx - x1) / (x2 - x1)))
+
+	return from[1], from[2] + (to[2] - from[2]) * f, from[3] + (to[3] - from[3]) * f, 0, false
 end
 
 function Transport.GetPlatformTimes(id)
@@ -441,7 +465,7 @@ function Transport.UpdateWorld()
 		local w, h = canvas:GetWidth(), canvas:GetHeight()
 		local size = Transport.iconSize / canvas:GetScale()
 		for id, route in pairs(Transport.GetRoutes()) do
-			local instance, wx, wy, angle, zoning = Transport.GetPosition(id)
+			local instance, wx, wy, angle, zoning = Transport.GetWorldMapPosition(id)
 			local mx, my = nil, nil
 			if instance ~= nil then mx, my = Transport.Project(projections, instance, wx, wy) end
 			if mx ~= nil then

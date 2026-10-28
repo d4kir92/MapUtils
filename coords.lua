@@ -1,8 +1,25 @@
 local _, MapUtils = ...
 local updater
+function MapUtils:HasCoordsCVar(cvar)
+	local getter = C_CVar and C_CVar.GetCVar or GetCVar
+	return getter ~= nil and getter(cvar) ~= nil
+end
+
+function MapUtils:GetCoordsOptionDefault(cvar)
+	return cvar ~= "coordsByTenths"
+end
+
+function MapUtils:IsCoordsOptionEnabled(cvar)
+	if MapUtils:HasCoordsCVar(cvar) then
+		local getter = C_CVar and C_CVar.GetCVarBool or GetCVarBool
+		return getter ~= nil and getter(cvar) == true
+	end
+
+	return MapUtils:GetConfig(strupper(cvar), MapUtils:GetCoordsOptionDefault(cvar)) == true
+end
+
 local function IsEnabled(key)
-	local getter = C_CVar and C_CVar.GetCVarBool or GetCVarBool
-	return getter ~= nil and getter(key) == true
+	return MapUtils:IsCoordsOptionEnabled(key)
 end
 
 local function ShowCoords(label, x, y, px, py, width, height, offsetY)
@@ -80,7 +97,7 @@ function MapUtils:RefreshCoords()
 	if updater == nil then return end
 	updater.player:Hide()
 	updater.cursor:Hide()
-	local enabled = MapUtils:GetConfig("COORDSIMPROVEMENTS", true) == true
+	local enabled = MapUtils:GetConfig("COORDSIMPROVEMENTS", true) == true or not MapUtils:HasCoordsCVar("worldMapShowPlayerCoords")
 	RefreshNativeCoords(enabled)
 	if not enabled then return end
 	local map = WorldMapFrame

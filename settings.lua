@@ -116,7 +116,7 @@ local function GetCVarValue(cvar)
 end
 
 local function AddCVarCheckbox(cvar, label, added)
-	if GetCVarValue(cvar) == nil then return end
+	if GetCVarValue(cvar) == nil then return AddCheckbox(strupper(cvar), MapUtils:GetCoordsOptionDefault(cvar), function() MapUtils:RefreshCoords() end, label, added) end
 	cvarCheckboxes[strlower(cvar)] = maset:AddCheckbox(
 		{
 			["label"] = label,
@@ -136,10 +136,7 @@ local function AddCVarCheckbox(cvar, label, added)
 end
 
 local function IsAnyCoordsShown()
-	local player, cursor = GetCVarValue("worldMapShowPlayerCoords"), GetCVarValue("worldMapShowCursorCoords")
-	if player == nil and cursor == nil then return true end
-
-	return player == "1" or cursor == "1"
+	return MapUtils:IsCoordsOptionEnabled("worldMapShowPlayerCoords") or MapUtils:IsCoordsOptionEnabled("worldMapShowCursorCoords")
 end
 
 local function AddTooltip(control, titleKey, textKey)
@@ -305,7 +302,7 @@ function MapUtils:InitSetting()
 	AddCategory("MAPLABELS", 2)
 	AddCVarCheckbox("worldMapShowPlayerCoords", "LID_SHOWPLAYERCOORDS", ADDED_1019)
 	AddCVarCheckbox("worldMapShowCursorCoords", "LID_SHOWCURSORCOORDS", ADDED_1019)
-	maset:AddDependency(AddCheckbox("COORDSIMPROVEMENTS", true, function() MapUtils:RefreshCoords() end, nil, "2026-10-06"), IsAnyCoordsShown)
+	if MapUtils:HasCoordsCVar("worldMapShowPlayerCoords") then maset:AddDependency(AddCheckbox("COORDSIMPROVEMENTS", true, function() MapUtils:RefreshCoords() end, nil, "2026-10-06"), IsAnyCoordsShown) end
 	maset:AddDependency(AddCVarCheckbox("coordsByTenths", "LID_COORDSBYTENTHS", ADDED_1019), IsAnyCoordsShown)
 	AddCheckbox("ZONELEVELS", true)
 	AddCheckbox("ZONERECLEVELS", true, nil, nil, "2026-10-02")

@@ -233,8 +233,9 @@ local DEFAULT_CROSSING_ICON = "Interface\\Icons\\INV_Misc_Map_01"
 local MEETING_STONE_ICON = "Interface\\AddOns\\MapUtils\\media\\meetingstone"
 local TRANSPORT_ICONS = {}
 TRANSPORT_ICONS["ship"] = "ShipMissionIcon-Training-Map"
-TRANSPORT_ICONS["zeppelin"] = "ShipMissionIcon-Training-Map"
-TRANSPORT_ICONS["tram"] = "Interface\\AddOns\\MapUtils\\media\\transport_tram"
+TRANSPORT_ICONS["zeppelin"] = "Interface\\AddOns\\MapUtils\\media\\pier_zeppelin_orc"
+TRANSPORT_ICONS["zeppelin_undead"] = "Interface\\AddOns\\MapUtils\\media\\pier_zeppelin_undead"
+TRANSPORT_ICONS["tram"] = "Interface\\AddOns\\MapUtils\\media\\pier_tram"
 local DEFAULT_FLIGHT_ICON = "Interface\\TaxiFrame\\UI-Taxi-Icon-Green"
 local FLIGHT_ICONS = {}
 FLIGHT_ICONS["Alliance"] = "TaxiNode_Alliance"
@@ -309,6 +310,7 @@ piers[1420] = {
 		["y"] = 0.588,
 		["faction"] = "Horde",
 		["transport"] = "zeppelin",
+		["iconStyle"] = "undead",
 		["routes"] = {
 			{
 				["dest"] = "Orgrimmar",
@@ -322,6 +324,7 @@ piers[1420] = {
 		["y"] = 0.591,
 		["faction"] = "Horde",
 		["transport"] = "zeppelin",
+		["iconStyle"] = "undead",
 		["routes"] = {
 			{
 				["dest"] = "Grom'gol Base Camp",
@@ -591,6 +594,8 @@ piers[1453] = {
 		["x"] = 0.616,
 		["y"] = 0.107,
 		["forever"] = {0.6901, 0.3071},
+		["track"] = {0.677, 0.048},
+		["foreverTrack"] = {0.7206, 0.2815},
 		["transport"] = "tram",
 		["platform"] = 1,
 		["routes"] = {
@@ -607,6 +612,7 @@ piers[1455] = {
 		["name"] = "Tinker Town",
 		["x"] = 0.76676,
 		["y"] = 0.51133,
+		["track"] = {0.845, 0.532},
 		["transport"] = "tram",
 		["platform"] = 2,
 		["routes"] = {
@@ -638,6 +644,7 @@ for mapID, list in pairs(piers) do
 	list = kept
 	for _, pier in ipairs(list) do
 		if pier.forever ~= nil and MapUtils:IsForever() then pier.x, pier.y = pier.forever[1], pier.forever[2] end
+		if pier.foreverTrack ~= nil and MapUtils:IsForever() then pier.track = pier.foreverTrack end
 		pier.name = MapUtils:TransName(pier.name)
 		local info = pier.nameMapID and C_Map.GetMapInfo(pier.nameMapID)
 		if info and info.name and info.name ~= "" then pier.name = info.name end
@@ -1406,6 +1413,21 @@ local function GetEntryWorldPos(mapID, entry)
 	return entry.worldPos
 end
 
+function MapUtils:GetTransportPlatformWorldPos(kind, number)
+	for mapID, list in pairs(piers) do
+		for _, entry in ipairs(list) do
+			if entry.transport == kind and entry.platform == number then
+				local rect = GetMapRect(mapID)
+				if rect ~= nil and entry.track ~= nil then return rect.continentID, CreateVector2D(rect[1].x + rect[2].x * entry.track[2], rect[1].y + rect[2].y * entry.track[1]) end
+				local pos = GetEntryWorldPos(mapID, entry)
+				if pos ~= nil and rect ~= nil then return rect.continentID, pos end
+			end
+		end
+	end
+
+	return nil
+end
+
 local function GetMapName(mapID)
 	if mapID == nil then return "no uiMapID" end
 	if C_Map == nil or C_Map.GetMapInfo == nil then return "no C_Map" end
@@ -1490,7 +1512,8 @@ local function GetEntryIcon(entry)
 	if entry.kind == "spirithealer" then return "Interface\\AddOns\\MapUtils\\media\\" .. (MapUtils:GetConfig("SPIRITHEALERSTYLE", "NORMAL") == "CHIBI" and "spirithealer_chibi" or "spirithealer") end
 	if entry.kind == "crossing" then return GetCrossingIcon(entry.up) end
 	if entry.kind == nil and (MAUTTAB == nil or MAUTTAB["icon"] == nil or MAUTTAB["icon"] == "") then
-		local icon = TRANSPORT_ICONS[entry.transport or "ship"]
+		local key = entry.transport or "ship"
+		local icon = entry.iconStyle ~= nil and TRANSPORT_ICONS[key .. "_" .. entry.iconStyle] or TRANSPORT_ICONS[key]
 		if icon ~= nil and (IsAtlas(icon) or string.find(icon, "\\", 1, true)) then return icon end
 
 		return GetIcon(entry.faction)
@@ -2681,6 +2704,7 @@ function PinCache.CreateMergedPier(parts, x, y)
 	local first = parts[1].entry
 	local merged = {
 		["transport"] = first.transport,
+		["iconStyle"] = first.iconStyle,
 		["faction"] = first.faction,
 		["x"] = x,
 		["y"] = y,
