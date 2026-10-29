@@ -61,6 +61,7 @@ transports.lua
 discovery.lua
 gathernodes.lua
 questturnins.lua
+guildmembers.lua
 zonelevels.lua
 data\classic\instancepins.lua
 instancemap.lua

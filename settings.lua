@@ -250,6 +250,10 @@ function MapUtils:InitSetting()
 	if MapUtils.RefreshCommChannel then AddTooltip(AddCheckbox("COMMCHANNEL", true, function() MapUtils:RefreshCommChannel() end, nil, "2026-10-28"), "LID_COMMCHANNEL", "LID_COMMCHANNELDESC") end
 	AddCategory("WORLDMAP", nil, nil, ADDED_0927)
 	if MapUtils.RefreshQuestTurnIns then AddCheckbox("QUESTTURNINWORLDMAPPINS", true, function() MapUtils:RefreshQuestTurnIns() end, nil, "2026-10-07") end
+	if MapUtils.RefreshGuildMembers then
+		AddTooltip(AddCheckbox("GUILDMEMBERPINS", true, function() MapUtils:RefreshGuildMembers() end, nil, "2026-10-29"), "LID_GUILDMEMBERPINS", "LID_GUILDMEMBERPINSDESC")
+		AddTooltip(AddCheckbox("GUILDMEMBERSHARE", true, function() MapUtils:RefreshGuildMembers() end, nil, "2026-10-29"), "LID_GUILDMEMBERSHARE", "LID_GUILDMEMBERSHAREDESC")
+	end
 	if MapUtils:IsForever() then AddCheckbox("REMEMBERQUESTCATEGORIES", true, function() MapUtils:RestoreQuestCategories() end) end
 	AddCategory("MAPWINDOW", 2, nil, ADDED_0927)
 	local byMoveAny = MapUtils:IsWorldMapByMoveAny()
