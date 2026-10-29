@@ -2,8 +2,20 @@ local _, MapUtils = ...
 local GatherNodes = {
 	optionKey = "GATHERNODEMINIMAPICONS",
 	learnedKey = "GATHERNODENAMES",
-	herbItems = {765, 785, 2447, 2449, 2450, 2453, 3355, 3356, 3357, 3358, 3369, 3818, 3819, 3820, 3821, 4625, 8831, 8836, 8838, 8839, 8845, 8846, 13463, 13464, 13465, 13466, 13467, 13468},
+	herbItems = {765, 785, 2447, 2449, 2450, 2453, 3355, 3356, 3357, 3358, 3369, 3818, 3819, 3820, 3821, 4625, 8831, 8836, 8838, 8839, 8845, 8846, 13463, 13464, 13465, 13466, 13467, 13468, 22785, 22786, 22787, 22788, 22789, 22790, 22791, 22792, 22793, 36901, 36903, 36904, 36905, 36906, 36907, 52983, 52984, 52985, 52986, 52987, 52988, 72234, 72235, 72237, 72238, 79010, 79011},
 	oreNames = {
+		{"fel iron deposit", 23424},
+		{"ghost iron deposit", 72092},
+		{"adamantite deposit", 23425},
+		{"khorium vein", 23426},
+		{"nethercite deposit", 32464},
+		{"cobalt deposit", 36909},
+		{"saronite deposit", 36912},
+		{"titanium vein", 36910},
+		{"obsidium deposit", 53038},
+		{"elementium vein", 52185},
+		{"pyrite deposit", 52183},
+		{"kyparite deposit", 72093},
 		{"dark iron deposit", 11370},
 		{"truesilver deposit", 7911},
 		{"mithril deposit", 3858},
@@ -30,6 +42,16 @@ local GatherNodes = {
 	iconSize = 14,
 	edge = 4,
 	maxIcons = 40,
+	mergePixels = 12,
+	blipLook = {
+		cell = 14,
+		iconSize = 20,
+		ringScale = 0.85,
+		holeX = 20.59,
+		holeY = 19.91,
+		ring = "Interface\\AddOns\\MapUtils\\media\\blipring"
+	},
+	oreItems = {},
 	mask = "Interface\\CharacterFrame\\TempPortraitAlphaMask",
 	knownItems = {},
 	herbNames = {},
@@ -52,6 +74,7 @@ end
 
 for _, entry in ipairs(GatherNodes.oreNames) do
 	GatherNodes.knownItems[entry[2]] = true
+	GatherNodes.oreItems[entry[2]] = true
 end
 
 function GatherNodes.IsSecret(...)
@@ -72,7 +95,7 @@ function MapUtils:CanShowGatherNodes()
 end
 
 function GatherNodes.IsEnabled()
-	return GatherNodes.CanScan() and MapUtils:GetConfig(GatherNodes.optionKey, true) == true
+	return (GatherNodes.CanScan() or GatherNodes.UsesBlips()) and MapUtils:GetConfig(GatherNodes.optionKey, true) == true
 end
 
 function GatherNodes.IsController()
@@ -106,16 +129,31 @@ function GatherNodes.GetItemIcon(itemID)
 	return nil
 end
 
+function GatherNodes.GetItemInstant(itemID)
+	if C_Item ~= nil and C_Item.GetItemInfoInstant ~= nil then return C_Item.GetItemInfoInstant(itemID) end
+	if GetItemInfoInstant ~= nil then return GetItemInfoInstant(itemID) end
+
+	return nil
+end
+
+function GatherNodes.ItemExists(itemID)
+	if (C_Item == nil or C_Item.GetItemInfoInstant == nil) and GetItemInfoInstant == nil then return true end
+
+	return GatherNodes.GetItemInstant(itemID) ~= nil
+end
+
 function GatherNodes.LoadHerbNames()
 	if not GatherNodes.herbNamesMissing then return end
 	local missing = false
 	for _, itemID in ipairs(GatherNodes.herbItems) do
-		local name = GatherNodes.GetItemName(itemID)
-		if type(name) == "string" and not GatherNodes.IsSecret(name) and name ~= "" then
-			GatherNodes.herbNames[strlower(name)] = itemID
-		else
-			missing = true
-			if C_Item ~= nil and C_Item.RequestLoadItemDataByID ~= nil then C_Item.RequestLoadItemDataByID(itemID) end
+		if GatherNodes.ItemExists(itemID) then
+			local name = GatherNodes.GetItemName(itemID)
+			if type(name) == "string" and not GatherNodes.IsSecret(name) and name ~= "" then
+				GatherNodes.herbNames[strlower(name)] = itemID
+			else
+				missing = true
+				if C_Item ~= nil and C_Item.RequestLoadItemDataByID ~= nil then C_Item.RequestLoadItemDataByID(itemID) end
+			end
 		end
 	end
 
@@ -404,9 +442,41 @@ function GatherNodes.UpdateScan()
 	if scan.index >= scan.side * scan.side then GatherNodes.FinishScan(scan) end
 end
 
+function GatherNodes.CreateBlipIcon()
+	local blip = GatherNodes.blipLook
+	local unit = blip.cell / 32
+	local icon = CreateFrame("Frame", nil, GatherNodes.overlay)
+	icon:SetSize(blip.cell, blip.cell)
+	icon:EnableMouse(false)
+	icon.texture = icon:CreateTexture(nil, "ARTWORK")
+	icon.texture:SetPoint("CENTER")
+	icon.texture:SetSize(blip.iconSize * unit, blip.iconSize * unit)
+	if icon.CreateMaskTexture ~= nil then
+		icon.mask = icon:CreateMaskTexture()
+		icon.mask:SetTexture(GatherNodes.mask, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+		icon.mask:SetAllPoints(icon.texture)
+		icon.texture:AddMaskTexture(icon.mask)
+	end
+
+	local ringSize = 64 * blip.ringScale * unit
+	icon.ring = icon:CreateTexture(nil, "OVERLAY")
+	icon.ring:SetTexture(blip.ring)
+	icon.ring:SetSize(ringSize, ringSize)
+	icon.ring:SetPoint("TOPLEFT", icon, "CENTER", -blip.holeX * blip.ringScale * unit, blip.holeY * blip.ringScale * unit)
+
+	return icon
+end
+
 function GatherNodes.GetIcon(index)
 	local icon = GatherNodes.icons[index]
 	if icon ~= nil then return icon end
+	if GatherNodes.UsesBlips() then
+		icon = GatherNodes.CreateBlipIcon()
+		GatherNodes.icons[index] = icon
+
+		return icon
+	end
+
 	local size = GatherNodes.iconSize
 	icon = CreateFrame("Frame", nil, GatherNodes.overlay)
 	icon:SetSize(size, size)
@@ -480,8 +550,121 @@ function GatherNodes.OnUpdate()
 		return
 	end
 
-	GatherNodes.UpdateScan()
+	if GatherNodes.CanScan() then
+		GatherNodes.UpdateScan()
+	else
+		GatherNodes.UpdateHover()
+	end
+
 	GatherNodes.UpdateIcons()
+end
+
+function GatherNodes.KindOf(itemID)
+	if GatherNodes.oreItems[itemID] then return "ore" end
+	local _, _, _, _, _, classID, subclassID = GatherNodes.GetItemInstant(itemID)
+	if classID == GatherNodes.tradeGoods and subclassID == GatherNodes.metalSubclass then return "ore" end
+
+	return "herbs"
+end
+
+function GatherNodes.TooltipSignature()
+	local parts = {}
+	for index = 1, GameTooltip:NumLines() do
+		local line = _G["GameTooltipTextLeft" .. index]
+		local text = line ~= nil and line:GetText() or nil
+		if type(text) == "string" and not GatherNodes.IsSecret(text) then tinsert(parts, text) end
+	end
+
+	return table.concat(parts, "\n")
+end
+
+function GatherNodes.ReadTooltipItem()
+	if not GameTooltip:IsShown() then return nil end
+	local found = nil
+	for index = 1, GameTooltip:NumLines() do
+		local line = _G["GameTooltipTextLeft" .. index]
+		local text = line ~= nil and line:GetText() or nil
+		if type(text) == "string" and not GatherNodes.IsSecret(text) then
+			for _, itemID in ipairs(GatherNodes.ItemsIn(text)) do
+				if found ~= nil and found ~= itemID then return nil end
+				found = itemID
+			end
+		end
+	end
+
+	return found
+end
+
+function GatherNodes.CursorToWorld(wx, wy, facing)
+	local width = Minimap:GetWidth()
+	local centerX, centerY = Minimap:GetCenter()
+	local scale = Minimap:GetEffectiveScale()
+	local radius = GatherNodes.GetViewRadius()
+	if width == nil or width <= 0 or centerX == nil or scale == nil or scale <= 0 or radius == nil then return nil end
+	local cursorX, cursorY = GetCursorPosition()
+	local yardsPerUnit = radius / (width / 2)
+	local a = (cursorX / scale - centerX) * yardsPerUnit
+	local b = (cursorY / scale - centerY) * yardsPerUnit
+	local s = math.sin(facing)
+	local c = math.cos(facing)
+
+	return wx + s * a + c * b, wy + s * b - c * a, yardsPerUnit
+end
+
+function GatherNodes.Refine(node, x, y, mergeYards)
+	if (node.x - x) ^ 2 + (node.y - y) ^ 2 > mergeYards * mergeYards then return end
+	node.minX = math.min(node.minX, x)
+	node.maxX = math.max(node.maxX, x)
+	node.minY = math.min(node.minY, y)
+	node.maxY = math.max(node.maxY, y)
+	node.x = (node.minX + node.maxX) / 2
+	node.y = (node.minY + node.maxY) / 2
+end
+
+function GatherNodes.UpdateHover()
+	local wx, wy, instanceID = GatherNodes.GetPlayer()
+	local facing = GatherNodes.GetFacing()
+	local signature = nil
+	if wx ~= nil and facing ~= nil and not InCombatLockdown() and not IsInInstance() and Minimap:IsMouseOver() and GameTooltip:IsShown() then signature = GatherNodes.TooltipSignature() end
+	if signature ~= GatherNodes.lastSignature then
+		GatherNodes.activeNode = nil
+		GatherNodes.activeItem = nil
+		if signature ~= nil then
+			GatherNodes.LoadHerbNames()
+			GatherNodes.activeItem = GatherNodes.ReadTooltipItem()
+		end
+	end
+
+	GatherNodes.lastSignature = signature
+	local itemID = GatherNodes.activeItem
+	if signature ~= nil and itemID ~= nil then
+		local x, y, yardsPerUnit = GatherNodes.CursorToWorld(wx, wy, facing)
+		if x ~= nil then
+			local node = GatherNodes.activeNode
+			if node == nil then
+				GatherNodes.activeNode = {
+					item = itemID,
+					x = x,
+					y = y,
+					minX = x,
+					maxX = x,
+					minY = y,
+					maxY = y
+				}
+			else
+				GatherNodes.Refine(node, x, y, GatherNodes.mergePixels * yardsPerUnit)
+			end
+		end
+	end
+
+	local node = GatherNodes.activeNode
+	if node ~= nil and GatherNodes.KindOf(node.item) == GatherNodes.GetTrackedKind() then
+		GatherNodes.nodes = {node}
+	else
+		GatherNodes.nodes = {}
+	end
+
+	GatherNodes.instanceID = instanceID
 end
 
 function GatherNodes.Refresh()
@@ -570,22 +753,6 @@ function GatherNodes.OnEvent(_, event, ...)
 	end
 end
 
-if GatherNodes.CanScan() then
-	GatherNodes.overlay = CreateFrame("Frame", nil, Minimap)
-	GatherNodes.overlay:SetAllPoints(Minimap)
-	GatherNodes.overlay:SetFrameLevel(Minimap:GetFrameLevel() + 5)
-	GatherNodes.overlay:EnableMouse(false)
-	GatherNodes.overlay:SetScript("OnUpdate", GatherNodes.OnUpdate)
-	GatherNodes.overlay:Hide()
-	GatherNodes.eventFrame = CreateFrame("Frame")
-	GatherNodes.eventFrame:RegisterEvent("PLAYER_LOGIN")
-	GatherNodes.eventFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
-	GatherNodes.eventFrame:RegisterEvent("UNIT_SPELLCAST_SENT")
-	GatherNodes.eventFrame:RegisterEvent("LOOT_OPENED")
-	GatherNodes.eventFrame:RegisterEvent("GET_ITEM_INFO_RECEIVED")
-	GatherNodes.eventFrame:SetScript("OnEvent", GatherNodes.OnEvent)
-end
-
 GatherNodes.blipFiles = {
 	herbs = "Interface\\AddOns\\MapUtils\\media\\blipherbs",
 	ore = "Interface\\AddOns\\MapUtils\\media\\blipore",
@@ -660,4 +827,20 @@ if GatherNodes.UsesBlips() then
 	GatherNodes.blipFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
 	GatherNodes.blipFrame:RegisterEvent("MINIMAP_UPDATE_TRACKING")
 	GatherNodes.blipFrame:SetScript("OnEvent", GatherNodes.UpdateBlips)
+end
+
+if GatherNodes.CanScan() or GatherNodes.UsesBlips() then
+	GatherNodes.overlay = CreateFrame("Frame", nil, Minimap)
+	GatherNodes.overlay:SetAllPoints(Minimap)
+	GatherNodes.overlay:SetFrameLevel(Minimap:GetFrameLevel() + 5)
+	GatherNodes.overlay:EnableMouse(false)
+	GatherNodes.overlay:SetScript("OnUpdate", GatherNodes.OnUpdate)
+	GatherNodes.overlay:Hide()
+	GatherNodes.eventFrame = CreateFrame("Frame")
+	GatherNodes.eventFrame:RegisterEvent("PLAYER_LOGIN")
+	GatherNodes.eventFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
+	GatherNodes.eventFrame:RegisterEvent("UNIT_SPELLCAST_SENT")
+	GatherNodes.eventFrame:RegisterEvent("LOOT_OPENED")
+	GatherNodes.eventFrame:RegisterEvent("GET_ITEM_INFO_RECEIVED")
+	GatherNodes.eventFrame:SetScript("OnEvent", GatherNodes.OnEvent)
 end
