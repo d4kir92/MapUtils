@@ -592,13 +592,27 @@ GatherNodes.blipFiles = {
 	default = "Interface\\Minimap\\ObjectIconsAtlas"
 }
 
+GatherNodes.blipFilesMists = {
+	herbs = "Interface\\AddOns\\MapUtils\\media\\blipherbs_mists",
+	ore = "Interface\\AddOns\\MapUtils\\media\\blipore_mists",
+	default = "Interface\\Minimap\\ObjectIconsAtlas"
+}
+
 GatherNodes.blipSpells = {
 	herbs = 2383,
 	ore = 2580
 }
 
+function GatherNodes.GetBlipFiles()
+	if WOW_PROJECT_ID == nil then return nil end
+	if WOW_PROJECT_ID == WOW_PROJECT_CLASSIC or WOW_PROJECT_ID == WOW_PROJECT_BURNING_CRUSADE_CLASSIC then return GatherNodes.blipFiles end
+	if WOW_PROJECT_ID == WOW_PROJECT_MISTS_CLASSIC then return GatherNodes.blipFilesMists end
+
+	return nil
+end
+
 function GatherNodes.UsesBlips()
-	return not GatherNodes.CanScan() and Minimap ~= nil and Minimap.SetBlipTexture ~= nil and WOW_PROJECT_ID ~= nil and WOW_PROJECT_ID == WOW_PROJECT_CLASSIC
+	return not GatherNodes.CanScan() and Minimap ~= nil and Minimap.SetBlipTexture ~= nil and GatherNodes.GetBlipFiles() ~= nil
 end
 
 function GatherNodes.GetSpellTexture(spellID)
@@ -633,7 +647,7 @@ function GatherNodes.UpdateBlips()
 	if not GatherNodes.UsesBlips() then return end
 	local kind = nil
 	if MapUtils:GetConfig(GatherNodes.optionKey, true) == true then kind = GatherNodes.GetTrackedKind() end
-	local file = GatherNodes.blipFiles[kind or "default"]
+	local file = GatherNodes.GetBlipFiles()[kind or "default"]
 	if file == GatherNodes.blipCurrent or kind == nil and GatherNodes.blipCurrent == nil then return end
 	GatherNodes.blipCurrent = file
 	Minimap:SetBlipTexture(file)
