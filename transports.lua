@@ -602,11 +602,7 @@ function Transport.Record()
 	if log == nil then return end
 	local u1, u2, _, instance = UnitPosition("player")
 	if u1 == nil or Transport.IsSecret(u1, u2, instance) then return end
-	local last = Transport.lastLog
-	Transport.lastLog = {u2, u1, instance}
-	if last == nil or last[3] ~= instance then return end
-	local moved = math.sqrt((u2 - last[1]) ^ 2 + (u1 - last[2]) ^ 2)
-	if moved <= Transport.minMove or moved > Transport.maxMove or UnitOnTaxi("player") then return end
+	if UnitOnTaxi("player") then return end
 	local id, index, distance = Transport.NearestTrigger(instance, u2, u1)
 	if #log >= Transport.logLimit then table.remove(log, 1) end
 	tinsert(log, format("%d:%.1f:%.1f:%d:%s:%d:%d:%.0f:%s", GetServerTime(), u2, u1, instance, tostring(Transport.GetCurrentZone() or 0), id, index, math.min(distance, 99999), IsSwimming() and "s" or "-"))
@@ -616,7 +612,6 @@ function MapUtils:ToggleTransportLog()
 	if type(MAUTTAB) ~= "table" then return end
 	if type(MAUTTAB.TRANSPORTLOG) ~= "table" then MAUTTAB.TRANSPORTLOG = {} end
 	MAUTTAB.TRANSPORTLOG.on = not MAUTTAB.TRANSPORTLOG.on
-	Transport.lastLog = nil
 	local log = MAUTTAB.TRANSPORTLOG[MapUtils:GetFlavor() or "unknown"]
 	MapUtils:INFO(format("Transport log %s (%d entries, saved on /reload or logout)", MAUTTAB.TRANSPORTLOG.on and "ON" or "OFF", type(log) == "table" and #log or 0))
 end

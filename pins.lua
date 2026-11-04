@@ -478,7 +478,7 @@ piers[1439] = {
 		["name"] = "Auberdine",
 		["minBuildNr"] = 20000,
 		["faction"] = "Neutral",
-		["x"] = 0.3,
+		["x"] = 0.308,
 		["y"] = 0.41,
 		["routes"] = {
 			{
@@ -494,8 +494,8 @@ piers[1943] = {
 		["nameMapID"] = 1943,
 		["minBuildNr"] = 20000,
 		["faction"] = "Alliance",
-		["x"] = 0.2,
-		["y"] = 0.54,
+		["x"] = 0.205,
+		["y"] = 0.602,
 		["routes"] = {
 			{
 				["dest"] = "Auberdine",
