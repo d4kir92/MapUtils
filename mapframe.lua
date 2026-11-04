@@ -597,6 +597,7 @@ end
 
 function SmoothZoom.GetMaxScale(container)
 	local maxScale = container:GetScaleForMaxZoom()
+	if container.mapID == 1458 then return math.max(maxScale, container:GetScaleForMinZoom() * SmoothZoom.zoneZoom) end
 	if not SmoothZoom.IsSpace(container.mapID) then return maxScale end
 	local info = C_Map.GetMapInfo(container.mapID)
 	local zoom = (info and info.mapType == Enum.UIMapType.Zone) and SmoothZoom.zoneZoom or SmoothZoom.spaceZoom

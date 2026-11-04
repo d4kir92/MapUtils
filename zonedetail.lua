@@ -860,8 +860,8 @@ local function Update(force)
 	MinimapLayer.frame:SetAllPoints(container)
 	MinimapLayer.frame:SetFrameLevel(level + 4)
 	MinimapLayer.frame:Show()
-	for _, city in pairs(cities) do
-		city.frame:SetFrameLevel(level + 3)
+	for cityMapID, city in pairs(cities) do
+		city.frame:SetFrameLevel(level + (cityMapID == 1458 and 5 or 3))
 	end
 
 	container:Show()
@@ -1154,6 +1154,59 @@ function MapUtils:AddMinimapLOD(dataFlavor, instance, group, data)
 	}
 end
 
+function MinimapLayer.UpdateUndercity()
+	local scroll = WorldMapFrame.ScrollContainer
+	local style = type(MAUTTAB) == "table" and MAUTTAB["MAPSTYLE"] or "MIXED"
+	local flavor = MapUtils:GetFlavor()
+	if WorldMapFrame:GetMapID() ~= 1458 or not MapUtils:IsOneMap() or style == "MAP" or flavor ~= "era" and flavor ~= "tbc" and flavor ~= "forever" then
+		if MinimapLayer.undercity ~= nil then MinimapLayer.undercity:Hide() end
+
+		return
+	end
+
+	local width, height = scroll.Child:GetSize()
+	local scale, minScale = scroll:GetCanvasScale(), scroll:GetScaleForMinZoom()
+	if width == nil or height == nil or width <= 0 or height <= 0 or scale == nil or minScale == nil or minScale <= 0 then return end
+	local frame = MinimapLayer.undercity
+	if frame == nil then
+		frame = CreateFrame("FRAME", nil, scroll.Child)
+		frame:EnableMouse(false)
+		frame.texture = frame:CreateTexture(nil, "ARTWORK")
+		frame.texture:SetTexture("Interface\\AddOns\\MapUtils\\media\\undercity-detail", nil, nil, "TRILINEAR")
+		frame.texture:SetAllPoints(frame)
+		frame.texture:SetDesaturation(MinimapLayer.desaturation)
+		frame.texture:SetVertexColor(unpack(MinimapLayer.tint))
+		MinimapLayer.undercity = frame
+	end
+
+	if frame.width ~= width or frame.height ~= height then
+		local firstInstance, first = C_Map.GetWorldPosFromMapPos(1458, CreateVector2D(0, 0))
+		local lastInstance, last = C_Map.GetWorldPosFromMapPos(1458, CreateVector2D(1, 1))
+		if first == nil or last == nil or firstInstance ~= 0 or lastInstance ~= 0 then
+			frame:Hide()
+
+			return
+		end
+
+		local north, west = first:GetXY()
+		local south, east = last:GetXY()
+		if north <= south or west <= east then
+			frame:Hide()
+
+			return
+		end
+
+		frame:ClearAllPoints()
+		frame:SetPoint("TOPLEFT", scroll.Child, "TOPLEFT", (west - 924) / (west - east) * width, -(north - 2124) / (north - south) * height)
+		frame:SetSize(1024 / (west - east) * width, 1024 / (north - south) * height)
+		frame.width, frame.height = width, height
+	end
+
+	frame:SetFrameLevel(scroll.Child:GetFrameLevel() + FRAME_LEVEL_OFFSET + 5)
+	frame:SetAlpha(style == "TERRAIN" and 1 or math.max(0, math.min(1, (scale / minScale - 1.1) / 1.4)))
+	frame:Show()
+end
+
 function MinimapLayer.Update()
 	if container == nil or MinimapLayer.frame == nil then return end
 	local style = type(MAUTTAB) == "table" and MAUTTAB["MAPSTYLE"] or "MIXED"
@@ -1375,6 +1428,7 @@ local function Install()
 			SyncBlizzardArt()
 			UpdateCityAlpha()
 			MinimapLayer.Update()
+			MinimapLayer.UpdateUndercity()
 		end
 	)
 
