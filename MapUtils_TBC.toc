@@ -52,6 +52,7 @@ flavor.lua
 data\classic\instances.lua
 data\tbc\instances.lua
 data\classic\transports.lua
+data\tbc\transports.lua
 core.lua
 comm.lua
 pins.lua

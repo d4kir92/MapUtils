@@ -495,7 +495,7 @@ piers[1943] = {
 		["minBuildNr"] = 20000,
 		["faction"] = "Alliance",
 		["x"] = 0.205,
-		["y"] = 0.602,
+		["y"] = 0.542,
 		["routes"] = {
 			{
 				["dest"] = "Auberdine",

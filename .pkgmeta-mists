@@ -28,6 +28,7 @@ ignore:
   - data/tbc/minimaptiles.lua
   - data/tbc/questgivers.lua
   - data/tbc/revealdata.lua
+  - data/tbc/transports.lua
   - data/tbc/zonemasks.lua
   - data/wrath/questgivers.lua
   - media/2959.blp
