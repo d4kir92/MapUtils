@@ -16,6 +16,18 @@ local MASK_PATH = "Interface\\AddOns\\MapUtils\\media\\zonemasks\\"
 local EDGE_PATH = MASK_PATH .. "edge"
 local ROUND_PATH = MASK_PATH .. "round"
 local CITY_FADE = {0.05, 0.2}
+local TILE_SHIFTS = {
+	["tbc"] = {
+		[1414530] = {165.6, 0}
+	}
+}
+local ART_SHIFTS = {
+	["tbc"] = {
+		[1943] = -0.061,
+		[1947] = -0.235,
+		[1950] = -0.0761
+	}
+}
 local UNDERGROUND = {
 	[1455] = true,
 	[1458] = true
@@ -297,8 +309,17 @@ local function GetArtMask(mapID)
 	return artID and list[artID] or nil
 end
 
+local function ArtRect(mapID, space)
+	local left, right, top, bottom = RectOn(mapID, space)
+	if left == nil then return nil end
+	local flavorShifts = ART_SHIFTS[MapUtils:GetFlavor() or ""]
+	local shift = flavorShifts and flavorShifts[mapID] and flavorShifts[mapID] * (bottom - top) or 0
+
+	return left, right, top + shift, bottom + shift, shift
+end
+
 local function DrawZone(continentID, continentRect, mapID, mode, width, height)
-	local left, right, top, bottom = RectOn(mapID, container.space)
+	local left, right, top, bottom, shift = ArtRect(mapID, container.space)
 	if left == nil or right <= left or bottom <= top then return end
 	local layers = C_Map.GetMapArtLayers(mapID)
 	local layer = layers and layers[1]
@@ -337,7 +358,7 @@ local function DrawZone(continentID, continentRect, mapID, mode, width, height)
 			{
 				["file"] = highlight.file,
 				["x"] = continentRect[1] + highlight.x * continentWidth,
-				["y"] = continentRect[3] + highlight.y * continentHeight,
+				["y"] = continentRect[3] + highlight.y * continentHeight + shift,
 				["width"] = highlight.width * continentWidth,
 				["height"] = highlight.height * continentHeight
 			},
@@ -605,7 +626,7 @@ local function DrawTileLayer(pool, mapID, offsetX, offsetY, scale, drawLayer, ma
 end
 
 local function DrawCity(mapID, width, height)
-	local left, right, top, bottom = RectOn(mapID, container.space)
+	local left, right, top, bottom = ArtRect(mapID, container.space)
 	if left == nil or right <= left or bottom <= top then return end
 	local layers = C_Map.GetMapArtLayers(mapID)
 	local layer = layers and layers[1]
@@ -987,6 +1008,12 @@ function MinimapLayer.GetTransform(source)
 	local a, b = (du1 * dY2 - dY1 * du2) / denominator, (dX1 * du2 - du1 * dX2) / denominator
 	local c, d = (dv1 * dY2 - dY1 * dv2) / denominator, (dX1 * dv2 - dv1 * dX2) / denominator
 	transform = {points[1][3] - a * points[1][1] - b * points[1][2], points[1][4] - c * points[1][1] - d * points[1][2], a, b, c, d}
+	local flavorShifts = TILE_SHIFTS[MapUtils:GetFlavor() or ""]
+	local shift = flavorShifts and flavorShifts[source.id]
+	if shift ~= nil then
+		transform[1] = transform[1] + a * shift[1] + b * shift[2]
+		transform[2] = transform[2] + c * shift[1] + d * shift[2]
+	end
 	local det = a * d - b * c
 	if det == 0 then return nil end
 	transform[7] = det
@@ -1082,7 +1109,7 @@ function MinimapLayer.GetWaterMask(source, tileX, tileY, transform)
 	local mask = MinimapLayer.waterMasks[key]
 	if mask == nil then
 		mask = MinimapLayer.frame:CreateMaskTexture()
-		mask:SetTexture(MinimapLayer.lodPath .. name, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+		mask:SetTexture(MinimapLayer.lodPath .. name, "CLAMP", "CLAMP")
 		local size = lod.group * MinimapLayer.tile
 		local northX, westY = (32 - row * lod.group) * MinimapLayer.tile, (32 - col * lod.group) * MinimapLayer.tile
 		local u1, v1 = MinimapLayer.ToWorld(transform, northX, westY)
@@ -1291,6 +1318,20 @@ function MapUtils:PrintMinimapTileDebug()
 				MinimapLayer.DebugLine("  sample instances: " .. table.concat(samples, ","))
 				local transform = MinimapLayer.transforms[source.id]
 				if transform then MinimapLayer.DebugLine(format("  transform %.6g %.6g %.6g %.6g %.6g %.6g", transform[1], transform[2], transform[3], transform[4], transform[5], transform[6])) end
+			end
+
+			for _, child in ipairs(C_Map.GetMapChildrenInfo(continentID, Enum.UIMapType.Zone, false) or {}) do
+				local childInstance, topLeft = C_Map.GetWorldPosFromMapPos(child.mapID, CreateVector2D(0, 0))
+				local _, bottomRight = C_Map.GetWorldPosFromMapPos(child.mapID, CreateVector2D(1, 1))
+				if childInstance ~= nil and childInstance ~= MinimapLayer.instances[continentID] and topLeft ~= nil and bottomRight ~= nil then
+					local rects = {}
+					for _, space in ipairs({continentID, SPACE_OF[continentID]}) do
+						local left, right, top, bottom = RectOn(child.mapID, space)
+						tinsert(rects, format("on %s %s", tostring(space), left and format("%.5f %.5f %.5f %.5f", left, right, top, bottom) or "nil"))
+					end
+
+					MinimapLayer.DebugLine(format("  child %d %s instance %s world %.1f %.1f / %.1f %.1f, %s", child.mapID, tostring(child.name), tostring(childInstance), topLeft.x, topLeft.y, bottomRight.x, bottomRight.y, table.concat(rects, ", ")))
+				end
 			end
 		end
 	end

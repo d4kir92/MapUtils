@@ -418,7 +418,52 @@ function Transport.GetOneMapProjections(mapID)
 		end
 	end
 
+	for _, extra in ipairs(Transport.GetOtherInstanceZones(space)) do
+		local l, r, t, b = C_Map.GetMapRectOnMap(extra.mapID, space)
+		if l ~= nil and r > l and b > t then
+			tinsert(
+				list,
+				{
+					rect = extra.rect,
+					ox = (l - hostL) / (hostR - hostL),
+					oy = (t - hostT) / (hostB - hostT),
+					sx = (r - l) / (hostR - hostL),
+					sy = (b - t) / (hostB - hostT)
+				}
+			)
+		end
+	end
+
 	list.minX, list.maxX, list.minY, list.maxY = minX, maxX, minY, maxY
+
+	return list
+end
+
+function Transport.GetOtherInstanceZones(space)
+	Transport.otherZones = Transport.otherZones or {}
+	if Transport.otherZones[space] ~= nil then return Transport.otherZones[space] end
+	local list, instances = {}, {}
+	for _, continentID in ipairs(MapUtils:GetZoneDetailContinents(space)) do
+		local rect = MapUtils.GetMapRect(continentID)
+		if rect ~= nil then instances[rect.continentID] = true end
+	end
+
+	for _, continentID in ipairs(MapUtils:GetZoneDetailContinents(space)) do
+		for _, child in ipairs(C_Map.GetMapChildrenInfo(continentID, Enum.UIMapType.Zone, false) or {}) do
+			local rect = MapUtils.GetMapRect(child.mapID)
+			if rect ~= nil and rect.continentID ~= nil and not instances[rect.continentID] then
+				tinsert(
+					list,
+					{
+						mapID = child.mapID,
+						rect = rect
+					}
+				)
+			end
+		end
+	end
+
+	Transport.otherZones[space] = list
 
 	return list
 end
@@ -426,10 +471,11 @@ end
 function Transport.GetProjections(mapID)
 	local list = Transport.GetOneMapProjections(mapID)
 	if list ~= nil and #list > 0 then return list end
+	Transport.projectionCache = Transport.projectionCache or {}
+	if Transport.projectionCache[mapID] ~= nil then return Transport.projectionCache[mapID] end
 	local rect = MapUtils.GetMapRect(mapID)
 	if rect == nil then return nil end
-
-	return {
+	local projections = {
 		{
 			rect = rect,
 			ox = 0,
@@ -442,6 +488,29 @@ function Transport.GetProjections(mapID)
 		minY = 0,
 		maxY = 1
 	}
+
+	for _, child in ipairs(C_Map.GetMapChildrenInfo(mapID, Enum.UIMapType.Zone, false) or {}) do
+		local childRect = MapUtils.GetMapRect(child.mapID)
+		if childRect ~= nil and childRect.continentID ~= nil and childRect.continentID ~= rect.continentID then
+			local l, r, t, b = C_Map.GetMapRectOnMap(child.mapID, mapID)
+			if l ~= nil and r > l and b > t then
+				tinsert(
+					projections,
+					{
+						rect = childRect,
+						ox = l,
+						oy = t,
+						sx = r - l,
+						sy = b - t
+					}
+				)
+			end
+		end
+	end
+
+	Transport.projectionCache[mapID] = projections
+
+	return projections
 end
 
 function Transport.Project(projections, instance, wx, wy)
