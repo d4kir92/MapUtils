@@ -1,10 +1,34 @@
 local _, MapUtils = ...
+function MapUtils:UpdateVisibleQuestPins(state)
+	wipe(state.pending)
+	if WorldMapFrame and WorldMapFrame.EnumeratePinsByTemplate then
+		for pin in WorldMapFrame:EnumeratePinsByTemplate("QuestPinTemplate") do
+			local questID = pin.GetQuestID and pin:GetQuestID() or pin.questID
+			if questID and not self:IsSecret(questID) and pin:IsVisible() and pin:GetAlpha() > 0 then state.pending[questID] = true end
+		end
+	end
+
+	local changed = false
+	for questID in pairs(state.current) do
+		if not state.pending[questID] then changed = true end
+	end
+
+	for questID in pairs(state.pending) do
+		if not state.current[questID] then changed = true end
+	end
+
+	state.current, state.pending = state.pending, state.current
+
+	return changed
+end
+
 if WorldMapFrame == nil or C_Map == nil or C_QuestLog == nil then return end
 if C_Map.GetMapChildrenInfo == nil or C_Map.GetMapRectOnMap == nil or C_QuestLog.GetQuestsOnMap == nil or C_QuestLog.ReadyForTurnIn == nil then return end
 local updater = CreateFrame("Frame", nil, WorldMapFrame)
 local pins = {}
 local entries = {}
 local seen = {}
+local nativeQuests = {current = {}, pending = {}}
 local mapTypes = {}
 local zoneChildren = {}
 local dirty = true
@@ -67,12 +91,6 @@ end
 local function CollectEntries(mapID)
 	wipe(entries)
 	wipe(seen)
-	if WorldMapFrame.EnumeratePinsByTemplate then
-		for pin in WorldMapFrame:EnumeratePinsByTemplate("QuestPinTemplate") do
-			local questID = pin.GetQuestID and pin:GetQuestID()
-			if pin:IsShown() and questID then seen[questID] = true end
-		end
-	end
 
 	for _, source in ipairs(GetZoneChildren(mapID)) do
 		for _, poi in ipairs(C_QuestLog.GetQuestsOnMap(source.mapID) or {}) do
@@ -177,6 +195,7 @@ local function UpdatePins()
 		lastMapID = mapID
 	end
 
+	MapUtils:UpdateVisibleQuestPins(nativeQuests)
 	for index, entry in ipairs(entries) do
 		local pin = pins[index]
 		if pin == nil then
@@ -200,7 +219,7 @@ local function UpdatePins()
 		pin:SetFrameLevel(canvas:GetFrameLevel() + 30)
 		pin:ClearAllPoints()
 		pin:SetPoint("CENTER", canvas, "TOPLEFT", width * entry.x, -height * entry.y)
-		pin:Show()
+		pin:SetShown(not nativeQuests.current[entry.questID])
 	end
 
 	for index = #entries + 1, #pins do

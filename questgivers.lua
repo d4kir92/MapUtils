@@ -38,6 +38,7 @@ local sources = {}
 local cells = {}
 local inLog = {}
 local complete = {}
+local nativeQuests = {current = {}, pending = {}}
 local skills = {}
 local player = {}
 local enabledCategories = {}
@@ -285,7 +286,7 @@ function QG.GetTurnIns(giver)
 	if not QG.showEnds or giver[5] == nil then return nil end
 	local quests = nil
 	for _, questID in ipairs(giver[5]) do
-		if complete[questID] then
+		if complete[questID] and not nativeQuests.current[questID] then
 			quests = quests or {}
 			tinsert(quests, questID)
 		end
@@ -568,6 +569,7 @@ function QG.Layout(canvas)
 end
 
 function QG.Update()
+	if MapUtils:UpdateVisibleQuestPins(nativeQuests) then dirty = true end
 	local mapID = WorldMapFrame:GetMapID()
 	local now = GetTime()
 	if mapID ~= lastMapID or (dirty and now - lastCollect >= COLLECT_DELAY) then
