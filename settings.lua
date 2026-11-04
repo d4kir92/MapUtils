@@ -211,6 +211,8 @@ local function HandleSlash(args)
 		MapUtils:ToggleInstanceMap()
 	elseif sub == "transports" and MapUtils.PrintTransports ~= nil then
 		MapUtils:PrintTransports()
+	elseif sub == "shiplog" and MapUtils.ToggleTransportLog ~= nil then
+		MapUtils:ToggleTransportLog()
 	else
 		MapUtils:ToggleSettings()
 	end

@@ -42,7 +42,8 @@ local Transport = {
 	minMove = 6.16,
 	commitMove = 17,
 	maxMove = 80,
-	triggerCooldown = 30
+	triggerCooldown = 30,
+	logLimit = 5000
 }
 
 MapUtils.Transport = Transport
@@ -572,7 +573,56 @@ function Transport.DirectionMatches(route, dx, dy, sx, sy)
 	return true
 end
 
+function Transport.GetLog()
+	if type(MAUTTAB) ~= "table" or type(MAUTTAB.TRANSPORTLOG) ~= "table" or not MAUTTAB.TRANSPORTLOG.on then return nil end
+	local flavor = MapUtils:GetFlavor() or "unknown"
+	if type(MAUTTAB.TRANSPORTLOG[flavor]) ~= "table" then MAUTTAB.TRANSPORTLOG[flavor] = {} end
+
+	return MAUTTAB.TRANSPORTLOG[flavor]
+end
+
+function Transport.NearestTrigger(instance, wx, wy)
+	local bestID, bestIndex, bestDistance = 0, 0, math.huge
+	for id, route in pairs(Transport.GetRoutes()) do
+		local d = Transport.decoded[id]
+		if d ~= nil then
+			for _, index in ipairs(d.trig) do
+				local ti, tx, ty = Transport.ToWorld(route, d, index, d.x[index], d.y[index])
+				local distance = ti == instance and math.sqrt((wx - tx) ^ 2 + (wy - ty) ^ 2) or math.huge
+				if distance < bestDistance then bestID, bestIndex, bestDistance = id, index, distance end
+			end
+		end
+	end
+
+	return bestID, bestIndex, bestDistance
+end
+
+function Transport.Record()
+	local log = Transport.GetLog()
+	if log == nil then return end
+	local u1, u2, _, instance = UnitPosition("player")
+	if u1 == nil or Transport.IsSecret(u1, u2, instance) then return end
+	local last = Transport.lastLog
+	Transport.lastLog = {u2, u1, instance}
+	if last == nil or last[3] ~= instance then return end
+	local moved = math.sqrt((u2 - last[1]) ^ 2 + (u1 - last[2]) ^ 2)
+	if moved <= Transport.minMove or moved > Transport.maxMove or UnitOnTaxi("player") then return end
+	local id, index, distance = Transport.NearestTrigger(instance, u2, u1)
+	if #log >= Transport.logLimit then table.remove(log, 1) end
+	tinsert(log, format("%d:%.1f:%.1f:%d:%s:%d:%d:%.0f:%s", GetServerTime(), u2, u1, instance, tostring(Transport.GetCurrentZone() or 0), id, index, math.min(distance, 99999), IsSwimming() and "s" or "-"))
+end
+
+function MapUtils:ToggleTransportLog()
+	if type(MAUTTAB) ~= "table" then return end
+	if type(MAUTTAB.TRANSPORTLOG) ~= "table" then MAUTTAB.TRANSPORTLOG = {} end
+	MAUTTAB.TRANSPORTLOG.on = not MAUTTAB.TRANSPORTLOG.on
+	Transport.lastLog = nil
+	local log = MAUTTAB.TRANSPORTLOG[MapUtils:GetFlavor() or "unknown"]
+	MapUtils:INFO(format("Transport log %s (%d entries, saved on /reload or logout)", MAUTTAB.TRANSPORTLOG.on and "ON" or "OFF", type(log) == "table" and #log or 0))
+end
+
 function Transport.CheckTriggers()
+	Transport.Record()
 	local _, instanceType = GetInstanceInfo()
 	local zone = (instanceType ~= "party" and instanceType ~= "raid") and Transport.GetCurrentZone() or nil
 	local routes = zone ~= nil and Transport.zoneIndex[zone] or nil

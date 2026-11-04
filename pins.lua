@@ -1697,7 +1697,7 @@ end
 
 function MapUtils:IsNearPier(mapID, x, y)
 	for _, pier in ipairs(piers[mapID] or {}) do
-		if math.abs(pier.x - x) < 0.04 and math.abs(pier.y - y) < 0.04 then return true end
+		if math.abs(pier.x - x) < 0.1 and math.abs(pier.y - y) < 0.1 then return true end
 	end
 
 	return false
