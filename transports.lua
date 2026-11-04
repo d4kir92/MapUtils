@@ -690,6 +690,7 @@ function Transport.CheckTriggers()
 	local _, instanceType = GetInstanceInfo()
 	local zone = (instanceType ~= "party" and instanceType ~= "raid") and Transport.GetCurrentZone() or nil
 	local routes = zone ~= nil and Transport.zoneIndex[zone] or nil
+	if routes == nil and instanceType == "none" then routes = Transport.GetRoutes() end
 	if routes == nil then
 		Transport.lastPos = nil
 
