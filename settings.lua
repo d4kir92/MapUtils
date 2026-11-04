@@ -9,6 +9,7 @@ local ADDED_1004 = "2026-10-04"
 local ADDED_1017 = "2026-10-17"
 local ADDED_1019 = "2026-10-19"
 local ADDED_1022 = "2026-10-22"
+local ADDED_1104 = "2026-11-04"
 local SHARED_KEYS = {"DUNGEONWORLDMAPPINS", "MEETINGSTONEWORLDMAPPINS", "DUNGEONMINIMAPPINS", "MEETINGSTONEMINIMAPPINS", "INSTANCEPINS_BOSS", "INSTANCEPINS_ITEM", "INSTANCEPINS_ENTRANCE", "INSTANCEPINS_LEVEL"}
 local maset = nil
 local sharedCheckboxes = {}
@@ -249,12 +250,22 @@ function MapUtils:InitSetting()
 
 	if MapUtils.RefreshCommChannel then AddTooltip(AddCheckbox("COMMCHANNEL", true, function() MapUtils:RefreshCommChannel() end, nil, "2026-10-28"), "LID_COMMCHANNEL", "LID_COMMCHANNELDESC") end
 	AddCategory("WORLDMAP", nil, nil, ADDED_0927)
-	if MapUtils.RefreshQuestTurnIns then AddCheckbox("QUESTTURNINWORLDMAPPINS", true, function() MapUtils:RefreshQuestTurnIns() end, nil, "2026-10-07") end
 	if MapUtils.RefreshGuildMembers then
 		AddTooltip(AddCheckbox("GUILDMEMBERPINS", true, function() MapUtils:RefreshGuildMembers() end, nil, "2026-10-29"), "LID_GUILDMEMBERPINS", "LID_GUILDMEMBERPINSDESC")
 		AddTooltip(AddCheckbox("GUILDMEMBERSHARE", true, function() MapUtils:RefreshGuildMembers() end, nil, "2026-10-29"), "LID_GUILDMEMBERSHARE", "LID_GUILDMEMBERSHAREDESC")
 	end
 	if MapUtils:IsForever() then AddCheckbox("REMEMBERQUESTCATEGORIES", true, function() MapUtils:RestoreQuestCategories() end) end
+	if MapUtils.RefreshQuestTurnIns or MapUtils.RefreshQuestGivers then AddCategory("QUESTS", 2, nil, ADDED_1104) end
+	if MapUtils.RefreshQuestGivers then
+		AddTooltip(AddCheckbox("QUESTGIVERWORLDMAPPINS", true, function() MapUtils:RefreshQuestGivers() end, nil, ADDED_1104), "LID_QUESTGIVERWORLDMAPPINS", "LID_QUESTGIVERWORLDMAPPINSDESC")
+		for _, key in ipairs({"QUESTGIVEREVENT", "QUESTGIVERDAILY", "QUESTGIVERREP"}) do
+			Requires(AddCheckbox(key, false, function() MapUtils:RefreshQuestGivers() end, nil, ADDED_1104), "QUESTGIVERWORLDMAPPINS")
+		end
+
+		AddTooltip(AddCheckbox("QUESTGIVERTURNIN", MapUtils:GetQuestTurnInDefault(), function() MapUtils:RefreshQuestGivers() end, nil, ADDED_1104), "LID_QUESTGIVERTURNIN", "LID_QUESTGIVERTURNINDESC")
+	end
+
+	if MapUtils.RefreshQuestTurnIns then AddCheckbox("QUESTTURNINWORLDMAPPINS", true, function() MapUtils:RefreshQuestTurnIns() end, nil, "2026-10-07") end
 	AddCategory("MAPWINDOW", 2, nil, ADDED_0927)
 	local byMoveAny = MapUtils:IsWorldMapByMoveAny()
 	for _, key in ipairs({"WORLDMAPMOVE", "WORLDMAPSCALE"}) do

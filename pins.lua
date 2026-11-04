@@ -1695,6 +1695,14 @@ function MapUtils:CaptureFlightKnowledge()
 	end
 end
 
+function MapUtils:IsNearPier(mapID, x, y)
+	for _, pier in ipairs(piers[mapID] or {}) do
+		if math.abs(pier.x - x) < 0.04 and math.abs(pier.y - y) < 0.04 then return true end
+	end
+
+	return false
+end
+
 local flights = {}
 local function GetFlights(mapID)
 	if mapID == nil then return nil end
@@ -1721,7 +1729,9 @@ local function GetFlights(mapID)
 					if not entry.undiscovered and known ~= nil then entry.undiscovered = not known end
 					entry.icon = GetFlightIcon(node, faction)
 					entry.x, entry.y = node.position:GetXY()
-					tinsert(list, entry)
+					local transportNode = type(entry.icon) == "string" and strfind(strlower(entry.icon), "taxinode_continent", 1, true) ~= nil
+					if transportNode and IsAtlas(TRANSPORT_ICONS["ship"]) then entry.icon = TRANSPORT_ICONS["ship"] end
+					if not transportNode or not MapUtils:IsNearPier(mapID, entry.x, entry.y) then tinsert(list, entry) end
 				end
 			end
 		end

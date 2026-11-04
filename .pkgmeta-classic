@@ -9,20 +9,25 @@ ignore:
   - convergences.lua
   - convergences_wowhead.lua
   - data/cata/instances.lua
+  - data/cata/questgivers.lua
   - data/forever/instancepins.lua
   - data/forever/instances.lua
   - data/forever/minimaplod.lua
   - data/forever/minimaptiles.lua
+  - data/forever/questgivers.lua
   - data/forever/revealdata.lua
   - data/forever/transports.lua
   - data/forever/zonemasks.lua
   - data/mists/instances.lua
+  - data/mists/questgivers.lua
   - data/tbc/instances.lua
   - data/tbc/minimaplod.lua
   - data/tbc/minimaptiles.lua
+  - data/tbc/questgivers.lua
   - data/tbc/revealdata.lua
   - data/tbc/zonemasks.lua
   - data/wrath/instances.lua
+  - data/wrath/questgivers.lua
   - media/246.blp
   - media/256.blp
   - media/257.blp
