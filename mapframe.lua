@@ -1113,6 +1113,98 @@ function MapLevelZoom.Install()
 	if frame ~= nil and frame.AddCanvasClickHandler ~= nil then frame:AddCanvasClickHandler(SmoothZoom.OnCanvasClick, 100) end
 end
 
+local MapView = {}
+function MapView.Save()
+	local container = WheelZoom.container
+	if not MapUtils:GetConfig("REMEMBERMAPVIEW", false) or container == nil or container.mapID == nil then
+		MapView.saved = nil
+
+		return
+	end
+
+	local scale = container.targetScale or container:GetCanvasScale()
+	local x = container.targetScrollX or container:GetCurrentScrollX()
+	local y = container.targetScrollY or container:GetCurrentScrollY()
+	local anim = SmoothZoom.anim
+	if anim ~= nil and anim.mapID == container.mapID and anim.target ~= nil and anim.target > 0 then
+		scale = anim.target
+		x, y = anim.anchorX - anim.offsetX / scale, anim.anchorY - anim.offsetY / scale
+	end
+
+	if scale == nil or scale <= 0 or x == nil or y == nil then
+		MapView.saved = nil
+
+		return
+	end
+
+	MapView.saved = {
+		["mapID"] = container.mapID,
+		["scale"] = scale,
+		["x"] = x,
+		["y"] = y,
+	}
+end
+
+MapView.guardTime = 0.5
+function MapView.Apply()
+	local saved = MapView.pending
+	local container = WheelZoom.container
+	if saved == nil or MapView.applying or not container:IsVisible() then return end
+	if GetTime() > MapView.guardUntil or SmoothZoom.userMoved or InCombatLockdown() then
+		MapView.pending = nil
+
+		return
+	end
+
+	MapView.applying = true
+	SmoothZoom.anim = nil
+	WheelZoom.pending = nil
+	if container.mapID ~= saved.mapID then
+		MapLevelZoom.lastSwitch = GetTime()
+		WheelZoom.own = true
+		frame:SetMapID(saved.mapID)
+		WheelZoom.own = false
+	end
+
+	if container.mapID == saved.mapID then
+		SmoothZoom.pickMapID = saved.mapID
+		SmoothZoom.SetView(container, saved.scale, saved.x, saved.y, saved.scale, saved.x, saved.y)
+		SmoothZoom.userMoved = false
+		if MapUtils.UpdateWorldPinsNow ~= nil then MapUtils.UpdateWorldPinsNow() end
+	else
+		MapView.pending = nil
+	end
+
+	MapView.applying = false
+end
+
+function MapView.OnResetZoom()
+	if MapView.pending ~= nil and not MapView.applying and WheelZoom.container.mapID == MapView.pending.mapID then MapView.Apply() end
+end
+
+function MapView.Restore()
+	local saved = MapView.saved
+	MapView.pending = nil
+	if saved == nil or not MapUtils:GetConfig("REMEMBERMAPVIEW", false) then return end
+	if InCombatLockdown() or IsInInstance() or C_Map.GetMapInfo(saved.mapID) == nil then return end
+	MapView.pending = saved
+	MapView.guardUntil = GetTime() + MapView.guardTime
+	SmoothZoom.userMoved = false
+	MapView.Apply()
+	C_Timer.After(0, MapView.Apply)
+	C_Timer.After(0.1, MapView.Apply)
+end
+
+if frame ~= nil and WheelZoom.container ~= nil then
+	frame:HookScript("OnHide", function()
+		MapView.pending = nil
+		MapView.Save()
+	end)
+
+	frame:HookScript("OnShow", MapView.Restore)
+	if WheelZoom.container.ResetZoom ~= nil then hooksecurefunc(WheelZoom.container, "ResetZoom", MapView.OnResetZoom) end
+end
+
 MapLevelZoom.loader = CreateFrame("Frame")
 MapLevelZoom.loader:RegisterEvent("PLAYER_LOGIN")
 MapLevelZoom.loader:SetScript("OnEvent", function(sel)

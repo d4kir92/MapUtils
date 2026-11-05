@@ -8,6 +8,8 @@ local Comm = {
 	gap = 1.2,
 	nextSend = 0,
 	joinDelay = 12,
+	retry = 5,
+	maxWait = 120,
 	joined = false
 }
 
@@ -62,6 +64,33 @@ function Comm.Join()
 	C_Timer.After(5, Comm.HideChannel)
 end
 
+function Comm.HasDefaultChannels()
+	if GetChannelName == nil then return true end
+	local number = GetChannelName(1)
+	if Comm.IsSecret(number) then return true end
+
+	return type(number) == "number" and number > 0
+end
+
+function Comm.ScheduleJoin(delay)
+	if Comm.waiting then return end
+	Comm.waiting = true
+	C_Timer.After(delay, Comm.TryJoin)
+end
+
+function Comm.TryJoin()
+	Comm.waiting = nil
+	if not Comm.IsEnabled() then return end
+	if Comm.GetChannelNumber() ~= nil then return Comm.Join() end
+	if IsInInstance() then
+		Comm.deadline = GetTime() + Comm.maxWait
+	elseif Comm.HasDefaultChannels() or GetTime() >= (Comm.deadline or 0) then
+		return Comm.Join()
+	end
+
+	Comm.ScheduleJoin(Comm.retry)
+end
+
 function Comm.Leave()
 	Comm.joined = false
 	if LeaveChannelByName ~= nil and Comm.GetChannelNumber() ~= nil then pcall(LeaveChannelByName, Comm.channel) end
@@ -69,7 +98,8 @@ end
 
 function MapUtils:RefreshCommChannel()
 	if Comm.IsEnabled() then
-		Comm.Join()
+		Comm.deadline = GetTime()
+		Comm.TryJoin()
 	else
 		Comm.Leave()
 	end
@@ -162,7 +192,8 @@ end
 
 function Comm.OnEvent(_, event, ...)
 	if event == "PLAYER_LOGIN" then
-		C_Timer.After(Comm.joinDelay, Comm.Join)
+		Comm.deadline = GetTime() + Comm.maxWait
+		Comm.ScheduleJoin(Comm.joinDelay)
 
 		return
 	end

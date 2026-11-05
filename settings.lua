@@ -287,6 +287,7 @@ function MapUtils:InitSetting()
 
 	local wheelZoomAvailable = MapUtils.IsWorldMapWheelZoomAvailable and MapUtils:IsWorldMapWheelZoomAvailable()
 	if wheelZoomAvailable then AddCheckbox("WORLDMAPZOOM", true, nil, nil, "2026-10-08") end
+	AddTooltip(AddCheckbox("REMEMBERMAPVIEW", false, nil, nil, "2026-11-05"), "LID_REMEMBERMAPVIEW", "LID_REMEMBERMAPVIEWDESC")
 	MapUtils:IsOneMap()
 	local oneMap = AddCheckbox(
 		"ONEMAP",
