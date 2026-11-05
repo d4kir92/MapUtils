@@ -57,6 +57,7 @@ core.lua
 comm.lua
 pins.lua
 transports.lua
+areapois.lua
 convergences_wowhead.lua
 convergences.lua
 discovery.lua
@@ -70,6 +71,7 @@ data\classic\instancepins.lua
 data\forever\instancepins.lua
 instancemap.lua
 mapframe.lua
+simpleframe.lua
 coords.lua
 battlefieldmap.lua
 reveal.lua

@@ -264,7 +264,7 @@ function MapUtils:InitSetting()
 			Requires(AddCheckbox(key, false, function() MapUtils:RefreshQuestGivers() end, nil, ADDED_1104), "QUESTGIVERWORLDMAPPINS")
 		end
 
-		AddTooltip(AddCheckbox("QUESTGIVERTURNIN", MapUtils:GetQuestTurnInDefault(), function() MapUtils:RefreshQuestGivers() end, nil, ADDED_1104), "LID_QUESTGIVERTURNIN", "LID_QUESTGIVERTURNINDESC")
+		if MapUtils:GetQuestTurnInDefault() then AddTooltip(AddCheckbox("QUESTGIVERTURNIN", true, function() MapUtils:RefreshQuestGivers() end, nil, ADDED_1104), "LID_QUESTGIVERTURNIN", "LID_QUESTGIVERTURNINDESC") end
 	end
 
 	if MapUtils.RefreshQuestTurnIns then AddCheckbox("QUESTTURNINWORLDMAPPINS", true, function() MapUtils:RefreshQuestTurnIns() end, nil, "2026-10-07") end
@@ -276,6 +276,15 @@ function MapUtils:InitSetting()
 		local checkbox = AddCheckbox(key, true, function() MapUtils:RefreshWorldMapFrame() end, label, ADDED_0927)
 		if byMoveAny then maset:AddDependency(checkbox, function() return false end, 0) end
 	end
+	if MapUtils.IsSimpleMapFrameAvailable and MapUtils:IsSimpleMapFrameAvailable() then
+		local byLeatrix = MapUtils:IsSimpleMapFrameByLeatrix()
+		local label = nil
+		if byLeatrix then label = MapUtils:Trans("LID_WORLDMAPSIMPLE") .. " |cffff8000(" .. MapUtils:Trans("LID_REVEALLEATRIX") .. ")|r" end
+		local simple = AddCheckbox("WORLDMAPSIMPLE", false, function() MapUtils:RefreshSimpleMapFrame() end, label, "2026-11-05")
+		AddTooltip(simple, "LID_WORLDMAPSIMPLE", "LID_WORLDMAPSIMPLEDESC")
+		if byLeatrix then maset:AddDependency(simple, function() return false end, 0) end
+	end
+
 	local wheelZoomAvailable = MapUtils.IsWorldMapWheelZoomAvailable and MapUtils:IsWorldMapWheelZoomAvailable()
 	if wheelZoomAvailable then AddCheckbox("WORLDMAPZOOM", true, nil, nil, "2026-10-08") end
 	MapUtils:IsOneMap()

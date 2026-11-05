@@ -294,27 +294,69 @@ function GatherNodes.Probe(scan, i, j)
 	Minimap:UpdateMouseoverAtPoint((scan.centerX + offsetX) * scan.scale, (scan.centerY + offsetY) * scan.scale)
 	local data = C_TooltipInfo.GetMinimapMouseover()
 	if type(data) ~= "table" or GatherNodes.IsSecret(data) or type(data.lines) ~= "table" then return end
+	local first = #scan.hits + 1
 	for _, line in ipairs(data.lines) do
 		local text = line.leftText
 		if type(text) == "string" and not GatherNodes.IsSecret(text) then
 			for _, itemID in ipairs(GatherNodes.ItemsIn(text)) do
-				local a = offsetX * scan.yardsPerUnit
-				local b = offsetY * scan.yardsPerUnit
-				local s = math.sin(scan.facing)
-				local c = math.cos(scan.facing)
-				tinsert(
-					scan.hits,
-					{
-						i = i,
-						j = j,
-						item = itemID,
-						x = scan.wx + s * a + c * b,
-						y = scan.wy + s * b - c * a
-					}
-				)
+				if not GatherNodes.HasHit(scan.hits, first, itemID) then
+					local a = offsetX * scan.yardsPerUnit
+					local b = offsetY * scan.yardsPerUnit
+					local s = math.sin(scan.facing)
+					local c = math.cos(scan.facing)
+					tinsert(
+						scan.hits,
+						{
+							i = i,
+							j = j,
+							item = itemID,
+							x = scan.wx + s * a + c * b,
+							y = scan.wy + s * b - c * a
+						}
+					)
+				end
 			end
 		end
 	end
+end
+
+function GatherNodes.HasHit(hits, first, itemID)
+	for index = first, #hits do
+		if hits[index].item == itemID then return true end
+	end
+
+	return false
+end
+
+function GatherNodes.MergeNodes(nodes, distance)
+	local merged = {}
+	local limit = distance * distance
+	for _, node in ipairs(nodes) do
+		local target = nil
+		for _, other in ipairs(merged) do
+			local dx = other.x - node.x
+			local dy = other.y - node.y
+			if other.item == node.item and dx * dx + dy * dy <= limit then
+				target = other
+				break
+			end
+		end
+
+		if target == nil then
+			tinsert(merged, node)
+		else
+			local n = target.n + node.n
+			target.x = (target.x * target.n + node.x * node.n) / n
+			target.y = (target.y * target.n + node.y * node.n) / n
+			target.n = n
+		end
+	end
+
+	while #merged > GatherNodes.maxIcons do
+		tremove(merged)
+	end
+
+	return merged
 end
 
 function GatherNodes.ScanStep(scan)
@@ -364,11 +406,10 @@ function GatherNodes.GroupHits(hits)
 				{
 					item = hit.item,
 					x = sx / n,
-					y = sy / n
+					y = sy / n,
+					n = n
 				}
 			)
-
-			if #nodes >= GatherNodes.maxIcons then break end
 		end
 	end
 
@@ -377,7 +418,7 @@ end
 
 function GatherNodes.FinishScan(scan)
 	GatherNodes.scan = nil
-	GatherNodes.nodes = GatherNodes.GroupHits(scan.hits)
+	GatherNodes.nodes = GatherNodes.MergeNodes(GatherNodes.GroupHits(scan.hits), GatherNodes.iconSize * scan.yardsPerUnit)
 	GatherNodes.instanceID = scan.instanceID
 	GatherNodes.nextScan = GetTime() + GatherNodes.scanInterval
 end

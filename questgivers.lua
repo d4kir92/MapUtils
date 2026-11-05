@@ -8,6 +8,15 @@ local ICON_FILE = "Interface\\GossipFrame\\AvailableQuestIcon"
 local TURNIN_ATLAS = "QuestTurnin"
 local TURNIN_FILE = "Interface\\GossipFrame\\ActiveQuestIcon"
 local ICON_SIZE = 18
+local CIRCLE_NORMAL = "UI-QuestPoi-QuestNumber"
+local CIRCLE_PUSHED = "UI-QuestPoi-QuestNumber-Pressed"
+local CIRCLE_TRACKED = "UI-QuestPoi-QuestNumber-SuperTracked"
+local CIRCLE_TRACKED_PUSHED = "UI-QuestPoi-QuestNumber-Pressed-SuperTracked"
+local CIRCLE_HIGHLIGHT = "UI-QuestPoi-InnerGlow"
+local CIRCLE_SCALE = 1.4
+local ICON_SCALE = 0.8
+local WAYPOINT_TOLERANCE = 0.001
+local WAYPOINT_TEMPLATE = "WaypointLocationPinTemplate"
 local PIN_LEVEL = 2500
 local TOOLTIP_GIVERS = 8
 local COLLECT_DELAY = 0.5
@@ -276,7 +285,7 @@ end
 function QG.IsShownOnMap(mapID)
 	if mapID == nil or C_Map.GetMapInfo(mapID) == nil or QG.IsAddOnLoaded("Questie") then return false end
 	QG.showStarts = MapUtils:GetConfig("QUESTGIVERWORLDMAPPINS", true) == true
-	QG.showEnds = MapUtils:GetConfig("QUESTGIVERTURNIN", MapUtils:GetQuestTurnInDefault()) == true
+	QG.showEnds = MapUtils:GetQuestTurnInDefault() and MapUtils:GetConfig("QUESTGIVERTURNIN", true) == true
 	if not QG.showStarts and not QG.showEnds then return false end
 
 	return #QG.GetSources(mapID) > 0
@@ -416,32 +425,138 @@ function QG.OnClick(pin, button)
 		return
 	end
 
-	local cluster = pin.cluster
-	if cluster == nil or lastMapID == nil or not MapUtils:HasWaypointSupport() then return end
-	local mapID, x, y = lastMapID, cluster.x, cluster.y
-	local spot = cluster.spots[1]
-	if spot.mapID ~= lastMapID then mapID, x, y = spot.mapID, spot.localX, spot.localY end
+	local mapID, x, y = QG.GetTarget(pin)
+	if mapID == nil or not MapUtils:HasWaypointSupport() then return end
 	local key = format("%d|%.4f|%.4f", mapID, x, y)
-	if QG.waypointKey == key and MapUtils:HasUserWaypoint() then
+	if QG.waypoint ~= nil and QG.waypoint.key == key and MapUtils:HasUserWaypoint() then
 		MapUtils:ClearUserWaypoint()
 		MapUtils:SetWaypointTracked(false)
-		QG.waypointKey = nil
+		QG.waypoint = nil
 		if SOUNDKIT and SOUNDKIT.UI_MAP_WAYPOINT_REMOVE then PlaySound(SOUNDKIT.UI_MAP_WAYPOINT_REMOVE) end
+		QG.UpdateStyles()
 
 		return
 	end
 
 	if MapUtils:SetTrackedWaypoint(mapID, x, y) then
-		QG.waypointKey = key
+		local point = MapUtils:GetUserWaypoint()
+		QG.waypoint = nil
+		if point ~= nil and point.position ~= nil then
+			QG.waypoint = {
+				key = key,
+				mapID = point.uiMapID,
+				x = point.position.x,
+				y = point.position.y
+			}
+		end
+
 		if SOUNDKIT and SOUNDKIT.UI_MAP_WAYPOINT_SUPER_TRACK_ON then PlaySound(SOUNDKIT.UI_MAP_WAYPOINT_SUPER_TRACK_ON) end
 	end
+
+	QG.UpdateStyles()
+end
+
+function QG.GetTarget(pin)
+	local cluster = pin.cluster
+	if cluster == nil or lastMapID == nil then return nil end
+	local spot = cluster.spots[1]
+	if spot.mapID ~= lastMapID then return spot.mapID, spot.localX, spot.localY end
+
+	return lastMapID, cluster.x, cluster.y
+end
+
+function QG.GetTrackedKey()
+	local waypoint = QG.waypoint
+	if waypoint == nil or not MapUtils:HasUserWaypoint() or not MapUtils:IsWaypointTracked() then return nil end
+	local point = MapUtils:GetUserWaypoint()
+	if point == nil or point.position == nil or point.uiMapID ~= waypoint.mapID then return nil end
+	if math.abs(point.position.x - waypoint.x) > WAYPOINT_TOLERANCE or math.abs(point.position.y - waypoint.y) > WAYPOINT_TOLERANCE then return nil end
+
+	return waypoint.key
+end
+
+function QG.SetAtlas(texture, atlas)
+	if not MapUtils:HasAtlasOrFallback(atlas) then
+		texture:Hide()
+
+		return
+	end
+
+	MapUtils:SetAtlasOrFallback(texture, atlas)
+	texture:Show()
+end
+
+function QG.GetWaypointLevel()
+	if WorldMapFrame.GetPinFrameLevelsManager == nil then return nil end
+	local manager = WorldMapFrame:GetPinFrameLevelsManager()
+	if manager == nil or manager.GetValidFrameLevel == nil then return nil end
+
+	return manager:GetValidFrameLevel("PIN_FRAME_LEVEL_WAYPOINT_LOCATION")
+end
+
+function QG.UpdateStyle(pin, trackedKey)
+	local tracked = false
+	if trackedKey ~= nil and pin.cluster ~= nil then
+		local mapID, x, y = QG.GetTarget(pin)
+		tracked = mapID ~= nil and format("%d|%.4f|%.4f", mapID, x, y) == trackedKey
+	end
+
+	local level = pin.baseLevel or pin:GetFrameLevel()
+	if tracked then
+		local waypointLevel = QG.GetWaypointLevel()
+		if waypointLevel ~= nil and waypointLevel >= level then level = waypointLevel + 1 end
+	end
+
+	if pin:GetFrameLevel() ~= level then pin:SetFrameLevel(level) end
+	if pin.tracked == tracked then return tracked end
+	pin.tracked = tracked
+	QG.SetAtlas(pin.normal, tracked and CIRCLE_TRACKED or CIRCLE_NORMAL)
+	QG.SetAtlas(pin.pushed, tracked and CIRCLE_TRACKED_PUSHED or CIRCLE_PUSHED)
+
+	return tracked
+end
+
+function QG.SetWaypointPinsHidden(hide)
+	if WorldMapFrame.EnumeratePinsByTemplate == nil then return end
+	for pin in WorldMapFrame:EnumeratePinsByTemplate(WAYPOINT_TEMPLATE) do
+		if hide then
+			pin:SetAlpha(0)
+		elseif QG.waypointHidden then
+			pin:SetAlpha(1)
+		end
+	end
+
+	QG.waypointHidden = hide
+end
+
+function QG.UpdateStyles()
+	local trackedKey = QG.GetTrackedKey()
+	local anyTracked = false
+	for _, pin in ipairs(pins) do
+		if pin:IsShown() and QG.UpdateStyle(pin, trackedKey) then anyTracked = true end
+	end
+
+	if anyTracked or QG.waypointHidden then QG.SetWaypointPinsHidden(anyTracked) end
 end
 
 function QG.CreatePin(canvas)
 	local pin = CreateFrame("Button", nil, canvas)
 	pin:RegisterForClicks("LeftButtonUp", "RightButtonUp")
-	pin.icon = pin:CreateTexture(nil, "OVERLAY")
-	pin.icon:SetAllPoints()
+	pin.normal = pin:CreateTexture(nil, "ARTWORK")
+	pin.pushed = pin:CreateTexture(nil, "ARTWORK")
+	pin.highlight = pin:CreateTexture(nil, "OVERLAY")
+	pin.icon = pin:CreateTexture(nil, "ARTWORK", nil, 1)
+	for _, texture in ipairs({pin.normal, pin.pushed, pin.highlight, pin.icon}) do
+		texture:SetPoint("CENTER")
+	end
+
+	QG.SetAtlas(pin.normal, CIRCLE_NORMAL)
+	QG.SetAtlas(pin.pushed, CIRCLE_PUSHED)
+	QG.SetAtlas(pin.highlight, CIRCLE_HIGHLIGHT)
+	pin:SetNormalTexture(pin.normal)
+	pin:SetPushedTexture(pin.pushed)
+	pin:SetHighlightTexture(pin.highlight, "ADD")
+	pin.tracked = false
 
 	pin:SetScript("OnEnter", QG.OnEnter)
 	pin:SetScript("OnLeave", function(sel) if GameTooltip:IsOwned(sel) then GameTooltip:Hide() end end)
@@ -476,6 +591,7 @@ function QG.HidePins()
 		pin.cluster = nil
 	end
 
+	if QG.waypointHidden then QG.SetWaypointPinsHidden(false) end
 	layoutKey = nil
 end
 
@@ -555,6 +671,15 @@ function QG.Layout(canvas)
 		pin.cluster = cluster
 		QG.SetPinIcon(pin, QG.HasTurnIn(cluster))
 		pin:SetSize(size, size)
+		local circle = size * CIRCLE_SCALE
+		for _, texture in ipairs({pin.normal, pin.pushed, pin.highlight}) do
+			texture:SetSize(circle, circle)
+		end
+
+		pin.icon:SetSize(size * ICON_SCALE, size * ICON_SCALE)
+		local extend = (circle - size) / 2
+		pin:SetHitRectInsets(-extend, -extend, -extend, -extend)
+		pin.baseLevel = level
 		pin:SetFrameLevel(level)
 		pin:ClearAllPoints()
 		pin:SetPoint("CENTER", canvas, "TOPLEFT", width * cluster.x, -height * cluster.y)
@@ -583,6 +708,7 @@ function QG.Update()
 
 	local canvas = WorldMapFrame:GetCanvas()
 	if canvas then QG.Layout(canvas) end
+	QG.UpdateStyles()
 end
 
 function MapUtils:RefreshQuestGivers()

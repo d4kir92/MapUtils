@@ -1,6 +1,6 @@
 local _, MapUtils = ...
 local flavor = MapUtils:GetFlavor()
-if flavor ~= "era" and flavor ~= "tbc" then return end
+if flavor ~= "era" and flavor ~= "tbc" and flavor ~= "forever" then return end
 if C_AreaPoiInfo == nil or C_AreaPoiInfo.GetAreaPOIInfo == nil then return end
 local AreaPOIs = {
 	template = "AreaPOIPinTemplate",
@@ -42,10 +42,17 @@ function AreaPOIs.Apply(map)
 	end
 end
 
+function AreaPOIs.GetTemplate(provider)
+	local ok, template = pcall(provider.GetPinTemplate, provider)
+	if ok then return template end
+
+	return nil
+end
+
 function AreaPOIs.Install(map)
 	if map == nil or AreaPOIs.hooked[map] or type(map.dataProviders) ~= "table" then return end
 	for provider in pairs(map.dataProviders) do
-		if type(provider) == "table" and provider.GetPinTemplate ~= nil and provider.RefreshAllData ~= nil and provider:GetPinTemplate() == AreaPOIs.template then
+		if type(provider) == "table" and provider.GetPinTemplate ~= nil and provider.RefreshAllData ~= nil and AreaPOIs.GetTemplate(provider) == AreaPOIs.template then
 			AreaPOIs.hooked[map] = true
 			tinsert(AreaPOIs.maps, map)
 			hooksecurefunc(
