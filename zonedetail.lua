@@ -32,6 +32,11 @@ local UNDERGROUND = {
 	[1455] = true,
 	[1458] = true
 }
+local HIGHLIGHT_CLIP = {
+	[1941] = true,
+	[1942] = true,
+	[1957] = true
+}
 local CITY_RING = {0.5, 0.75, 1}
 local CITY_RING_STEPS = 16
 local container = nil
@@ -334,7 +339,7 @@ local function DrawZone(continentID, continentRect, mapID, mode, width, height)
 	zone.frame:SetSize(frameWidth, frameHeight)
 	local highlight = false
 	local artMask = mode == MODE_FULL and GetArtMask(mapID)
-	if mode == MODE_FULL then
+	if mode == MODE_FULL and (not artMask or HIGHLIGHT_CLIP[mapID]) then
 		local l, r, t, b = C_Map.GetMapRectOnMap(mapID, continentID)
 		if l ~= nil and r > l and b > t then highlight = GetHighlight(continentID, mapID, l, r, t, b) end
 	end
