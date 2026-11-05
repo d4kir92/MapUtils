@@ -259,8 +259,13 @@ function QG.ProjectRect(sourceID, targetID)
 end
 
 function QG.GetSources(mapID)
-	if sources[mapID] then return sources[mapID] end
-	local list = {}
+	local foreign = MapUtils:GetOneMapQuestSources(mapID)
+	local cached = sources[mapID]
+	if cached and cached.foreign == foreign then return cached end
+	local list = {
+		["foreign"] = foreign
+	}
+
 	local seen = {}
 	if GIVERS[mapID] then
 		seen[mapID] = true
@@ -274,6 +279,14 @@ function QG.GetSources(mapID)
 			seen[childID] = true
 			local left, right, top, bottom = QG.ProjectRect(childID, mapID)
 			if left then tinsert(list, {childID, left, right, top, bottom}) end
+		end
+	end
+
+	for _, source in ipairs(foreign or {}) do
+		local sourceID = source[1]
+		if not seen[sourceID] and GIVERS[sourceID] then
+			seen[sourceID] = true
+			tinsert(list, {sourceID, source[2], source[3], source[4], source[5], true})
 		end
 	end
 
@@ -312,7 +325,7 @@ function QG.Collect(mapID)
 	QG.ReadSkills()
 	local available = {}
 	for _, source in ipairs(QG.GetSources(mapID)) do
-		local sourceID, left, right, top, bottom = source[1], source[2], source[3], source[4], source[5]
+		local sourceID, left, right, top, bottom, outside = source[1], source[2], source[3], source[4], source[5], source[6]
 		for _, giver in ipairs(GIVERS[sourceID]) do
 			local quests = nil
 			if QG.showStarts then
@@ -332,7 +345,7 @@ function QG.Collect(mapID)
 				for _, coord in ipairs(giver[2]) do
 					local localX, localY = math.floor(coord / 1000) / 1000, (coord % 1000) / 1000
 					local x, y = left + localX * (right - left), top + localY * (bottom - top)
-					if x >= 0 and x <= 1 and y >= 0 and y <= 1 then
+					if outside or x >= 0 and x <= 1 and y >= 0 and y <= 1 then
 						tinsert(
 							spots,
 							{

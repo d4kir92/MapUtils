@@ -3541,6 +3541,8 @@ local function HandleSlash(args)
 		ReportMaps(rest)
 	elseif sub == "entrances" then
 		ReportEntrances()
+	elseif sub == "areapois" and MapUtils.AreaPOIs ~= nil then
+		MapUtils.AreaPOIs.Report()
 	elseif sub == "icon" then
 		if rest == "" then
 			ReportIcons()

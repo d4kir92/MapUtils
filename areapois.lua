@@ -24,20 +24,39 @@ local AreaPOIs = {
 }
 
 MapUtils.AreaPOIs = AreaPOIs
+function AreaPOIs.GetID(pin)
+	if pin.areaPoiID ~= nil then return pin.areaPoiID end
+	if type(pin.poiInfo) == "table" and pin.poiInfo.areaPoiID ~= nil then return pin.poiInfo.areaPoiID end
+	if pin.GetAreaPOIID ~= nil then return pin:GetAreaPOIID() end
+
+	return nil
+end
+
 function AreaPOIs.IsHidden(mapID, pin)
-	local id = pin.areaPoiID
+	local id = AreaPOIs.GetID(pin)
 	if id == nil then return false end
 	if AreaPOIs.capitals[id] then return MapUtils:GetConfig("CAPITALPOIS", false) ~= true end
 	if MapUtils:GetConfig("TOWNPOIS", false) == true or mapID == nil then return false end
 	local info = C_AreaPoiInfo.GetAreaPOIInfo(mapID, id)
+	if info == nil and type(pin.poiInfo) == "table" and pin.poiInfo.areaPoiID == id then info = pin.poiInfo end
 
 	return info ~= nil and AreaPOIs.towns[info.textureIndex] == true
+end
+
+function AreaPOIs.OnPinShow(pin)
+	local map = pin.GetMap and pin:GetMap()
+	if map ~= nil and map.GetMapID ~= nil and AreaPOIs.IsHidden(map:GetMapID(), pin) then pin:Hide() end
 end
 
 function AreaPOIs.Apply(map)
 	if map == nil or map.EnumeratePinsByTemplate == nil then return end
 	local mapID = map:GetMapID()
 	for pin in map:EnumeratePinsByTemplate(AreaPOIs.template) do
+		if not AreaPOIs.hooked[pin] then
+			AreaPOIs.hooked[pin] = true
+			pin:HookScript("OnShow", AreaPOIs.OnPinShow)
+		end
+
 		pin:SetShown(not AreaPOIs.IsHidden(mapID, pin))
 	end
 end
@@ -73,6 +92,25 @@ end
 function AreaPOIs.InstallAll()
 	AreaPOIs.Install(_G["WorldMapFrame"])
 	AreaPOIs.Install(_G["BattlefieldMapFrame"])
+end
+
+function AreaPOIs.Report()
+	local map = _G["WorldMapFrame"]
+	if map == nil or map.pinPools == nil then return end
+	local mapID = map:GetMapID()
+	MapUtils:INFO(format("map %s | TOWNPOIS %s | CAPITALPOIS %s | hooked %s", tostring(mapID), tostring(MapUtils:GetConfig("TOWNPOIS", false)), tostring(MapUtils:GetConfig("CAPITALPOIS", false)), tostring(AreaPOIs.hooked[map] == true)))
+	for template, pool in pairs(map.pinPools) do
+		if pool.EnumerateActive ~= nil then
+			for pin in pool:EnumerateActive() do
+				local id = AreaPOIs.GetID(pin)
+				if id ~= nil or type(pin.name) == "string" then
+					local info = id and mapID and C_AreaPoiInfo.GetAreaPOIInfo(mapID, id)
+					local index = info and info.textureIndex or pin.poiInfo and pin.poiInfo.textureIndex
+					MapUtils:INFO(format("%s | %s | id %s | textureIndex %s | atlas %s | shown %s | alpha %.2f | hidden %s | hook %s", tostring(template), tostring(pin.name), tostring(id), tostring(index), tostring(info and info.atlasName), tostring(pin:IsShown()), pin:GetAlpha(), tostring(template == AreaPOIs.template and AreaPOIs.IsHidden(mapID, pin)), tostring(AreaPOIs.hooked[pin] == true)))
+				end
+			end
+		end
+	end
 end
 
 function MapUtils:RefreshAreaPOIs()
