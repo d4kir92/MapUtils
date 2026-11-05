@@ -27,6 +27,8 @@ local Guild = {
 }
 
 MapUtils.GuildMembers = Guild
+if MapUtils.CanvasPinLists ~= nil then tinsert(MapUtils.CanvasPinLists, Guild.pins) end
+if MapUtils.CanvasPinUpdaters ~= nil then tinsert(MapUtils.CanvasPinUpdaters, function() Guild.UpdatePins() end) end
 function Guild.IsSecret(...)
 	return MapUtils.Comm ~= nil and MapUtils.Comm.IsSecret(...)
 end
@@ -380,6 +382,7 @@ function Guild.UpdatePins()
 				pin.dot:SetPoint("BOTTOMRIGHT", -inset, inset)
 				local color = RAID_CLASS_COLORS[member.class or ""] or Guild.fallbackColor
 				pin.dot:SetVertexColor(color.r, color.g, color.b, 1)
+				if MapUtils.SetCanvasPinScale ~= nil then MapUtils:SetCanvasPinScale(pin, scale) end
 				pin:ClearAllPoints()
 				pin:SetPoint("CENTER", canvas, "TOPLEFT", width * x, -height * y)
 				pin:Show()

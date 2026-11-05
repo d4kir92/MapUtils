@@ -2803,6 +2803,8 @@ function PinCache.MergePiers(list, ownCount, mapID, pixelWidth, pixelHeight)
 end
 
 local worldPins = {}
+MapUtils.CanvasPinLists = MapUtils.CanvasPinLists or {}
+tinsert(MapUtils.CanvasPinLists, worldPins)
 local worldPinPool = nil
 local worldMapID = nil
 local worldScale = nil
@@ -2900,6 +2902,7 @@ local function UpdateWorldPins()
 		end
 
 		UpdatePinStyle(pin)
+		if MapUtils.SetCanvasPinScale ~= nil then MapUtils:SetCanvasPinScale(pin, scale) end
 		pin:ClearAllPoints()
 		pin:SetPoint("CENTER", child, "TOPLEFT", w * entryX, -h * entryY)
 		pin:SetAlpha(MapUtils:GetDebugPinAlpha(entry))
@@ -3060,6 +3063,8 @@ if worldCanvas ~= nil and CreateFramePool ~= nil then
 	)
 	worldUpdater = CreateUpdater(WorldMapFrame, UpdateWorldPins)
 	MapUtils.UpdateWorldPinsNow = UpdateWorldPins
+	MapUtils.CanvasPinUpdaters = MapUtils.CanvasPinUpdaters or {}
+	tinsert(MapUtils.CanvasPinUpdaters, UpdateWorldPins)
 	WorldMapFrame:HookScript(
 		"OnHide",
 		function()

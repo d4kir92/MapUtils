@@ -41,6 +41,7 @@ local SKILL_SPELLS = {
 
 local updater = CreateFrame("Frame", nil, WorldMapFrame)
 local pins = {}
+if MapUtils.CanvasPinLists ~= nil then tinsert(MapUtils.CanvasPinLists, pins) end
 local spots = {}
 local clusters = {}
 local sources = {}
@@ -694,6 +695,7 @@ function QG.Layout(canvas)
 		pin:SetHitRectInsets(-extend, -extend, -extend, -extend)
 		pin.baseLevel = level
 		pin:SetFrameLevel(level)
+		MapUtils:SetCanvasPinScale(pin, scale)
 		pin:ClearAllPoints()
 		pin:SetPoint("CENTER", canvas, "TOPLEFT", width * cluster.x, -height * cluster.y)
 		pin:Show()
@@ -724,6 +726,7 @@ function QG.Update()
 	QG.UpdateStyles()
 end
 
+if MapUtils.CanvasPinUpdaters ~= nil then tinsert(MapUtils.CanvasPinUpdaters, QG.Update) end
 function MapUtils:RefreshQuestGivers()
 	dirty = true
 	lastCollect = 0
