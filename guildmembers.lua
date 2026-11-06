@@ -95,6 +95,7 @@ end
 Guild.sources = {
 	MapUtils = 75,
 	GuildMapDots = 15,
+	GuildMap = 20,
 	GuildAtlas = 150,
 	GuildCrest = 30,
 	Kinship = 1900
@@ -150,6 +151,10 @@ Guild.parsers = {
 		x, y = tonumber(x), tonumber(y)
 		if tag ~= "P" or x == nil or y == nil then return end
 		Guild.Store(sender, "GuildMapDots", tonumber(mapID), x / Guild.scale, y / Guild.scale, class)
+	end,
+	GuildMapEx1 = function(message, sender)
+		local _, _, level, class, _, x, y, mapID = strsplit(",", message)
+		Guild.Store(sender, "GuildMap", tonumber(mapID), tonumber(x), tonumber(y), class and class:upper(), tonumber(level))
 	end,
 	GQHMAP = function(message, sender)
 		if message == "0" then return Guild.Remove(sender, "GuildAtlas") end
