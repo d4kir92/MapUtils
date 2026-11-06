@@ -39,10 +39,14 @@ local GatherNodes = {
 	scanInterval = 1,
 	noFinderInterval = 5,
 	learnSeconds = 10,
-	iconSize = 14,
+	iconSize = 11,
 	edge = 4,
 	maxIcons = 40,
 	mergePixels = 12,
+	maxSplit = 6,
+	splitRounds = 8,
+	smoothScans = 8,
+	matchYards = 15,
 	blipLook = {
 		cell = 14,
 		iconSize = 20,
@@ -373,7 +377,179 @@ function GatherNodes.ScanStep(scan)
 	scan.index = last + 1
 end
 
-function GatherNodes.GroupHits(hits)
+function GatherNodes.SplitGroup(item, points, yardsPerUnit)
+	local n = #points
+	local mx, my = 0, 0
+	for _, point in ipairs(points) do
+		mx = mx + point.x
+		my = my + point.y
+	end
+
+	mx, my = mx / n, my / n
+	local single = {
+		{
+			item = item,
+			x = mx,
+			y = my,
+			n = n
+		}
+	}
+
+	if n < 3 then return single end
+	local cell = GatherNodes.step * yardsPerUnit
+	local sxx, syy, sxy = 0, 0, 0
+	for _, point in ipairs(points) do
+		local dx, dy = point.x - mx, point.y - my
+		sxx = sxx + dx * dx
+		syy = syy + dy * dy
+		sxy = sxy + dx * dy
+	end
+
+	local angle = 0.5 * math.atan2(2 * sxy, sxx - syy)
+	local ux, uy = math.cos(angle), math.sin(angle)
+	local lowLong, highLong, lowShort, highShort = math.huge, -math.huge, math.huge, -math.huge
+	local first = points[1]
+	for _, point in ipairs(points) do
+		local dx, dy = point.x - mx, point.y - my
+		local along = dx * ux + dy * uy
+		local across = dy * ux - dx * uy
+		if along < lowLong then
+			lowLong = along
+			first = point
+		end
+
+		highLong = math.max(highLong, along)
+		lowShort = math.min(lowShort, across)
+		highShort = math.max(highShort, across)
+	end
+
+	local long = highLong - lowLong + cell
+	local short = highShort - lowShort + cell
+	local area = n * cell * cell
+	local own = math.pi * (short - cell) * (short - cell) / 4
+	if long < short * 1.25 and area < own * 1.5 then
+		local pixels = area / (yardsPerUnit * yardsPerUnit)
+		GatherNodes.dotArea = GatherNodes.dotArea == nil and pixels or GatherNodes.dotArea * 0.8 + pixels * 0.2
+	end
+
+	local dotArea = own
+	if GatherNodes.dotArea ~= nil then dotArea = math.min(own * 1.5, GatherNodes.dotArea * yardsPerUnit * yardsPerUnit) end
+	if dotArea <= 0 then return single end
+	local dot = 2 * math.sqrt(dotArea / math.pi)
+	local k = math.max(1, math.min(GatherNodes.maxSplit, n, math.floor(area / dotArea + 0.5)))
+	if k == 1 or long < dot * 1.3 then return single end
+	local centers = {
+		{
+			x = first.x,
+			y = first.y
+		}
+	}
+
+	while #centers < k do
+		local far, farGap = nil, -1
+		for _, point in ipairs(points) do
+			local gap = math.huge
+			for _, center in ipairs(centers) do
+				gap = math.min(gap, (point.x - center.x) ^ 2 + (point.y - center.y) ^ 2)
+			end
+
+			if gap > farGap then far, farGap = point, gap end
+		end
+
+		tinsert(
+			centers,
+			{
+				x = far.x,
+				y = far.y
+			}
+		)
+	end
+
+	for _ = 1, GatherNodes.splitRounds do
+		for _, center in ipairs(centers) do
+			center.sx, center.sy, center.n, center.members = 0, 0, 0, {}
+		end
+
+		for _, point in ipairs(points) do
+			local best, bestGap = nil, math.huge
+			for _, center in ipairs(centers) do
+				local gap = (point.x - center.x) ^ 2 + (point.y - center.y) ^ 2
+				if gap < bestGap then best, bestGap = center, gap end
+			end
+
+			best.sx, best.sy, best.n = best.sx + point.x, best.sy + point.y, best.n + 1
+			tinsert(best.members, point)
+		end
+
+		for _, center in ipairs(centers) do
+			if center.n > 0 then center.x, center.y = center.sx / center.n, center.sy / center.n end
+		end
+	end
+
+	local nodes = {}
+	for _, center in ipairs(centers) do
+		if center.n > 0 then
+			local x, y = center.x, center.y
+			local other, otherGap = nil, math.huge
+			for _, neighbor in ipairs(centers) do
+				local gap = (neighbor.x - x) ^ 2 + (neighbor.y - y) ^ 2
+				if neighbor ~= center and neighbor.n > 0 and gap < otherGap then other, otherGap = neighbor, gap end
+			end
+
+			if other ~= nil and otherGap > 0 then
+				local length = math.sqrt(otherGap)
+				local ox, oy = (x - other.x) / length, (y - other.y) / length
+				local edge = -math.huge
+				for _, point in ipairs(center.members) do
+					edge = math.max(edge, (point.x - x) * ox + (point.y - y) * oy)
+				end
+
+				local shift = math.max(-dot / 2, math.min(dot / 2, edge + cell / 2 - dot / 2))
+				x, y = x + ox * shift, y + oy * shift
+			end
+
+			tinsert(
+				nodes,
+				{
+					item = item,
+					x = x,
+					y = y,
+					n = center.n
+				}
+			)
+		end
+	end
+
+	return nodes
+end
+
+function GatherNodes.Smooth(found, before)
+	local used = {}
+	local limit = GatherNodes.matchYards * GatherNodes.matchYards
+	for _, node in ipairs(found) do
+		local best, bestGap = nil, nil
+		for _, old in ipairs(before) do
+			if old.item == node.item and not used[old] then
+				local gap = (old.x - node.x) ^ 2 + (old.y - node.y) ^ 2
+				if gap < limit and (bestGap == nil or gap < bestGap) then best, bestGap = old, gap end
+			end
+		end
+
+		if best == nil then
+			node.count = 1
+		else
+			used[best] = true
+			local count = math.min(best.count or 1, GatherNodes.smoothScans)
+			node.x = (best.x * count + node.x) / (count + 1)
+			node.y = (best.y * count + node.y) / (count + 1)
+			node.count = count + 1
+		end
+	end
+
+	return found
+end
+
+function GatherNodes.GroupHits(hits, yardsPerUnit)
 	local byKey = {}
 	for _, hit in ipairs(hits) do
 		byKey[hit.item .. ":" .. hit.i .. ":" .. hit.j] = hit
@@ -383,13 +559,11 @@ function GatherNodes.GroupHits(hits)
 	for _, hit in ipairs(hits) do
 		if not hit.seen then
 			hit.seen = true
-			local sx, sy, n = 0, 0, 0
+			local points = {}
 			local stack = {hit}
 			while #stack > 0 do
 				local current = tremove(stack)
-				sx = sx + current.x
-				sy = sy + current.y
-				n = n + 1
+				tinsert(points, current)
 				for di = -1, 1 do
 					for dj = -1, 1 do
 						local near = byKey[hit.item .. ":" .. (current.i + di) .. ":" .. (current.j + dj)]
@@ -401,15 +575,9 @@ function GatherNodes.GroupHits(hits)
 				end
 			end
 
-			tinsert(
-				nodes,
-				{
-					item = hit.item,
-					x = sx / n,
-					y = sy / n,
-					n = n
-				}
-			)
+			for _, node in ipairs(GatherNodes.SplitGroup(hit.item, points, yardsPerUnit)) do
+				tinsert(nodes, node)
+			end
 		end
 	end
 
@@ -418,7 +586,9 @@ end
 
 function GatherNodes.FinishScan(scan)
 	GatherNodes.scan = nil
-	GatherNodes.nodes = GatherNodes.MergeNodes(GatherNodes.GroupHits(scan.hits), GatherNodes.iconSize * scan.yardsPerUnit)
+	local found = GatherNodes.MergeNodes(GatherNodes.GroupHits(scan.hits, scan.yardsPerUnit), GatherNodes.step * scan.yardsPerUnit)
+	if scan.instanceID == GatherNodes.instanceID then found = GatherNodes.Smooth(found, GatherNodes.nodes) end
+	GatherNodes.nodes = found
 	GatherNodes.instanceID = scan.instanceID
 	GatherNodes.nextScan = GetTime() + GatherNodes.scanInterval
 end
