@@ -12,8 +12,11 @@ local Guild = {
 	dotSize = 12,
 	levelDotSize = 16,
 	levelFontSize = 9,
+	levelOffsetX = 1,
 	nameFontSize = 10,
 	crownSize = 12,
+	crownOverlap = 5,
+	nameCrownOverlap = 1,
 	crownAtlas = "UI-HUD-UnitFrame-Player-Group-LeaderIcon",
 	crownTexture = "Interface\\GroupFrame\\UI-Group-LeaderIcon",
 	border = 1.5,
@@ -112,11 +115,23 @@ Guild.sources = {
 	Kinship = 1900
 }
 
+function Guild.IsSelf(sender, name)
+	if MapUtils.Comm ~= nil and MapUtils.Comm.IsSelf(sender) then return true end
+	if name == UnitName("player") then return true end
+	local first, second = UnitName("player", true)
+	if type(first) == "string" and type(second) == "string" and second ~= "" then
+		local full = first .. " " .. second
+		if name == full or sender == full or name == first .. "-" .. second then return true end
+	end
+
+	return false
+end
+
 function Guild.Store(sender, source, mapID, x, y, class, level)
 	if type(mapID) ~= "number" or type(x) ~= "number" or type(y) ~= "number" or mapID <= 0 then return end
 	if x < 0 or x > 1 or y < 0 or y > 1 or (x == 0 and y == 0) then return end
 	local name = Guild.GetName(sender)
-	if name == nil or name == "" then return end
+	if name == nil or name == "" or Guild.IsSelf(sender, name) then return end
 	Guild.online[name] = true
 	local now = GetTime()
 	local member = Guild.members[name]
@@ -229,17 +244,20 @@ function Guild.OnKinshipChunk(sender, body)
 end
 
 Guild.online = {}
+Guild.ranks = {}
 function Guild.UpdateRoster()
 	if GetNumGuildMembers == nil or GetGuildRosterInfo == nil then return end
 	local count = GetNumGuildMembers()
 	if Guild.IsSecret(count) or type(count) ~= "number" or count <= 0 then return end
 	wipe(Guild.online)
+	wipe(Guild.ranks)
 	local leader
 	for index = 1, count do
-		local name, _, rankIndex, _, _, _, _, _, online = GetGuildRosterInfo(index)
-		if not Guild.IsSecret(name, rankIndex, online) and type(name) == "string" then
+		local name, rank, rankIndex, _, _, _, _, _, online = GetGuildRosterInfo(index)
+		if not Guild.IsSecret(name, rank, rankIndex, online) and type(name) == "string" then
 			name = Guild.GetName(name)
 			Guild.online[name] = online and true or false
+			Guild.ranks[name] = type(rank) == "string" and rank or nil
 			if rankIndex == 0 then leader = name end
 		end
 	end
@@ -320,12 +338,32 @@ function Guild.IsGrouped(name)
 	return UnitInParty(name) or UnitInRaid(name)
 end
 
+function Guild.IsLeader(name)
+	return name == Guild.leader
+end
+
+function Guild.HasCrownAtlas()
+	return C_Texture ~= nil and C_Texture.GetAtlasInfo ~= nil and C_Texture.GetAtlasInfo(Guild.crownAtlas) ~= nil
+end
+
+function Guild.GetCrownMarkup()
+	if CreateAtlasMarkup ~= nil and Guild.HasCrownAtlas() then return CreateAtlasMarkup(Guild.crownAtlas, 14, 14) end
+
+	return "|T" .. Guild.crownTexture .. ":14:14|t"
+end
+
 function Guild.OnPinEnter(pin)
 	local member = pin.member
 	if member == nil then return end
 	GameTooltip:SetOwner(pin, "ANCHOR_RIGHT")
 	local color = RAID_CLASS_COLORS[member.class or ""] or Guild.fallbackColor
 	GameTooltip:SetText(member.name, color.r, color.g, color.b)
+	local rank = member.rank or Guild.ranks[member.name]
+	if rank ~= nil then
+		if Guild.IsLeader(member.name) then rank = Guild.GetCrownMarkup() .. " " .. rank end
+		GameTooltip:AddLine(rank, 0.25, 1, 0.25)
+	end
+
 	local info = C_Map.GetMapInfo(member.mapID)
 	if member.level ~= nil then
 		GameTooltip:AddLine(format("%s %d", LEVEL or "Level", member.level), 1, 1, 1)
@@ -347,17 +385,14 @@ function Guild.CreatePin(canvas)
 	pin.dot = pin:CreateTexture(nil, "ARTWORK")
 	pin.dot:SetTexture(Guild.mask)
 	pin.crown = pin:CreateTexture(nil, "OVERLAY")
-	pin.crown:SetPoint("CENTER", pin, "TOPLEFT")
-	if pin.crown.SetAtlas ~= nil and C_Texture ~= nil and C_Texture.GetAtlasInfo ~= nil and C_Texture.GetAtlasInfo(Guild.crownAtlas) ~= nil then
+	if pin.crown.SetAtlas ~= nil and Guild.HasCrownAtlas() then
 		pin.crown:SetAtlas(Guild.crownAtlas)
 	else
 		pin.crown:SetTexture(Guild.crownTexture)
 	end
 
 	pin.level = pin:CreateFontString(nil, "OVERLAY")
-	pin.level:SetPoint("CENTER")
 	pin.name = pin:CreateFontString(nil, "OVERLAY")
-	pin.name:SetPoint("BOTTOM", pin, "TOP")
 	pin:SetScript("OnEnter", Guild.OnPinEnter)
 	pin:SetScript("OnLeave", function(self) if GameTooltip:IsOwned(self) then GameTooltip:Hide() end end)
 	pin:SetScript("OnHide", function(self) if GameTooltip:IsOwned(self) then GameTooltip:Hide() end end)
@@ -421,7 +456,7 @@ function Guild.UpdatePins()
 	local showName = MapUtils:GetConfig("GUILDMEMBERNAME", false) == true
 	local size, inset = (showLevel and Guild.levelDotSize or Guild.dotSize) / scale, Guild.border / scale
 	local levelSize, nameSize = Guild.levelFontSize / scale, Guild.nameFontSize / scale
-	local crownSize = Guild.crownSize / scale
+	local crownSize, crownOverlap = Guild.crownSize / scale, Guild.crownOverlap / scale
 	local level = Guild.GetPinLevel(canvas)
 	local low, high = 0, 1
 	if MapUtils.IsOneMap ~= nil and MapUtils.IsZoneDetailMap ~= nil and MapUtils:IsOneMap() and MapUtils:IsZoneDetailMap(mapID) then low, high = -50, 51 end
@@ -445,13 +480,20 @@ function Guild.UpdatePins()
 				pin.dot:SetPoint("BOTTOMRIGHT", -inset, inset)
 				local color = RAID_CLASS_COLORS[member.class or ""] or Guild.fallbackColor
 				pin.dot:SetVertexColor(color.r, color.g, color.b, 1)
+				pin.level:ClearAllPoints()
+				pin.level:SetPoint("CENTER", (member.level or 0) < 10 and Guild.levelOffsetX / scale or 0, 0)
 				Guild.SetLabel(pin.level, showLevel and member.level or nil, levelSize, Guild.textColor)
 				Guild.SetLabel(pin.name, showName and member.name or nil, nameSize, color)
-				if name == Guild.leader then
+				pin.name:ClearAllPoints()
+				if Guild.IsLeader(name) then
 					pin.crown:SetSize(crownSize, crownSize)
+					pin.crown:ClearAllPoints()
+					pin.crown:SetPoint("BOTTOM", pin, "TOP", 0, -crownOverlap)
 					pin.crown:Show()
+					pin.name:SetPoint("BOTTOM", pin.crown, "TOP", 0, -Guild.nameCrownOverlap / scale)
 				else
 					pin.crown:Hide()
+					pin.name:SetPoint("BOTTOM", pin, "TOP")
 				end
 				if MapUtils.SetCanvasPinScale ~= nil then MapUtils:SetCanvasPinScale(pin, scale) end
 				pin:ClearAllPoints()
