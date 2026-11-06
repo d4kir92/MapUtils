@@ -51,6 +51,15 @@ MapUtils includes translations for all World of Warcraft client locales:
 
 `deDE`, `enUS`, `esES`, `esMX`, `frFR`, `itIT`, `koKR`, `ptBR`, `ruRU`, `zhCN`, and `zhTW`.
 
+## Credits
+
+- Combat pin handling (`CombatPins` in `mapframe.lua`) adapted from [OpenMap](https://github.com/openmap-world/openmap) (MIT, © 2026 OpenMap contributors). See `THIRD_PARTY_LICENSES.md`.
+- Quest giver and quest turn-in data derived from [QuestieDB](https://github.com/Questie/QuestieDB) and [Questie](https://github.com/Questie/Questie) (GPLv3). See `THIRD_PARTY_LICENSES.md`.
+
+## License
+
+MapUtils is licensed under the GNU General Public License v3, see `LICENSE`.
+
 ## Author
 
 D4KiR
