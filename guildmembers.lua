@@ -10,12 +10,20 @@ local Guild = {
 	checkInterval = 0.1,
 	pruneInterval = 2,
 	dotSize = 12,
+	levelDotSize = 16,
+	levelFontSize = 9,
+	nameFontSize = 10,
 	border = 1.5,
 	mask = "Interface\\CharacterFrame\\TempPortraitAlphaMask",
 	fallbackColor = {
 		r = 0.2,
 		g = 1,
 		b = 0.4
+	},
+	textColor = {
+		r = 1,
+		g = 1,
+		b = 1
 	},
 	members = {},
 	pins = {},
@@ -325,11 +333,32 @@ function Guild.CreatePin(canvas)
 	pin.border:SetVertexColor(0, 0, 0, 0.9)
 	pin.dot = pin:CreateTexture(nil, "ARTWORK")
 	pin.dot:SetTexture(Guild.mask)
+	pin.level = pin:CreateFontString(nil, "OVERLAY")
+	pin.level:SetPoint("CENTER")
+	pin.name = pin:CreateFontString(nil, "OVERLAY")
+	pin.name:SetPoint("BOTTOM", pin, "TOP")
 	pin:SetScript("OnEnter", Guild.OnPinEnter)
 	pin:SetScript("OnLeave", function(self) if GameTooltip:IsOwned(self) then GameTooltip:Hide() end end)
 	pin:SetScript("OnHide", function(self) if GameTooltip:IsOwned(self) then GameTooltip:Hide() end end)
 
 	return pin
+end
+
+function Guild.SetLabel(label, text, size, color)
+	if text == nil then
+		label:Hide()
+
+		return
+	end
+
+	if label.size ~= size then
+		label:SetFont(STANDARD_TEXT_FONT, size, "OUTLINE")
+		label.size = size
+	end
+
+	label:SetText(text)
+	label:SetTextColor(color.r, color.g, color.b, 1)
+	label:Show()
 end
 
 function Guild.GetPinLevel(canvas)
@@ -367,7 +396,10 @@ function Guild.UpdatePins()
 		return
 	end
 
-	local size, inset = Guild.dotSize / scale, Guild.border / scale
+	local showLevel = MapUtils:GetConfig("GUILDMEMBERLEVEL", false) == true
+	local showName = MapUtils:GetConfig("GUILDMEMBERNAME", false) == true
+	local size, inset = (showLevel and Guild.levelDotSize or Guild.dotSize) / scale, Guild.border / scale
+	local levelSize, nameSize = Guild.levelFontSize / scale, Guild.nameFontSize / scale
 	local level = Guild.GetPinLevel(canvas)
 	local low, high = 0, 1
 	if MapUtils.IsOneMap ~= nil and MapUtils.IsZoneDetailMap ~= nil and MapUtils:IsOneMap() and MapUtils:IsZoneDetailMap(mapID) then low, high = -50, 51 end
@@ -391,6 +423,8 @@ function Guild.UpdatePins()
 				pin.dot:SetPoint("BOTTOMRIGHT", -inset, inset)
 				local color = RAID_CLASS_COLORS[member.class or ""] or Guild.fallbackColor
 				pin.dot:SetVertexColor(color.r, color.g, color.b, 1)
+				Guild.SetLabel(pin.level, showLevel and member.level or nil, levelSize, Guild.textColor)
+				Guild.SetLabel(pin.name, showName and member.name or nil, nameSize, color)
 				if MapUtils.SetCanvasPinScale ~= nil then MapUtils:SetCanvasPinScale(pin, scale) end
 				pin:ClearAllPoints()
 				pin:SetPoint("CENTER", canvas, "TOPLEFT", width * x, -height * y)

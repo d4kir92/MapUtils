@@ -254,6 +254,12 @@ function MapUtils:InitSetting()
 	AddCategory("WORLDMAP", nil, nil, ADDED_0927)
 	if MapUtils.RefreshGuildMembers then
 		AddTooltip(AddCheckbox("GUILDMEMBERPINS", true, function() MapUtils:RefreshGuildMembers() end, nil, "2026-10-29"), "LID_GUILDMEMBERPINS", "LID_GUILDMEMBERPINSDESC")
+		for _, key in ipairs({"GUILDMEMBERLEVEL", "GUILDMEMBERNAME"}) do
+			local control = AddCheckbox(key, false, function() MapUtils:RefreshGuildMembers() end, nil, "2026-11-06")
+			Requires(control, "GUILDMEMBERPINS")
+			AddTooltip(control, "LID_" .. key, "LID_" .. key .. "DESC")
+		end
+
 		AddTooltip(AddCheckbox("GUILDMEMBERSHARE", true, function() MapUtils:RefreshGuildMembers() end, nil, "2026-10-29"), "LID_GUILDMEMBERSHARE", "LID_GUILDMEMBERSHAREDESC")
 	end
 	if MapUtils:IsForever() then AddCheckbox("REMEMBERQUESTCATEGORIES", true, function() MapUtils:RestoreQuestCategories() end) end
