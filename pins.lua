@@ -892,6 +892,7 @@ AddDungeon(
 	{
 		["name"] = "The Drowned City",
 		["foreverOnly"] = true,
+		["instanceMap"] = 900001,
 		["minLevel"] = 35,
 		["maxLevel"] = 40,
 	},
