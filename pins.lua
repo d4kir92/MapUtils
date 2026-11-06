@@ -903,6 +903,56 @@ AddDungeon(
 
 AddDungeon(
 	{
+		["name"] = "Krol'dok Stronghold",
+		["foreverOnly"] = true,
+		["instanceMap"] = 900002,
+		["minLevel"] = 40,
+		["maxLevel"] = 45,
+	},
+	{
+		[2548] = {0.485, 0.261},
+	}
+)
+
+AddDungeon(
+	{
+		["name"] = "Alcaz Prison",
+		["foreverOnly"] = true,
+		["minLevel"] = 48,
+		["maxLevel"] = 53,
+	},
+	{
+		[1445] = {0.750, 0.147},
+	}
+)
+
+AddDungeon(
+	{
+		["name"] = "Blackmaw Hold",
+		["foreverOnly"] = true,
+		["minLevel"] = 55,
+		["maxLevel"] = 60,
+	},
+	{
+		[1447] = {0.386, 0.332},
+	}
+)
+
+AddDungeon(
+	{
+		["name"] = "Shaper's Terrace",
+		["foreverOnly"] = true,
+		["instanceMap"] = 900005,
+		["minLevel"] = 58,
+		["maxLevel"] = 60,
+	},
+	{
+		[1449] = {0.481, 0.061},
+	}
+)
+
+AddDungeon(
+	{
 		["name"] = "Zul'Farrak",
 		["instanceMap"] = 209,
 		["minLevel"] = 44,
