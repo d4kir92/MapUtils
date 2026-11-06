@@ -13,6 +13,9 @@ local Guild = {
 	levelDotSize = 16,
 	levelFontSize = 9,
 	nameFontSize = 10,
+	crownSize = 12,
+	crownAtlas = "UI-HUD-UnitFrame-Player-Group-LeaderIcon",
+	crownTexture = "Interface\\GroupFrame\\UI-Group-LeaderIcon",
 	border = 1.5,
 	mask = "Interface\\CharacterFrame\\TempPortraitAlphaMask",
 	fallbackColor = {
@@ -231,9 +234,19 @@ function Guild.UpdateRoster()
 	local count = GetNumGuildMembers()
 	if Guild.IsSecret(count) or type(count) ~= "number" or count <= 0 then return end
 	wipe(Guild.online)
+	local leader
 	for index = 1, count do
-		local name, _, _, _, _, _, _, _, online = GetGuildRosterInfo(index)
-		if not Guild.IsSecret(name, online) and type(name) == "string" then Guild.online[Guild.GetName(name)] = online and true or false end
+		local name, _, rankIndex, _, _, _, _, _, online = GetGuildRosterInfo(index)
+		if not Guild.IsSecret(name, rankIndex, online) and type(name) == "string" then
+			name = Guild.GetName(name)
+			Guild.online[name] = online and true or false
+			if rankIndex == 0 then leader = name end
+		end
+	end
+
+	if Guild.leader ~= leader then
+		Guild.leader = leader
+		Guild.dirty = true
 	end
 
 	for name in pairs(Guild.members) do
@@ -333,6 +346,14 @@ function Guild.CreatePin(canvas)
 	pin.border:SetVertexColor(0, 0, 0, 0.9)
 	pin.dot = pin:CreateTexture(nil, "ARTWORK")
 	pin.dot:SetTexture(Guild.mask)
+	pin.crown = pin:CreateTexture(nil, "OVERLAY")
+	pin.crown:SetPoint("CENTER", pin, "TOPLEFT")
+	if pin.crown.SetAtlas ~= nil and C_Texture ~= nil and C_Texture.GetAtlasInfo ~= nil and C_Texture.GetAtlasInfo(Guild.crownAtlas) ~= nil then
+		pin.crown:SetAtlas(Guild.crownAtlas)
+	else
+		pin.crown:SetTexture(Guild.crownTexture)
+	end
+
 	pin.level = pin:CreateFontString(nil, "OVERLAY")
 	pin.level:SetPoint("CENTER")
 	pin.name = pin:CreateFontString(nil, "OVERLAY")
@@ -400,6 +421,7 @@ function Guild.UpdatePins()
 	local showName = MapUtils:GetConfig("GUILDMEMBERNAME", false) == true
 	local size, inset = (showLevel and Guild.levelDotSize or Guild.dotSize) / scale, Guild.border / scale
 	local levelSize, nameSize = Guild.levelFontSize / scale, Guild.nameFontSize / scale
+	local crownSize = Guild.crownSize / scale
 	local level = Guild.GetPinLevel(canvas)
 	local low, high = 0, 1
 	if MapUtils.IsOneMap ~= nil and MapUtils.IsZoneDetailMap ~= nil and MapUtils:IsOneMap() and MapUtils:IsZoneDetailMap(mapID) then low, high = -50, 51 end
@@ -425,6 +447,12 @@ function Guild.UpdatePins()
 				pin.dot:SetVertexColor(color.r, color.g, color.b, 1)
 				Guild.SetLabel(pin.level, showLevel and member.level or nil, levelSize, Guild.textColor)
 				Guild.SetLabel(pin.name, showName and member.name or nil, nameSize, color)
+				if name == Guild.leader then
+					pin.crown:SetSize(crownSize, crownSize)
+					pin.crown:Show()
+				else
+					pin.crown:Hide()
+				end
 				if MapUtils.SetCanvasPinScale ~= nil then MapUtils:SetCanvasPinScale(pin, scale) end
 				pin:ClearAllPoints()
 				pin:SetPoint("CENTER", canvas, "TOPLEFT", width * x, -height * y)
