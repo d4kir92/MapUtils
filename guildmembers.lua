@@ -276,6 +276,8 @@ function Guild.Project(sourceID, targetID, x, y)
 		visited[sourceID] = true
 		local rect = Guild.GetRect(sourceID, targetID)
 		if rect ~= nil then return rect[1] + x * (rect[2] - rect[1]), rect[3] + y * (rect[4] - rect[3]) end
+		rect = Guild.GetRect(targetID, sourceID)
+		if rect ~= nil then return (x - rect[1]) / (rect[2] - rect[1]), (y - rect[3]) / (rect[4] - rect[3]) end
 		local info = C_Map.GetMapInfo(sourceID)
 		local parentID = info and info.parentMapID
 		if parentID == nil or parentID == 0 then return nil end
@@ -362,11 +364,13 @@ function Guild.UpdatePins()
 
 	local size, inset = Guild.dotSize / scale, Guild.border / scale
 	local level = Guild.GetPinLevel(canvas)
+	local low, high = 0, 1
+	if MapUtils.IsOneMap ~= nil and MapUtils.IsZoneDetailMap ~= nil and MapUtils:IsOneMap() and MapUtils:IsZoneDetailMap(mapID) then low, high = -50, 51 end
 	local count = 0
 	for name, member in pairs(Guild.members) do
 		if not Guild.IsGrouped(name) then
 			local x, y = Guild.Project(member.mapID, mapID, member.x, member.y)
-			if x ~= nil and x >= 0 and x <= 1 and y >= 0 and y <= 1 then
+			if x ~= nil and x >= low and x <= high and y >= low and y <= high then
 				count = count + 1
 				local pin = Guild.pins[count]
 				if pin == nil then
