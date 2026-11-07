@@ -32,7 +32,7 @@ SOFTWARE.
 
 ## QuestieDB / Questie
 
-The quest giver and quest turn-in data (`data/<flavor>/questgivers.lua`) is derived from QuestieDB, which imported its initial data from Questie. The data was converted into a MapUtils layout.
+The quest giver and quest turn-in data (`data/<flavor>/questgivers.lua`) is derived from QuestieDB, which imported its initial data from Questie. The data was converted into a MapUtils layout. This includes the quest objective texts, reputation rewards, follow-up quests and the base quest experience from QuestieDB's QuestXP support tables; the experience scaling follows Questie's `QuestieXP.lua`.
 
 Sources:
 

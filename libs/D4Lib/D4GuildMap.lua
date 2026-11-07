@@ -1,5 +1,22 @@
 local _, D4 = ...
 local GUILDMAP_OWNERS = "D4GuildMapOwners"
+local GUILDMAP_HOOKS = "D4GuildMapHooks"
+local GUILDMAP_MAPS = "D4GuildMapInstances"
+function D4:AttachGuildMapHooks()
+    local attached = _G.D4GuildMapAttached
+    for hookOwner, hooks in pairs(_G[GUILDMAP_HOOKS]) do
+        if hooks.attach ~= nil then
+            for mapOwner, guild in pairs(_G[GUILDMAP_MAPS]) do
+                local key = hookOwner .. ":" .. mapOwner
+                if not attached[key] then
+                    attached[key] = true
+                    hooks.attach(guild)
+                end
+            end
+        end
+    end
+end
+
 function D4:GetGuildMapOwner()
     local owners = _G[GUILDMAP_OWNERS]
     if owners == nil then return nil end
@@ -17,6 +34,16 @@ function D4:CreateGuildMap(options)
     local owner = options.owner or "D4"
     _G[GUILDMAP_OWNERS] = _G[GUILDMAP_OWNERS] or {}
     _G[GUILDMAP_OWNERS][owner] = options.priority or 0
+    _G[GUILDMAP_HOOKS] = _G[GUILDMAP_HOOKS] or {}
+    _G[GUILDMAP_MAPS] = _G[GUILDMAP_MAPS] or {}
+    _G.D4GuildMapAttached = _G.D4GuildMapAttached or {}
+    _G[GUILDMAP_HOOKS][owner] = {
+        isHidden = options.isHidden,
+        getClip = options.getClip,
+        setPinScale = options.setPinScale,
+        attach = options.attach
+    }
+
     local Guild = {
         owner = owner,
         prefix = "MapUtils",
@@ -94,29 +121,38 @@ function D4:CreateGuildMap(options)
     end
 
     function Guild.IsShown()
-        _G.D4GuildMapDebugOwners = _G.D4GuildMapDebugOwners or {}
-    _G.D4GuildMapDebugOwners[owner] = Guild
-    SLASH_D4GUILDMAP1 = "/d4guildmap"
-    SlashCmdList.D4GUILDMAP = function(message)
-        if strtrim(message):lower() ~= "debug" then return end
-        local active = _G.D4GuildMapDebugOwners[D4:GetGuildMapOwner()]
-        if active ~= nil then active.ToggleDebugMenu() end
-    end
-
-    return Guild.IsActive() and Guild.GetConfig("GUILDMEMBERPINS", true)
+        return Guild.IsActive() and Guild.GetConfig("GUILDMEMBERPINS", true)
     end
 
     function Guild.IsSharing()
-        _G.D4GuildMapDebugOwners = _G.D4GuildMapDebugOwners or {}
-    _G.D4GuildMapDebugOwners[owner] = Guild
-    SLASH_D4GUILDMAP1 = "/d4guildmap"
-    SlashCmdList.D4GUILDMAP = function(message)
-        if strtrim(message):lower() ~= "debug" then return end
-        local active = _G.D4GuildMapDebugOwners[D4:GetGuildMapOwner()]
-        if active ~= nil then active.ToggleDebugMenu() end
+        return Guild.IsActive() and Guild.GetConfig("GUILDMEMBERSHARE", true)
     end
 
-    return Guild.IsActive() and Guild.GetConfig("GUILDMEMBERSHARE", true)
+    function Guild.IsHiddenOn(mapID)
+        for _, hooks in pairs(_G[GUILDMAP_HOOKS]) do
+            if hooks.isHidden ~= nil and hooks.isHidden(mapID) then return true end
+        end
+
+        return false
+    end
+
+    function Guild.GetClip(mapID)
+        local low, high = 0, 1
+        for _, hooks in pairs(_G[GUILDMAP_HOOKS]) do
+            if hooks.getClip ~= nil then
+                local hookLow, hookHigh = hooks.getClip(mapID)
+                if hookLow ~= nil and hookLow < low then low = hookLow end
+                if hookHigh ~= nil and hookHigh > high then high = hookHigh end
+            end
+        end
+
+        return low, high
+    end
+
+    function Guild.SetPinScale(pin, scale)
+        for _, hooks in pairs(_G[GUILDMAP_HOOKS]) do
+            if hooks.setPinScale ~= nil then hooks.setPinScale(pin, scale) end
+        end
     end
 
     function Guild.GetName(sender)
@@ -640,7 +676,7 @@ function D4:CreateGuildMap(options)
     function Guild.UpdatePins()
         local canvas = WorldMapFrame:GetCanvas()
         local mapID = WorldMapFrame:GetMapID()
-        if canvas == nil or mapID == nil or not Guild.IsShown() or (options.isHidden ~= nil and options.isHidden(mapID)) then
+        if canvas == nil or mapID == nil or not Guild.IsShown() or Guild.IsHiddenOn(mapID) then
             Guild.HidePins()
 
             return
@@ -660,8 +696,7 @@ function D4:CreateGuildMap(options)
         local levelSize, nameSize = Guild.levelFontSize / scale, Guild.nameFontSize / scale
         local crownSize, crownOverlap = Guild.crownSize / scale, Guild.crownOverlap / scale
         local level = Guild.GetPinLevel(canvas)
-        local low, high = 0, 1
-        if options.getClip ~= nil then low, high = options.getClip(mapID) end
+        local low, high = Guild.GetClip(mapID)
         local count = 0
         local debugVisible = false
         for name, member in pairs(Guild.members) do
@@ -705,7 +740,7 @@ function D4:CreateGuildMap(options)
                         pin.name:SetPoint("BOTTOM", pin, "TOP")
                     end
 
-                    if options.setPinScale ~= nil then options.setPinScale(pin, scale) end
+                    Guild.SetPinScale(pin, scale)
                     pin:ClearAllPoints()
                     pin:SetPoint("CENTER", canvas, "TOPLEFT", width * x, -height * y + (member.debug and Guild.debug.y / scale or 0))
                     if member.debug then debugVisible = true end
@@ -814,6 +849,9 @@ function D4:CreateGuildMap(options)
         local active = _G.D4GuildMapDebugOwners[D4:GetGuildMapOwner()]
         if active ~= nil then active.ToggleDebugMenu() end
     end
+
+    _G[GUILDMAP_MAPS][owner] = Guild
+    D4:AttachGuildMapHooks()
 
     return Guild
 end

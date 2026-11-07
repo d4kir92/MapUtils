@@ -9,13 +9,15 @@ local Guild = MapUtils:CreateGuildMap({
 
 		return 0, 1
 	end,
-	setPinScale = function(pin, scale) if MapUtils.SetCanvasPinScale ~= nil then MapUtils:SetCanvasPinScale(pin, scale) end end
+	setPinScale = function(pin, scale) if MapUtils.SetCanvasPinScale ~= nil then MapUtils:SetCanvasPinScale(pin, scale) end end,
+	attach = function(guild)
+		if MapUtils.CanvasPinLists ~= nil then tinsert(MapUtils.CanvasPinLists, guild.pins) end
+		if MapUtils.CanvasPinUpdaters ~= nil then tinsert(MapUtils.CanvasPinUpdaters, function() guild.UpdatePins() end) end
+	end
 })
 
 if Guild == nil then return end
 MapUtils.GuildMembers = Guild
-if MapUtils.CanvasPinLists ~= nil then tinsert(MapUtils.CanvasPinLists, Guild.pins) end
-if MapUtils.CanvasPinUpdaters ~= nil then tinsert(MapUtils.CanvasPinUpdaters, function() Guild.UpdatePins() end) end
 function MapUtils:RefreshGuildMembers()
 	Guild.Refresh()
 end

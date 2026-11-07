@@ -377,25 +377,135 @@ function QG.GetTitle(questID, fallback)
 	return fallback
 end
 
+function QG.GetXP(quest)
+	local data = quest[19]
+	if type(data) ~= "table" then return 0 end
+	local charLevel = UnitLevel("player") or 1
+	local maxLevel = GetMaxPlayerLevel and GetMaxPlayerLevel()
+	if maxLevel and charLevel >= maxLevel then return 0 end
+	local xp = data[2] * math.min(10, math.max(1, 2 * (data[1] - charLevel) + 20)) / 10
+	if xp <= 100 then
+		xp = 5 * math.floor((xp + 2) / 5)
+	elseif xp <= 500 then
+		xp = 10 * math.floor((xp + 5) / 10)
+	elseif xp <= 1000 then
+		xp = 25 * math.floor((xp + 12) / 25)
+	else
+		xp = 50 * math.floor((xp + 25) / 50)
+	end
+
+	return math.floor(xp)
+end
+
+function QG.GetMoney(questID)
+	if GetQuestLogRewardMoney == nil then return 0 end
+	local ok, money = pcall(GetQuestLogRewardMoney, questID)
+	if ok and type(money) == "number" and not MapUtils:IsSecret(money) and money > 0 then return money end
+
+	return 0
+end
+
+function QG.GetFactionName(factionID)
+	if C_Reputation and C_Reputation.GetFactionDataByID then
+		local data = C_Reputation.GetFactionDataByID(factionID)
+		if data and data.name then return data.name end
+	end
+
+	if GetFactionInfoByID then
+		local name = GetFactionInfoByID(factionID)
+		if name then return name end
+	end
+
+	return nil
+end
+
+function QG.VisibleLength(text)
+	return #text:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", ""):gsub("|T.-|t", "  ")
+end
+
+function QG.AddWrapped(text, indent, r, g, b)
+	local line = ""
+	for word in text:gmatch("%S+") do
+		if line == "" then
+			line = word
+		elseif QG.VisibleLength(line) + 1 + QG.VisibleLength(word) > QG.WRAP then
+			GameTooltip:AddLine(indent .. line, r, g, b)
+			line = word
+		else
+			line = line .. " " .. word
+		end
+	end
+
+	if line ~= "" then GameTooltip:AddLine(indent .. line, r, g, b) end
+end
+
+QG.WRAP = 44
+QG.INDENT = "  "
+QG.CHAIN_INDENT = "     "
+function QG.AddQuestDetails(questID, quest)
+	if quest[20] then QG.AddWrapped(quest[20], QG.INDENT, 0.85, 0.85, 0.85) end
+	local rewards = {}
+	local xp = QG.GetXP(quest)
+	if xp > 0 then tinsert(rewards, format("%s %s", BreakUpLargeNumbers and BreakUpLargeNumbers(xp) or xp, MapUtils:Trans("LID_QUESTXP"))) end
+	local money = QG.GetMoney(questID)
+	if money > 0 and GetCoinTextureString then tinsert(rewards, GetCoinTextureString(money)) end
+	if #rewards > 0 then QG.AddWrapped(format("|cffffd100%s:|r %s", MapUtils:Trans("LID_QUESTREWARD"), table.concat(rewards, "  ")), QG.INDENT, 1, 1, 1) end
+	local reputation = quest[21]
+	if type(reputation) == "table" then
+		local parts = {}
+		for i = 1, #reputation - 1, 2 do
+			local name = QG.GetFactionName(reputation[i])
+			if name then tinsert(parts, format("%+d %s", reputation[i + 1], name)) end
+		end
+
+		if #parts > 0 then QG.AddWrapped(format("|cffffd100%s:|r %s", MapUtils:Trans("LID_QUESTREPUTATION"), table.concat(parts, ", ")), QG.INDENT, 0.55, 0.65, 1) end
+	end
+
+	local nextID = quest[18]
+	local seen = {
+		[questID] = true
+	}
+
+	local first = true
+	while nextID and INFO[nextID] and not seen[nextID] do
+		seen[nextID] = true
+		if first then
+			GameTooltip:AddLine(format("%s%s:", QG.INDENT, MapUtils:Trans("LID_QUESTNEXT")), 1, 0.82, 0)
+			first = false
+		end
+
+		GameTooltip:AddLine(QG.CHAIN_INDENT .. QG.GetTitle(nextID, INFO[nextID][3]), 0.75, 0.75, 0.75)
+		nextID = INFO[nextID][18]
+	end
+end
+
 function QG.AddQuestLines(quests)
-	for _, questID in ipairs(quests) do
+	local details = IsShiftKeyDown()
+	for index, questID in ipairs(quests) do
 		local quest = INFO[questID]
 		local level = QG.GetLevel(quest)
 		local color = GetQuestDifficultyColor and GetQuestDifficultyColor(level)
 		local tag = ""
 		if quest[5] then tag = " |cff9d9d9d(" .. MapUtils:Trans(CATEGORY_TAGS[quest[5]]) .. ")|r" end
+		if details and index > 1 then GameTooltip:AddLine(" ") end
 		if color then
-			GameTooltip:AddLine(format("[%d] %s%s", level, QG.GetTitle(questID, quest[3]), tag), color.r, color.g, color.b, true)
+			GameTooltip:AddLine(format("%s[%d] %s%s", QG.INDENT, level, QG.GetTitle(questID, quest[3]), tag), color.r, color.g, color.b, true)
 		else
-			GameTooltip:AddLine(format("[%d] %s%s", level, QG.GetTitle(questID, quest[3]), tag), 1, 1, 1, true)
+			GameTooltip:AddLine(format("%s[%d] %s%s", QG.INDENT, level, QG.GetTitle(questID, quest[3]), tag), 1, 1, 1, true)
 		end
+
+		if details then QG.AddQuestDetails(questID, quest) end
 	end
+
+	return #quests > 0
 end
 
 function QG.OnEnter(pin)
 	local cluster = pin.cluster
 	if cluster == nil then return end
 	GameTooltip:SetOwner(pin, "ANCHOR_RIGHT")
+	QG.hovered = pin
+	local hasQuests = false
 	local seen = {}
 	local first = true
 	local shown = 0
@@ -417,10 +527,10 @@ function QG.OnEnter(pin)
 
 			for _, questID in ipairs(spot.turnins or {}) do
 				local quest = INFO[questID]
-				GameTooltip:AddLine(format("%s: %s", MapUtils:Trans("LID_QUESTTURNIN"), QG.GetTitle(questID, quest and quest[3] or tostring(questID))), 0.25, 1, 0.25, true)
+				GameTooltip:AddLine(format("%s%s: %s", QG.INDENT, MapUtils:Trans("LID_QUESTTURNIN"), QG.GetTitle(questID, quest and quest[3] or tostring(questID))), 0.25, 1, 0.25, true)
 			end
 
-			QG.AddQuestLines(spot.quests or {})
+			if QG.AddQuestLines(spot.quests or {}) then hasQuests = true end
 		end
 	end
 
@@ -429,6 +539,9 @@ function QG.OnEnter(pin)
 		GameTooltip:AddLine(format("+%d", hidden), 0.6, 0.6, 0.6)
 	end
 
+	local shiftHint = hasQuests and not IsShiftKeyDown()
+	if shiftHint or MapUtils:HasWaypointSupport() then GameTooltip:AddLine(" ") end
+	if shiftHint then GameTooltip:AddLine(format("|cffffd100%s|r %s", MapUtils:Trans("LID_SHIFT"), MapUtils:Trans("LID_QUESTMOREINFO")), 1, 1, 1) end
 	if MapUtils:HasWaypointSupport() then GameTooltip:AddLine(format("|cffffd100%s|r %s", MapUtils:Trans("LID_LEFTCLICK"), MapUtils:Trans("LID_SETWAYPOINT")), 1, 1, 1) end
 	GameTooltip:Show()
 end
@@ -740,7 +853,20 @@ updater:RegisterEvent("QUEST_TURNED_IN")
 updater:RegisterEvent("PLAYER_LEVEL_UP")
 updater:RegisterEvent("SKILL_LINES_CHANGED")
 updater:RegisterEvent("UPDATE_FACTION")
-updater:SetScript("OnEvent", function() dirty = true end)
+updater:RegisterEvent("MODIFIER_STATE_CHANGED")
+updater:SetScript(
+	"OnEvent",
+	function(_, event)
+		if event ~= "MODIFIER_STATE_CHANGED" then
+			dirty = true
+
+			return
+		end
+
+		local pin = QG.hovered
+		if pin and pin:IsShown() and GameTooltip:IsOwned(pin) then QG.OnEnter(pin) end
+	end
+)
 updater:SetScript(
 	"OnUpdate",
 	function(_, elapsed)
