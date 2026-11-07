@@ -29,12 +29,16 @@ function MapUtils:IsSimpleMapFrameAvailable()
 	return map ~= nil and map.NavBar ~= nil and map.BorderFrame ~= nil and map.ScrollContainer ~= nil and QuestMapFrame ~= nil
 end
 
+function MapUtils:IsSimpleMapFrameByEllesmere()
+	return MapUtils:IsAddOnActive("EllesmereUI")
+end
+
 function MapUtils:IsSimpleMapFrameByLeatrix()
 	return MapUtils:IsAddOnActive("Leatrix_Maps") and type(LeaMapsDB) == "table" and LeaMapsDB["SimpleMapFrame"] == "On"
 end
 
 local function IsWanted()
-	return MapUtils:IsSimpleMapFrameAvailable() and not MapUtils:IsSimpleMapFrameByLeatrix() and type(MAUTTAB) == "table" and MAUTTAB["WORLDMAPSIMPLE"] == true
+	return MapUtils:IsSimpleMapFrameAvailable() and not MapUtils:IsSimpleMapFrameByLeatrix() and not MapUtils:IsSimpleMapFrameByEllesmere() and type(MAUTTAB) == "table" and MAUTTAB["WORLDMAPSIMPLE"] == true
 end
 
 local function Save(frame)

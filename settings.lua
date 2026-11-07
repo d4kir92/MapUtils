@@ -285,10 +285,11 @@ function MapUtils:InitSetting()
 	if MapUtils.IsSimpleMapFrameAvailable and MapUtils:IsSimpleMapFrameAvailable() then
 		local byLeatrix = MapUtils:IsSimpleMapFrameByLeatrix()
 		local label = nil
-		if byLeatrix then label = MapUtils:Trans("LID_WORLDMAPSIMPLE") .. " |cffff8000(" .. MapUtils:Trans("LID_REVEALLEATRIX") .. ")|r" end
+		local byEllesmere = MapUtils:IsSimpleMapFrameByEllesmere()
+		if byLeatrix then label = MapUtils:Trans("LID_WORLDMAPSIMPLE") .. " |cffff8000(" .. MapUtils:Trans("LID_REVEALLEATRIX") .. ")|r" elseif byEllesmere then label = MapUtils:Trans("LID_WORLDMAPSIMPLE") .. " |cffff8000(EllesmereUI)|r" end
 		local simple = AddCheckbox("WORLDMAPSIMPLE", false, function() MapUtils:RefreshSimpleMapFrame() end, label, "2026-11-05")
 		AddTooltip(simple, "LID_WORLDMAPSIMPLE", "LID_WORLDMAPSIMPLEDESC")
-		if byLeatrix then maset:AddDependency(simple, function() return false end, 0) end
+		if byLeatrix or byEllesmere then maset:AddDependency(simple, function() return false end, 0) end
 	end
 
 	local wheelZoomAvailable = MapUtils.IsWorldMapWheelZoomAvailable and MapUtils:IsWorldMapWheelZoomAvailable()
