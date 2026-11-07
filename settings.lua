@@ -252,7 +252,7 @@ function MapUtils:InitSetting()
 
 	if MapUtils.RefreshCommChannel then AddTooltip(AddCheckbox("COMMCHANNEL", true, function() MapUtils:RefreshCommChannel() end, nil, "2026-10-28"), "LID_COMMCHANNEL", "LID_COMMCHANNELDESC") end
 	AddCategory("WORLDMAP", nil, nil, ADDED_0927)
-	if MapUtils.RefreshGuildMembers then
+	if MapUtils.RefreshGuildMembers and MapUtils:GetGuildMapOwner() == "MapUtils" then
 		AddTooltip(AddCheckbox("GUILDMEMBERPINS", true, function() MapUtils:RefreshGuildMembers() end, nil, "2026-10-29"), "LID_GUILDMEMBERPINS", "LID_GUILDMEMBERPINSDESC")
 		for _, key in ipairs({"GUILDMEMBERLEVEL", "GUILDMEMBERNAME"}) do
 			local control = AddCheckbox(key, false, function() MapUtils:RefreshGuildMembers() end, nil, "2026-11-06")
