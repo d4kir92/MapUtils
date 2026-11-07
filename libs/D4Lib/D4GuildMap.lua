@@ -94,11 +94,29 @@ function D4:CreateGuildMap(options)
     end
 
     function Guild.IsShown()
-        return Guild.IsActive() and Guild.GetConfig("GUILDMEMBERPINS", true)
+        _G.D4GuildMapDebugOwners = _G.D4GuildMapDebugOwners or {}
+    _G.D4GuildMapDebugOwners[owner] = Guild
+    SLASH_D4GUILDMAP1 = "/d4guildmap"
+    SlashCmdList.D4GUILDMAP = function(message)
+        if strtrim(message):lower() ~= "debug" then return end
+        local active = _G.D4GuildMapDebugOwners[D4:GetGuildMapOwner()]
+        if active ~= nil then active.ToggleDebugMenu() end
+    end
+
+    return Guild.IsActive() and Guild.GetConfig("GUILDMEMBERPINS", true)
     end
 
     function Guild.IsSharing()
-        return Guild.IsActive() and Guild.GetConfig("GUILDMEMBERSHARE", true)
+        _G.D4GuildMapDebugOwners = _G.D4GuildMapDebugOwners or {}
+    _G.D4GuildMapDebugOwners[owner] = Guild
+    SLASH_D4GUILDMAP1 = "/d4guildmap"
+    SlashCmdList.D4GUILDMAP = function(message)
+        if strtrim(message):lower() ~= "debug" then return end
+        local active = _G.D4GuildMapDebugOwners[D4:GetGuildMapOwner()]
+        if active ~= nil then active.ToggleDebugMenu() end
+    end
+
+    return Guild.IsActive() and Guild.GetConfig("GUILDMEMBERSHARE", true)
     end
 
     function Guild.GetName(sender)
@@ -156,10 +174,15 @@ function D4:CreateGuildMap(options)
         local last = Guild.lastSent
         local now = GetTime()
         local moved = last.mapID ~= mapID or last.x == nil or math.abs(last.x - x) > Guild.moveEpsilon or math.abs(last.y - y) > Guild.moveEpsilon
-        if not moved and last.time ~= nil and now - last.time < Guild.heartbeat then return end
+        local taxi = UnitOnTaxi ~= nil and UnitOnTaxi("player")
+        local faction = UnitFactionGroup("player")
+        if Guild.IsSecret(taxi, faction) then return end
+        taxi = taxi and 1 or 0
+        if faction ~= "Horde" and faction ~= "Alliance" then faction = "" end
+        if not moved and last.taxi == taxi and last.faction == faction and last.time ~= nil and now - last.time < Guild.heartbeat then return end
         local _, class = UnitClass("player")
-        local message = format("%s%d:%d:%d:%s:%d:%s", Guild.tag, mapID, x * Guild.scale + 0.5, y * Guild.scale + 0.5, class or "", UnitLevel("player") or 0, Guild.owner)
-        if Guild.Send(message) then last.mapID, last.x, last.y, last.time = mapID, x, y, now end
+        local message = format("%s%d:%d:%d:%s:%d:%s:%d:%s", Guild.tag, mapID, x * Guild.scale + 0.5, y * Guild.scale + 0.5, class or "", UnitLevel("player") or 0, Guild.owner, taxi, faction)
+        if Guild.Send(message) then last.mapID, last.x, last.y, last.time, last.taxi, last.faction = mapID, x, y, now, taxi, faction end
     end
 
     function Guild.RefreshTicker()
@@ -174,7 +197,7 @@ function D4:CreateGuildMap(options)
         end
     end
 
-    function Guild.Store(sender, source, mapID, x, y, class, level)
+    function Guild.Store(sender, source, mapID, x, y, class, level, taxi, faction)
         if type(mapID) ~= "number" or type(x) ~= "number" or type(y) ~= "number" or mapID <= 0 then return end
         if x < 0 or x > 1 or y < 0 or y > 1 or (x == 0 and y == 0) then return end
         local name = Guild.GetName(sender)
@@ -193,6 +216,8 @@ function D4:CreateGuildMap(options)
         end
 
         member.source = source
+        member.taxi = taxi == "1"
+        member.faction = (faction == "Horde" or faction == "Alliance") and faction or nil
         member.mapID, member.x, member.y = mapID, x, y
         if type(class) == "string" and RAID_CLASS_COLORS[class] ~= nil then member.class = class end
         if type(level) == "number" and level > 0 then member.level = level end
@@ -251,11 +276,11 @@ function D4:CreateGuildMap(options)
     Guild.parsers = {
         MapUtils = function(message, sender)
             if message:sub(1, 1) ~= Guild.tag then return end
-            local mapID, x, y, class, level, source = strsplit(":", message:sub(2))
+            local mapID, x, y, class, level, source, taxi, faction = strsplit(":", message:sub(2))
             x, y = tonumber(x), tonumber(y)
             if x == nil or y == nil then return end
             if not Guild.ownSources[source or ""] then source = "MapUtils" end
-            Guild.Store(sender, source, tonumber(mapID), x / Guild.scale, y / Guild.scale, class, tonumber(level))
+            Guild.Store(sender, source, tonumber(mapID), x / Guild.scale, y / Guild.scale, class, tonumber(level), taxi, faction)
         end,
         GMD1 = function(message, sender)
             local tag, mapID, x, y, class = strsplit("|", message)
@@ -404,12 +429,16 @@ function D4:CreateGuildMap(options)
         GameTooltip:SetText(member.name, color.r, color.g, color.b)
         local rank = member.rank or Guild.ranks[member.name]
         if rank ~= nil then
-            if Guild.IsLeader(member.name) then rank = Guild.GetCrownMarkup() .. " " .. rank end
+            if (member.debug and Guild.debug.crown) or (not member.debug and Guild.IsLeader(member.name)) then rank = Guild.GetCrownMarkup() .. " " .. rank end
             GameTooltip:AddLine(rank, 0.25, 1, 0.25)
         end
 
         local info = C_Map.GetMapInfo(member.mapID)
         if member.level ~= nil then GameTooltip:AddLine(format("%s %d", LEVEL or "Level", member.level), 1, 1, 1) end
+        if member.taxi then
+            local labels = Guild.debugLabels[GetLocale()] or Guild.debugLabels.enUS
+            GameTooltip:AddLine(labels.flying, 1, 0.82, 0)
+        end
         if info ~= nil and info.name ~= nil then GameTooltip:AddLine(info.name, 1, 1, 1) end
         GameTooltip:AddLine(format(D4:Trans("LID_GUILDMEMBERSEEN"), math.max(0, math.floor(GetTime() - member.time))), 0.7, 0.7, 0.7)
         if member.source ~= nil then GameTooltip:AddLine(member.source, 0.5, 0.5, 0.5) end
@@ -425,6 +454,10 @@ function D4:CreateGuildMap(options)
         pin.border:SetVertexColor(0, 0, 0, 0.9)
         pin.dot = pin:CreateTexture(nil, "ARTWORK")
         pin.dot:SetTexture(Guild.mask)
+        pin.mask = pin:CreateMaskTexture()
+        pin.mask:SetTexture(Guild.mask, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+        pin.mask:SetAllPoints(pin.dot)
+        pin.dot:AddMaskTexture(pin.mask)
         pin.crown = pin:CreateTexture(nil, "OVERLAY")
         if pin.crown.SetAtlas ~= nil and Guild.HasCrownAtlas() then
             pin.crown:SetAtlas(Guild.crownAtlas)
@@ -470,7 +503,135 @@ function D4:CreateGuildMap(options)
         return canvas:GetFrameLevel() + 30
     end
 
+    Guild.debug = {enabled = false, taxi = false, crown = false, y = 0}
+    Guild.debugArrows = {}
+    Guild.debugLabels = {
+        deDE = {flying = "Auf einem Taxiflug", crown = "Gildenleiter-Krone", enabled = "Eigenen Gildenmarker testen", taxi = "Taxiflug", title = "Gildenmarker-Test", y = "Y-Versatz"},
+        enUS = {flying = "On a taxi flight", crown = "Guild leader crown", enabled = "Test own guild marker", taxi = "Taxi flight", title = "Guild marker test", y = "Y offset"},
+        esES = {flying = "En un vuelo de transporte", crown = "Corona de maestro de hermandad", enabled = "Probar mi marcador de hermandad", taxi = "Vuelo de transporte", title = "Prueba de marcador", y = "Desplazamiento Y"},
+        esMX = {flying = "En un vuelo de transporte", crown = "Corona de maestro de hermandad", enabled = "Probar mi marcador de hermandad", taxi = "Vuelo de transporte", title = "Prueba de marcador", y = "Desplazamiento Y"},
+        frFR = {flying = "Sur un trajet aérien", crown = "Couronne de chef de guilde", enabled = "Tester mon marqueur de guilde", taxi = "Trajet aérien", title = "Test du marqueur de guilde", y = "Décalage Y"},
+        itIT = {flying = "Su un volo di trasporto", crown = "Corona del capogilda", enabled = "Prova il mio indicatore di gilda", taxi = "Volo di trasporto", title = "Prova indicatore di gilda", y = "Scostamento Y"},
+        koKR = {flying = "비행 경로로 이동 중", crown = "길드장 왕관", enabled = "내 길드 지도 표시 테스트", taxi = "비행 경로 이동", title = "길드 지도 표시 테스트", y = "Y 오프셋"},
+        ptBR = {flying = "Em um voo de transporte", crown = "Coroa do mestre da guilda", enabled = "Testar meu marcador de guilda", taxi = "Voo de transporte", title = "Teste de marcador da guilda", y = "Deslocamento Y"},
+        ruRU = {flying = "В полёте на такси", crown = "Корона главы гильдии", enabled = "Проверить свой маркер гильдии", taxi = "Полёт на такси", title = "Проверка маркера гильдии", y = "Смещение Y"},
+        zhCN = {flying = "正在乘坐飞行坐骑", crown = "公会会长皇冠", enabled = "测试自己的公会标记", taxi = "飞行路线", title = "公会标记测试", y = "Y轴偏移"},
+        zhTW = {flying = "正在搭乘飛行坐騎", crown = "公會會長皇冠", enabled = "測試自己的公會標記", taxi = "飛行路線", title = "公會標記測試", y = "Y軸偏移"}
+    }
+
+    function Guild.SetDebugArrowHidden(hidden)
+        if not hidden and not Guild.debugArrowHidden then return end
+        Guild.debugArrowHidden = hidden
+        if hidden and WorldMapFrame.EnumeratePinsByTemplate ~= nil then
+            for pin in WorldMapFrame:EnumeratePinsByTemplate("GroupMembersPinTemplate") do
+                if pin.SetShouldShowUnits ~= nil then
+                    if not Guild.debugArrows[pin] then
+                        Guild.debugArrows[pin] = true
+                        hooksecurefunc(pin, "SetShouldShowUnits", function(arrow, unit, shown)
+                            if Guild.debugArrowHidden and unit == "player" and shown then arrow:SetShouldShowUnits("player", false) end
+                        end)
+                    end
+                    pin:SetShouldShowUnits("player", false)
+                    if pin.StopPlayerPing ~= nil then pin:StopPlayerPing() end
+                end
+            end
+        elseif not hidden then
+            for pin in pairs(Guild.debugArrows) do
+                if pin.UpdateShownUnits ~= nil then pin:UpdateShownUnits() end
+            end
+        end
+    end
+
+    function Guild.UpdateDebugMember()
+        local debug = Guild.debug
+        local mapID, x, y
+        if debug.enabled and Guild.IsActive() then mapID, x, y = Guild.GetOwnPosition() end
+        if mapID == nil then
+            Guild.members[debug] = nil
+            return
+        end
+        local member = Guild.members[debug] or {}
+        Guild.members[debug] = member
+        member.debug = true
+        member.name = UnitName("player")
+        member.mapID, member.x, member.y = mapID, x, y
+        member.class = select(2, UnitClass("player"))
+        member.level = UnitLevel("player")
+        local _, rank = GetGuildInfo("player")
+        member.rank = not Guild.IsSecret(rank) and type(rank) == "string" and rank or nil
+        member.faction = UnitFactionGroup("player")
+        member.taxi = debug.taxi
+        member.source = Guild.owner
+        member.time, member.expire = GetTime(), math.huge
+    end
+
+    function Guild.ToggleDebugMenu()
+        if Guild.debugMenu ~= nil then
+            Guild.debugMenu:SetShown(not Guild.debugMenu:IsShown())
+            return
+        end
+        local labels = Guild.debugLabels[GetLocale()] or Guild.debugLabels.enUS
+        local frame = CreateFrame("Frame", nil, UIParent, "BackdropTemplate")
+        Guild.debugMenu = frame
+        frame:SetSize(350, 235)
+        frame:SetPoint("CENTER")
+        frame:SetFrameStrata("DIALOG")
+        frame:SetClampedToScreen(true)
+        frame:EnableMouse(true)
+        frame:SetMovable(true)
+        frame:RegisterForDrag("LeftButton")
+        frame:SetScript("OnDragStart", frame.StartMoving)
+        frame:SetScript("OnDragStop", frame.StopMovingOrSizing)
+        frame:SetBackdrop({bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Buttons\\WHITE8X8", edgeSize = 1})
+        frame:SetBackdropColor(0.08, 0.08, 0.08, 0.98)
+        frame:SetBackdropBorderColor(0.4, 0.4, 0.4, 1)
+        local title = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+        title:SetPoint("TOPLEFT", 16, -16)
+        title:SetText(labels.title)
+        local close = CreateFrame("Button", nil, frame, "UIPanelCloseButton")
+        close:SetPoint("TOPRIGHT")
+        close:SetScript("OnClick", function() frame:Hide() end)
+        for index, key in ipairs({"enabled", "taxi", "crown"}) do
+            local check = CreateFrame("CheckButton", nil, frame, "UICheckButtonTemplate")
+            check:SetPoint("TOPLEFT", 14, -42 - (index - 1) * 32)
+            check:SetChecked(Guild.debug[key])
+            local label = check.text or check.Text or check:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+            label:ClearAllPoints()
+            label:SetPoint("LEFT", check, "RIGHT", 2, 0)
+            label:SetText(labels[key])
+            check:SetScript("OnClick", function(button)
+                Guild.debug[key] = button:GetChecked() == true
+                Guild.UpdateDebugMember()
+                Guild.dirty = true
+                Guild.UpdatePins()
+            end)
+        end
+        local slider = CreateFrame("Slider", nil, frame, "OptionsSliderTemplate")
+        slider:SetPoint("TOPLEFT", 28, -175)
+        slider:SetSize(290, 18)
+        slider:SetMinMaxValues(-100, 100)
+        slider:SetValueStep(1)
+        slider:SetObeyStepOnDrag(true)
+        slider.Low = slider.Low or slider:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        slider.High = slider.High or slider:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        slider.Text = slider.Text or slider:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+        slider.Low:SetPoint("TOPLEFT", slider, "BOTTOMLEFT", 0, -2)
+        slider.High:SetPoint("TOPRIGHT", slider, "BOTTOMRIGHT", 0, -2)
+        slider.Text:SetPoint("BOTTOM", slider, "TOP", 0, 3)
+        slider.Low:SetText("-100")
+        slider.High:SetText("100")
+        slider:SetValue(Guild.debug.y)
+        slider.Text:SetText(labels.y .. ": " .. Guild.debug.y)
+        slider:SetScript("OnValueChanged", function(control, value)
+            Guild.debug.y = math.floor(value + 0.5)
+            control.Text:SetText(labels.y .. ": " .. Guild.debug.y)
+            Guild.dirty = true
+            Guild.UpdatePins()
+        end)
+    end
+
     function Guild.HidePins()
+        Guild.SetDebugArrowHidden(false)
         for _, pin in ipairs(Guild.pins) do
             pin:Hide()
         end
@@ -502,8 +663,9 @@ function D4:CreateGuildMap(options)
         local low, high = 0, 1
         if options.getClip ~= nil then low, high = options.getClip(mapID) end
         local count = 0
+        local debugVisible = false
         for name, member in pairs(Guild.members) do
-            if not Guild.IsGrouped(name) then
+            if member.debug or not Guild.IsGrouped(name) then
                 local x, y = Guild.Project(member.mapID, mapID, member.x, member.y)
                 if x ~= nil and x >= low and x <= high and y >= low and y <= high then
                     count = count + 1
@@ -520,13 +682,19 @@ function D4:CreateGuildMap(options)
                     pin.dot:SetPoint("TOPLEFT", inset, -inset)
                     pin.dot:SetPoint("BOTTOMRIGHT", -inset, inset)
                     local color = RAID_CLASS_COLORS[member.class or ""] or Guild.fallbackColor
-                    pin.dot:SetVertexColor(color.r, color.g, color.b, 1)
+                    local taxiIcon = member.taxi and (member.faction == "Horde" and 132268 or member.faction == "Alliance" and 132239)
+                    pin.dot:SetTexture(taxiIcon or Guild.mask)
+                    if taxiIcon then
+                        pin.dot:SetVertexColor(1, 1, 1, 1)
+                    else
+                        pin.dot:SetVertexColor(color.r, color.g, color.b, 1)
+                    end
                     pin.level:ClearAllPoints()
                     pin.level:SetPoint("CENTER", (member.level or 0) < 10 and Guild.levelOffsetX / scale or 0, 0)
-                    Guild.SetLabel(pin.level, showLevel and member.level or nil, levelSize, Guild.textColor)
+                    Guild.SetLabel(pin.level, showLevel and not taxiIcon and member.level or nil, levelSize, Guild.textColor)
                     Guild.SetLabel(pin.name, showName and member.name or nil, nameSize, color)
                     pin.name:ClearAllPoints()
-                    if Guild.IsLeader(name) then
+                    if (member.debug and Guild.debug.crown) or (not member.debug and Guild.IsLeader(name)) then
                         pin.crown:SetSize(crownSize, crownSize)
                         pin.crown:ClearAllPoints()
                         pin.crown:SetPoint("BOTTOM", pin, "TOP", 0, -crownOverlap)
@@ -539,12 +707,14 @@ function D4:CreateGuildMap(options)
 
                     if options.setPinScale ~= nil then options.setPinScale(pin, scale) end
                     pin:ClearAllPoints()
-                    pin:SetPoint("CENTER", canvas, "TOPLEFT", width * x, -height * y)
+                    pin:SetPoint("CENTER", canvas, "TOPLEFT", width * x, -height * y + (member.debug and Guild.debug.y / scale or 0))
+                    if member.debug then debugVisible = true end
                     pin:Show()
                 end
             end
         end
 
+        Guild.SetDebugArrowHidden(debugVisible)
         for index = count + 1, #Guild.pins do
             Guild.pins[index]:Hide()
         end
@@ -565,7 +735,8 @@ function D4:CreateGuildMap(options)
         local mapID = WorldMapFrame:GetMapID()
         local scale = canvas and canvas:GetScale()
         local width = canvas and canvas:GetWidth()
-        if not Guild.dirty and mapID == Guild.lastMapID and scale == Guild.lastScale and width == Guild.lastWidth then return end
+        Guild.UpdateDebugMember()
+        if not Guild.debug.enabled and not Guild.dirty and mapID == Guild.lastMapID and scale == Guild.lastScale and width == Guild.lastWidth then return end
         Guild.dirty = false
         Guild.lastMapID, Guild.lastScale, Guild.lastWidth = mapID, scale, width
         Guild.UpdatePins()
@@ -634,6 +805,15 @@ function D4:CreateGuildMap(options)
     end)
 
     WorldMapFrame:HookScript("OnHide", Guild.HidePins)
+
+    _G.D4GuildMapDebugOwners = _G.D4GuildMapDebugOwners or {}
+    _G.D4GuildMapDebugOwners[owner] = Guild
+    SLASH_D4GUILDMAP1 = "/d4guildmap"
+    SlashCmdList.D4GUILDMAP = function(message)
+        if strtrim(message):lower() ~= "debug" then return end
+        local active = _G.D4GuildMapDebugOwners[D4:GetGuildMapOwner()]
+        if active ~= nil then active.ToggleDebugMenu() end
+    end
 
     return Guild
 end
