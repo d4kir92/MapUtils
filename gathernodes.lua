@@ -89,7 +89,7 @@ function GatherNodes.IsSecret(...)
 end
 
 function GatherNodes.CanScan()
-	return Minimap ~= nil and Minimap.SetUsingSoftCursor ~= nil and Minimap.UpdateMouseoverAtPoint ~= nil and C_TooltipInfo ~= nil and C_TooltipInfo.GetMinimapMouseover ~= nil and UnitPosition ~= nil
+	return not MapUtils:IsForever() and Minimap ~= nil and Minimap.SetUsingSoftCursor ~= nil and Minimap.UpdateMouseoverAtPoint ~= nil and C_TooltipInfo ~= nil and C_TooltipInfo.GetMinimapMouseover ~= nil and UnitPosition ~= nil
 end
 
 function MapUtils:CanShowGatherNodes()
