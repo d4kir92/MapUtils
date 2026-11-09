@@ -16,6 +16,7 @@ local blizzardPoint = nil
 local grip = nil
 local scrollBarsShifted = false
 local fader = nil
+local fullscreenWasMaximized
 local dragRegions = {"BorderFrame", "TitleCanvasSpacerFrame", "MiniBorderFrame"}
 function MapUtils:GetCursorUi()
 	local x, y = GetCursorPosition()
@@ -159,7 +160,21 @@ local function UpdateGrip()
 end
 
 local function Apply()
-	if not ready or applying or sizing ~= nil or dragging then return end
+	if applying or sizing ~= nil or dragging then return end
+	if fullscreenWasMaximized ~= nil and IsMaximized() then
+		if IsLocked() then return end
+		applying = true
+		local k = ToUi()
+		local width, height = UIParent:GetWidth() / k, UIParent:GetHeight() / k
+		local sizeChanged = math.abs(frame:GetWidth() - width) > SCALE_EPSILON or math.abs(frame:GetHeight() - height) > SCALE_EPSILON
+		if sizeChanged then frame:SetSize(width, height) end
+		SetPos(0, UIParent:GetHeight())
+		if sizeChanged and frame.OnFrameSizeChanged then frame:OnFrameSizeChanged() end
+		applying = false
+		UpdateGrip()
+		return
+	end
+	if not ready then return end
 	if IsLocked() or CheckForeign() then return end
 	applying = true
 	if IsMaximized() then
@@ -300,10 +315,104 @@ function MapUtils:RefreshWorldMapFrame()
 	if fader ~= nil then fader:Reset() end
 end
 
+function MapUtils:IsWorldMapFullscreen()
+	return fullscreenWasMaximized ~= nil and IsMaximized()
+end
+
+local function SetMinimizeArtwork(button)
+	if not button or not C_Texture or not C_Texture.GetAtlasInfo then return end
+	for _, state in ipairs({
+		{button:GetNormalTexture(), "RedButton-MiniCondense"},
+		{button:GetPushedTexture(), "RedButton-MiniCondense-Pressed"},
+		{button:GetDisabledTexture(), "RedButton-MiniCondense-Disabled"}
+	}) do
+		local texture, atlas = unpack(state, 1, 2)
+		if texture and C_Texture.GetAtlasInfo(atlas) then texture:SetAtlas(atlas) end
+	end
+end
+
+local function CreateFullscreenButton()
+	local arrow = frame.BorderFrame and frame.BorderFrame.MaximizeMinimizeFrame
+	if not arrow or not arrow.Maximize or not arrow.Minimize or not frame.UpdateMaximizedSize or not frame.SynchronizeDisplayState then return end
+
+	SetMinimizeArtwork(arrow.MinimizeButton)
+	local button = CreateFrame("Button", nil, arrow, "UIPanelCloseButton")
+	arrow.MapUtilsFullscreenButton = button
+	button:SetSize(arrow:GetSize())
+	button:SetPoint("RIGHT", arrow, "LEFT", -2, 0)
+	local face = button:CreateTexture(nil, "ARTWORK")
+	local atlas = C_Texture and C_Texture.GetAtlasInfo and C_Texture.GetAtlasInfo("RedButton-MiniCondense")
+	local function LayoutFace(self, width, height)
+		face:SetSize(width * 0.56, height * 0.46)
+		face:SetPoint("CENTER", self, "CENTER", 0, -height * 0.05)
+	end
+	if atlas and (atlas.file or atlas.filename) then
+		button:GetNormalTexture():SetAtlas("RedButton-MiniCondense")
+		button:GetPushedTexture():SetAtlas("RedButton-MiniCondense-Pressed")
+		local left, right = atlas.leftTexCoord, atlas.rightTexCoord
+		local top, bottom = atlas.topTexCoord, atlas.bottomTexCoord
+		face:SetTexture(atlas.file or atlas.filename)
+		face:SetTexCoord(left + (right - left) * 0.22, right - (right - left) * 0.22,
+			top + (bottom - top) * 0.27, top + (bottom - top) * 0.49)
+	else
+		face:SetColorTexture(0.4, 0.06, 0.02)
+	end
+	button:SetScript("OnSizeChanged", LayoutFace)
+	LayoutFace(button, button:GetSize())
+
+	for _, corner in ipairs({"TOPLEFT", "TOPRIGHT", "BOTTOMLEFT", "BOTTOMRIGHT"}) do
+		local x = corner:find("LEFT") and 5 or -5
+		local y = corner:find("TOP") and -5 or 5
+		local horizontal = button:CreateTexture(nil, "OVERLAY", nil, 7)
+		horizontal:SetColorTexture(1, 0.82, 0.2)
+		horizontal:SetSize(4, 1)
+		horizontal:SetPoint(corner, x, y)
+		local vertical = button:CreateTexture(nil, "OVERLAY", nil, 7)
+		vertical:SetColorTexture(1, 0.82, 0.2)
+		vertical:SetSize(1, 4)
+		vertical:SetPoint(corner, x, y)
+	end
+
+	button:SetScript("OnEnter", function(self)
+		GameTooltip:SetOwner(self, "ANCHOR_BOTTOM")
+		GameTooltip:SetText(VIDEO_OPTIONS_FULLSCREEN or "Fullscreen")
+		GameTooltip:Show()
+	end)
+	button:SetScript("OnLeave", function() GameTooltip:Hide() end)
+	button:SetScript("OnClick", function()
+		if IsLocked() then return end
+		if fullscreenWasMaximized ~= nil then
+			local wasMaximized = fullscreenWasMaximized
+			fullscreenWasMaximized = nil
+			if wasMaximized then
+				frame:UpdateMaximizedSize()
+			else
+				arrow:Minimize()
+			end
+		else
+			fullscreenWasMaximized = IsMaximized()
+			if not fullscreenWasMaximized then arrow:Maximize() end
+			Apply()
+		end
+	end)
+	hooksecurefunc(frame, "UpdateMaximizedSize", function()
+		if fullscreenWasMaximized ~= nil then Apply() end
+	end)
+end
+
 if frame ~= nil then
+	if frame.BlackoutFrame ~= nil then frame.BlackoutFrame:SetAlpha(0) end
 	CreateGrip()
 	hooksecurefunc(frame, "SetPoint", OnBlizzardPoint)
-	if frame.SynchronizeDisplayState ~= nil then hooksecurefunc(frame, "SynchronizeDisplayState", Apply) end
+	CreateFullscreenButton()
+	if frame.SynchronizeDisplayState ~= nil then
+		hooksecurefunc(frame, "SynchronizeDisplayState", function()
+			if fullscreenWasMaximized ~= nil and not IsMaximized() then
+				fullscreenWasMaximized = nil
+			end
+			Apply()
+		end)
+	end
 	frame:HookScript("OnShow", Apply)
 	fader = MapUtils:CreateMoveFader(
 		frame,
