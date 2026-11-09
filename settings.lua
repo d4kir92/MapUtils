@@ -14,6 +14,32 @@ local SHARED_KEYS = {"DUNGEONWORLDMAPPINS", "MEETINGSTONEWORLDMAPPINS", "DUNGEON
 local maset = nil
 local sharedCheckboxes = {}
 local cvarCheckboxes = {}
+local guildCheckboxes = {}
+
+MapUtils:RegisterSharedSettings({
+	keys = {"GUILDMEMBERPINS", "GUILDMEMBERLEVEL", "GUILDMEMBERNAME", "GUILDMEMBERSHARE"},
+	getDB = function()
+		MAUTTAB = MAUTTAB or {}
+
+		return MAUTTAB
+	end,
+	get = function(key)
+		local value = MAUTTAB[key]
+		if value == nil and GHTABPC then value = GHTABPC[key] end
+		if value == nil then value = key == "GUILDMEMBERPINS" or key == "GUILDMEMBERSHARE" end
+		MAUTTAB[key] = value
+
+		return value
+	end,
+	set = function(key, value) MAUTTAB[key] = value end,
+	onChange = function(key, value)
+		if guildCheckboxes[key] then
+			guildCheckboxes[key]:SetChecked(value)
+			maset:UpdateDependencies()
+		end
+		if MapUtils.RefreshGuildMembers then MapUtils:RefreshGuildMembers() end
+	end
+})
 
 function MapUtils:GetConfig(key, value)
 	MAUTTAB = MAUTTAB or {}
@@ -252,15 +278,17 @@ function MapUtils:InitSetting()
 
 	if MapUtils.RefreshCommChannel then AddTooltip(AddCheckbox("COMMCHANNEL", true, function() MapUtils:RefreshCommChannel() end, nil, "2026-10-28"), "LID_COMMCHANNEL", "LID_COMMCHANNELDESC") end
 	AddCategory("WORLDMAP", nil, nil, ADDED_0927)
-	if MapUtils.RefreshGuildMembers and MapUtils:GetGuildMapOwner() == "MapUtils" then
-		AddTooltip(AddCheckbox("GUILDMEMBERPINS", true, function() MapUtils:RefreshGuildMembers() end, nil, "2026-10-29"), "LID_GUILDMEMBERPINS", "LID_GUILDMEMBERPINSDESC")
-		for _, key in ipairs({"GUILDMEMBERLEVEL", "GUILDMEMBERNAME"}) do
-			local control = AddCheckbox(key, false, function() MapUtils:RefreshGuildMembers() end, nil, "2026-11-06")
-			Requires(control, "GUILDMEMBERPINS")
+	if MapUtils.RefreshGuildMembers then
+		for _, key in ipairs({"GUILDMEMBERPINS", "GUILDMEMBERLEVEL", "GUILDMEMBERNAME", "GUILDMEMBERSHARE"}) do
+			local default = key == "GUILDMEMBERPINS" or key == "GUILDMEMBERSHARE"
+			local control = AddCheckbox(key, default, function()
+				MapUtils:SetSharedSetting(key, MapUtils:GetConfig(key, default))
+				MapUtils:RefreshGuildMembers()
+			end, nil, default and "2026-10-29" or "2026-11-06")
+			guildCheckboxes[key] = control
+			if not default then Requires(control, "GUILDMEMBERPINS") end
 			AddTooltip(control, "LID_" .. key, "LID_" .. key .. "DESC")
 		end
-
-		AddTooltip(AddCheckbox("GUILDMEMBERSHARE", true, function() MapUtils:RefreshGuildMembers() end, nil, "2026-10-29"), "LID_GUILDMEMBERSHARE", "LID_GUILDMEMBERSHAREDESC")
 	end
 	if MapUtils:IsForever() then AddCheckbox("REMEMBERQUESTCATEGORIES", true, function() MapUtils:RestoreQuestCategories() end) end
 	if MapUtils.RefreshQuestTurnIns or MapUtils.RefreshQuestGivers then AddCategory("QUESTS", 2, nil, ADDED_1104) end
