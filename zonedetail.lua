@@ -872,7 +872,7 @@ local function Update(force)
 	MinimapLayer.frame:SetFrameLevel(level + 4)
 	MinimapLayer.frame:Show()
 	for _, city in pairs(cities) do
-		city.frame:SetFrameLevel(level + 5)
+		city.frame:SetFrameLevel(level + 3)
 	end
 
 	container:Show()
@@ -911,7 +911,6 @@ MinimapLayer = {
 	maxTiles = 100,
 	desaturation = 0.35,
 	tint = {1, 0.93, 0.8},
-	cityFactor = 2.5,
 	terrainMaxTiles = 400,
 	lodData = {},
 	lodParsed = {},
@@ -1331,9 +1330,12 @@ function MinimapLayer.ShowCityDetail(mapID, detail, host, width, height)
 	end
 
 	frame:SetFrameLevel(child:GetFrameLevel() + FRAME_LEVEL_OFFSET + 6)
-	frame:Show()
 
 	return true
+end
+
+function MinimapLayer.GetTerrainShare(tilePixels)
+	return (tilePixels - MinimapLayer.fadeStart) / (MinimapLayer.fadeEnd - MinimapLayer.fadeStart)
 end
 
 function MinimapLayer.UpdateCityDetail()
@@ -1344,40 +1346,35 @@ function MinimapLayer.UpdateCityDetail()
 	local supported = flavor == "era" or flavor == "tbc" or flavor == "forever"
 	local width, height = scroll.Child:GetSize()
 	local world = container:IsShown() and container.built == MODE_FULL and not container.cityMode
-	if MinimapLayer.lastCityDetailMap ~= host then
-		local detail = UNDERGROUND[host]
-		MinimapLayer.keepCityDetail = detail ~= nil and detail.frame ~= nil and detail.frame:IsShown()
-		MinimapLayer.lastCityDetailMap = host
-	end
-
 	local terrainFrame = MinimapLayer.frame
-	local terrainReady = terrainFrame ~= nil and style ~= "MAP" and terrainFrame:GetAlpha() >= MinimapLayer.maxAlpha
-	local cityTerrain = container:IsShown() and container.cityMode and terrainReady
-	if terrainFrame ~= nil then terrainFrame:SetShown(not container.cityMode or cityTerrain) end
-
-	local worldTerrain = world and (style == "TERRAIN" or terrainReady)
-	for mapID, city in pairs(cities) do
-		if not UNDERGROUND[mapID] then city.frame:SetShown(world and city.count > 0 and not worldTerrain) end
+	local terrainAlpha = style ~= "MAP" and terrainFrame and terrainFrame:GetAlpha() or 0
+	for _, city in pairs(cities) do
+		city.frame:SetShown(world and city.count > 0)
 	end
 
-	MinimapLayer.cityDetailHost = cityTerrain and host or nil
+	MinimapLayer.cityDetailHost = nil
 	for mapID, detail in pairs(UNDERGROUND) do
 		local city = cities[mapID]
-		local show = false
-		if supported and style ~= "MAP" and width > 0 and height > 0 then
-			if host == mapID then
-				local scale, minScale = scroll:GetCanvasScale(), scroll:GetScaleForMinZoom()
-				local maxScale = scroll.GetScaleForMaxZoom and scroll:GetScaleForMaxZoom()
-				show = style == "TERRAIN" or MinimapLayer.keepCityDetail or scale and minScale and maxScale and scale > minScale and scale >= math.min(minScale * 1.8, (minScale + maxScale) / 2)
-			elseif worldTerrain and city and city.count > 0 then
-				show = true
+		local alpha = 0
+		local onCityMap = host == mapID
+		local canShow = supported and style ~= "MAP" and width > 0 and height > 0 and (onCityMap or world and city and city.count > 0)
+		if canShow and MinimapLayer.ShowCityDetail(mapID, detail, host, width, height) then
+			if style == "TERRAIN" then
+				alpha = MinimapLayer.maxAlpha
+			elseif onCityMap then
+				local tilePixels = detail.frame:GetWidth() * MinimapLayer.tile / 1024 * scroll:GetCanvasScale()
+				alpha = MinimapLayer.maxAlpha * math.max(0, math.min(1, MinimapLayer.GetTerrainShare(tilePixels)))
+			else
+				alpha = terrainAlpha
 			end
 		end
 
-		show = show and MinimapLayer.ShowCityDetail(mapID, detail, host, width, height)
-		if show and host == mapID then MinimapLayer.cityDetailHost = host end
-		if not show and detail.frame then detail.frame:Hide() end
-		if city then city.frame:SetShown(world and city.count > 0 and not show) end
+		if detail.frame then
+			detail.frame:SetAlpha(alpha)
+			detail.frame:SetShown(alpha > 0)
+		end
+
+		if onCityMap and alpha >= MinimapLayer.maxAlpha then MinimapLayer.cityDetailHost = host end
 	end
 end
 
@@ -1423,15 +1420,7 @@ function MinimapLayer.Update()
 			if tiles then
 				local tileU = math.abs(transform[4]) * MinimapLayer.tile
 				local tilePixels = tileU * spaceWidth * width * scale
-				local factor = container.cityMode and MinimapLayer.cityFactor or 1
-				local fadeStart, fadeEnd = MinimapLayer.fadeStart * factor, MinimapLayer.fadeEnd * factor
-				local maxScale = container.cityMode and scrollContainer.GetScaleForMaxZoom ~= nil and scrollContainer:GetScaleForMaxZoom()
-				if maxScale and maxScale > 0 then
-					local maxPixels = tilePixels * maxScale / scale
-					if maxPixels < fadeEnd then fadeStart, fadeEnd = fadeStart * maxPixels / fadeEnd, maxPixels end
-				end
-
-				local share = (tilePixels - fadeStart) / (fadeEnd - fadeStart)
+				local share = MinimapLayer.GetTerrainShare(tilePixels)
 				if terrain then share = 1 end
 				info.tilePixels, info.share = tilePixels, share
 				if share > 0 then
