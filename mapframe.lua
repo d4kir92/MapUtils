@@ -10,6 +10,7 @@ local foreignMove = false
 local applying = false
 local dragging = false
 local wasClamped = false
+local originalClampTop
 local sizing = nil
 local lastScale = 1
 local blizzardPoint = nil
@@ -97,13 +98,31 @@ local function ClampScale(value, maxScale)
 	return max(min(MIN_SCALE, maxScale), min(value or 1, maxScale))
 end
 
-local function ClampPos(left, top)
+local function UpdateTopClamp()
+	local gap = 0
+	if IsMaximized() and not MapUtils:IsWorldMapFullscreen() and MoveEnabled() and MapUtils.GetSimpleMapTopGap then
+		gap = MapUtils:GetSimpleMapTopGap()
+	end
+	if gap > 0 then
+		local left, right, top, bottom = frame:GetClampRectInsets()
+		if originalClampTop == nil then originalClampTop = top end
+		if top ~= -gap then frame:SetClampRectInsets(left, right, -gap, bottom) end
+	elseif originalClampTop ~= nil then
+		local left, right, _, bottom = frame:GetClampRectInsets()
+		frame:SetClampRectInsets(left, right, originalClampTop, bottom)
+		originalClampTop = nil
+	end
+
+	return gap * ToUi()
+end
+
+local function ClampPos(left, top, topGap)
 	local w, h = GetUnitSize()
 	local s = frame:GetScale()
 	w = w * s
 	h = h * s
 	left = max(0, min(left, UIParent:GetWidth() - w))
-	top = min(UIParent:GetHeight(), max(top, h))
+	top = min(UIParent:GetHeight() + (topGap or 0), max(top, h))
 
 	return left, top
 end
@@ -164,6 +183,7 @@ local function Apply()
 	if fullscreenWasMaximized ~= nil and IsMaximized() then
 		if IsLocked() then return end
 		applying = true
+		UpdateTopClamp()
 		local k = ToUi()
 		local width, height = UIParent:GetWidth() / k, UIParent:GetHeight() / k
 		local sizeChanged = math.abs(frame:GetWidth() - width) > SCALE_EPSILON or math.abs(frame:GetHeight() - height) > SCALE_EPSILON
@@ -179,11 +199,13 @@ local function Apply()
 	applying = true
 	if IsMaximized() then
 		SetScale(1)
+		local topGap = UpdateTopClamp()
 		local pos = MAUTTAB["WORLDMAPMAXIMIZEDPOS"]
 		if MoveEnabled() and type(pos) == "table" and pos.x ~= nil and pos.y ~= nil then
-			SetPos(ClampPos(pos.x, pos.y))
+			SetPos(ClampPos(pos.x, pos.y, topGap))
 		end
 	else
+		UpdateTopClamp()
 		local scale = 1
 		if ScaleEnabled() then scale = ClampScale(MAUTTAB["WORLDMAPSCALEVALUE"]) end
 		local foreignLeft, foreignTop
@@ -220,6 +242,7 @@ local function OnDragStart()
 	if not ready or MapUtils:IsWorldMapFullscreen() or IsLocked() or CheckForeign() or not MoveEnabled() then return end
 	dragging = true
 	wasClamped = frame:IsClampedToScreen()
+	UpdateTopClamp()
 	frame:SetMovable(true)
 	frame:SetClampedToScreen(true)
 	frame:StartMoving()
@@ -426,7 +449,10 @@ local function CreateFullscreenButton()
 end
 
 if frame ~= nil then
-	if frame.BlackoutFrame ~= nil then frame.BlackoutFrame:SetAlpha(0) end
+	if frame.BlackoutFrame ~= nil then
+		frame.BlackoutFrame:SetAlpha(0)
+		frame.BlackoutFrame:EnableMouse(false)
+	end
 	CreateGrip()
 	hooksecurefunc(frame, "SetPoint", OnBlizzardPoint)
 	CreateFullscreenButton()
