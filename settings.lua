@@ -319,7 +319,6 @@ function MapUtils:InitSetting()
 	end
 
 	local mapStyle = AddDropdown("MAPSTYLE", "MIXED", mapStyles, function() MapUtils:RefreshZoneDetail() end, nil, ADDED_1022)
-	Requires(mapStyle, "ONEMAP")
 	AddTooltip(mapStyle, "LID_MAPSTYLE", "LID_MAPSTYLEDESC")
 	AddCategory("NAVIGATION", 2, nil, ADDED_0928)
 	AddTooltip(AddCheckbox("ALWAYSSHOWWAYPOINT", false, nil, nil, ADDED_0928), "LID_ALWAYSSHOWWAYPOINT", "LID_ALWAYSSHOWWAYPOINTDESC")
@@ -345,7 +344,8 @@ function MapUtils:InitSetting()
 		local revealLabel = nil
 		if MapUtils:IsRevealedByLeatrix() then revealLabel = MapUtils:Trans("LID_REVEALMAP") .. " |cffff8000(" .. MapUtils:Trans("LID_REVEALLEATRIX") .. ")|r" end
 		AddCheckbox("REVEALMAP", true, function() MapUtils:RefreshReveal() MapUtils:RefreshZoneDetail() end, revealLabel, ADDED_0928)
-		Requires(AddDropdown("REVEALTINT", "BLUE", MapUtils:GetRevealTintChoices(), function() MapUtils:RefreshReveal() MapUtils:RefreshZoneDetail() end, nil, ADDED_0928), "REVEALMAP")
+		local tint = AddDropdown("REVEALTINT", "BLUE", MapUtils:GetRevealTintChoices(), function() MapUtils:RefreshReveal() MapUtils:RefreshZoneDetail() end, nil, ADDED_0928)
+		maset:AddDependency(tint, function() return type(MAUTTAB) == "table" and (MAUTTAB["REVEALMAP"] == true or MAUTTAB["MAPSTYLE"] ~= "MAP") end, 0)
 	end
 
 	AddCategory("BATTLEFIELDMAP", nil, nil, ADDED_0927)

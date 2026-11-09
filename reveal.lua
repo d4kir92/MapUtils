@@ -52,12 +52,17 @@ local function IsEnabled()
 	return not MapUtils:IsRevealedByLeatrix()
 end
 
-local function GetTint(mapID)
-	local info = C_Map.GetMapInfo(mapID)
-	if info == nil or info.mapType ~= ZONE_MAP_TYPE then return TINTS["NONE"] end
+function MapUtils:GetSelectedRevealTint()
 	local key = type(MAUTTAB) == "table" and MAUTTAB["REVEALTINT"] or DEFAULT_TINT
 
 	return TINTS[key] or TINTS[DEFAULT_TINT]
+end
+
+local function GetTint(mapID)
+	local info = C_Map.GetMapInfo(mapID)
+	if info == nil or info.mapType ~= ZONE_MAP_TYPE then return TINTS["NONE"] end
+
+	return MapUtils:GetSelectedRevealTint()
 end
 
 function MapUtils:GetRevealTintChoices()
