@@ -3,7 +3,6 @@ local MIN_SCALE = 0.5
 local MAX_SCALE = 2
 local SCALE_EPSILON = 0.001
 local GRIP_SIZE = 26
-local MAXIMIZED_VISIBLE_HEIGHT = 72
 local frame = WorldMapFrame
 local ready = false
 local foreign = false
@@ -11,7 +10,6 @@ local foreignMove = false
 local applying = false
 local dragging = false
 local wasClamped = false
-local savedClampInsets
 local sizing = nil
 local lastScale = 1
 local blizzardPoint = nil
@@ -99,24 +97,13 @@ local function ClampScale(value, maxScale)
 	return max(min(MIN_SCALE, maxScale), min(value or 1, maxScale))
 end
 
-local function UpdateDragClamp(allowVerticalMovement)
-	if allowVerticalMovement then
-		if savedClampInsets == nil then savedClampInsets = {frame:GetClampRectInsets()} end
-		local left, right, top, bottom = unpack(savedClampInsets)
-		frame:SetClampRectInsets(left, right, top, max(bottom, frame:GetHeight() - MAXIMIZED_VISIBLE_HEIGHT))
-	elseif savedClampInsets ~= nil then
-		frame:SetClampRectInsets(unpack(savedClampInsets))
-		savedClampInsets = nil
-	end
-end
-
-local function ClampPos(left, top, visibleHeight)
+local function ClampPos(left, top)
 	local w, h = GetUnitSize()
 	local s = frame:GetScale()
 	w = w * s
 	h = h * s
 	left = max(0, min(left, UIParent:GetWidth() - w))
-	top = min(UIParent:GetHeight(), max(top, min(h, visibleHeight or h)))
+	top = min(UIParent:GetHeight(), max(top, h))
 
 	return left, top
 end
@@ -177,7 +164,6 @@ local function Apply()
 	if fullscreenWasMaximized ~= nil and IsMaximized() then
 		if IsLocked() then return end
 		applying = true
-		UpdateDragClamp(false)
 		local k = ToUi()
 		local width, height = UIParent:GetWidth() / k, UIParent:GetHeight() / k
 		local sizeChanged = math.abs(frame:GetWidth() - width) > SCALE_EPSILON or math.abs(frame:GetHeight() - height) > SCALE_EPSILON
@@ -189,18 +175,13 @@ local function Apply()
 		return
 	end
 	if not ready then return end
-	if IsLocked() then return end
-	if CheckForeign() then
-		UpdateDragClamp(false)
-		return
-	end
+	if IsLocked() or CheckForeign() then return end
 	applying = true
-	UpdateDragClamp(IsMaximized() and MoveEnabled())
 	if IsMaximized() then
 		SetScale(1)
 		local pos = MAUTTAB["WORLDMAPMAXIMIZEDPOS"]
 		if MoveEnabled() and type(pos) == "table" and pos.x ~= nil and pos.y ~= nil then
-			SetPos(ClampPos(pos.x, pos.y, MAXIMIZED_VISIBLE_HEIGHT * ToUi()))
+			SetPos(ClampPos(pos.x, pos.y))
 		end
 	else
 		local scale = 1
@@ -239,7 +220,6 @@ local function OnDragStart()
 	if not ready or MapUtils:IsWorldMapFullscreen() or IsLocked() or CheckForeign() or not MoveEnabled() then return end
 	dragging = true
 	wasClamped = frame:IsClampedToScreen()
-	UpdateDragClamp(IsMaximized())
 	frame:SetMovable(true)
 	frame:SetClampedToScreen(true)
 	frame:StartMoving()

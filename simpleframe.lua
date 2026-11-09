@@ -21,7 +21,7 @@ local hidden = {}
 local sizes = {}
 local active = false
 local bar, back, questCount
-local fullscreenScrollTop
+local originalScrollTop
 local function CanChange(frame)
 	return frame ~= nil and (not InCombatLockdown() or not frame:IsProtected())
 end
@@ -286,21 +286,21 @@ local function GetQuestWidth()
 	return map.questLogWidth or QuestMapFrame:GetWidth() or 0
 end
 
-local function LayoutFullscreenScroll(scroll, fullscreen)
+local function LayoutMaximizedScroll(scroll, maximized)
 	if not CanChange(scroll) then return end
-	if fullscreen then
-		if fullscreenScrollTop ~= nil then return end
+	if maximized then
+		if originalScrollTop ~= nil then return end
 		for i = 1, scroll:GetNumPoints() do
 			local point, relativeTo, relativePoint, x, y = scroll:GetPoint(i)
 			if point == "TOPLEFT" and relativeTo == map.TitleCanvasSpacerFrame then
-				fullscreenScrollTop = {point, relativeTo, relativePoint, x, y}
+				originalScrollTop = {point, relativeTo, relativePoint, x, y}
 				scroll:SetPoint(point, relativeTo, "TOPLEFT", x, -BAR_HEIGHT)
 				return
 			end
 		end
-	elseif fullscreenScrollTop ~= nil then
-		scroll:SetPoint(unpack(fullscreenScrollTop))
-		fullscreenScrollTop = nil
+	elseif originalScrollTop ~= nil then
+		scroll:SetPoint(unpack(originalScrollTop))
+		originalScrollTop = nil
 	end
 end
 
@@ -308,7 +308,7 @@ local function Layout()
 	if not active or bar == nil then return end
 	if InCombatLockdown() and map:IsProtected() then return end
 	local scroll = map.ScrollContainer
-	LayoutFullscreenScroll(scroll, MapUtils:IsWorldMapFullscreen())
+	LayoutMaximizedScroll(scroll, map.IsMaximized ~= nil and map:IsMaximized())
 	local questWidth = GetQuestWidth()
 	local level = bar:GetFrameLevel() + 5
 	bar:ClearAllPoints()
@@ -421,7 +421,7 @@ end
 
 local function Remove()
 	active = false
-	LayoutFullscreenScroll(map.ScrollContainer, false)
+	LayoutMaximizedScroll(map.ScrollContainer, false)
 	if bar ~= nil then
 		bar:Hide()
 		back:Hide()
