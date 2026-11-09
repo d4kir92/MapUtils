@@ -331,13 +331,11 @@ local function Layout()
 	if Place(maxButton, level, {"RIGHT", rightMost, rightPoint, rightOffset, 0}) then
 		maxButton:SetSize(BUTTON_SIZE, BUTTON_SIZE)
 		for _, child in ipairs({maxButton:GetChildren()}) do
-			if child ~= maxButton.MapUtilsFullscreenButton and child:IsObjectType("Button") then
-				if Place(child, level + 1, {"CENTER", maxButton, "CENTER", 0, 0}) then
+			if CanChange(child) then
+				if child == maxButton.MapUtilsFullscreenButton then
+					Save(child)
 					child:SetSize(BUTTON_SIZE, BUTTON_SIZE)
 				end
-			elseif CanChange(child) then
-				Save(child)
-				child:SetSize(BUTTON_SIZE, BUTTON_SIZE)
 				child:SetFrameLevel(level + 1)
 			end
 		end

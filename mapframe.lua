@@ -319,23 +319,10 @@ function MapUtils:IsWorldMapFullscreen()
 	return fullscreenWasMaximized ~= nil and IsMaximized()
 end
 
-local function SetMinimizeArtwork(button)
-	if not button or not C_Texture or not C_Texture.GetAtlasInfo then return end
-	for _, state in ipairs({
-		{button:GetNormalTexture(), "RedButton-MiniCondense"},
-		{button:GetPushedTexture(), "RedButton-MiniCondense-Pressed"},
-		{button:GetDisabledTexture(), "RedButton-MiniCondense-Disabled"}
-	}) do
-		local texture, atlas = unpack(state, 1, 2)
-		if texture and C_Texture.GetAtlasInfo(atlas) then texture:SetAtlas(atlas) end
-	end
-end
-
 local function CreateFullscreenButton()
 	local arrow = frame.BorderFrame and frame.BorderFrame.MaximizeMinimizeFrame
 	if not arrow or not arrow.Maximize or not arrow.Minimize or not frame.UpdateMaximizedSize or not frame.SynchronizeDisplayState then return end
 
-	SetMinimizeArtwork(arrow.MinimizeButton)
 	local button = CreateFrame("Button", nil, arrow, "UIPanelCloseButton")
 	arrow.MapUtilsFullscreenButton = button
 	button:SetSize(arrow:GetSize())
@@ -360,6 +347,7 @@ local function CreateFullscreenButton()
 	button:SetScript("OnSizeChanged", LayoutFace)
 	LayoutFace(button, button:GetSize())
 
+	local corners = {}
 	for _, corner in ipairs({"TOPLEFT", "TOPRIGHT", "BOTTOMLEFT", "BOTTOMRIGHT"}) do
 		local x = corner:find("LEFT") and 5 or -5
 		local y = corner:find("TOP") and -5 or 5
@@ -371,13 +359,40 @@ local function CreateFullscreenButton()
 		vertical:SetColorTexture(1, 0.82, 0.2)
 		vertical:SetSize(1, 4)
 		vertical:SetPoint(corner, x, y)
+		tinsert(corners, horizontal)
+		tinsert(corners, vertical)
+	end
+
+	local hasNativeDash = atlas and (atlas.file or atlas.filename)
+	local dash
+	if not hasNativeDash then
+		dash = button:CreateTexture(nil, "OVERLAY", nil, 7)
+		dash:SetColorTexture(1, 0.82, 0.2)
+		dash:SetSize(8, 1)
+		dash:SetPoint("BOTTOM", 0, 5)
+		dash:Hide()
+	end
+
+	local function ShowTooltip()
+		local key = MapUtils:IsWorldMapFullscreen() and "LID_FULLSCREENEXIT" or "LID_FULLSCREENENTER"
+		GameTooltip:SetText(MapUtils:Trans(key))
+		GameTooltip:Show()
+	end
+
+	local function RefreshArtwork()
+		local fullscreen = MapUtils:IsWorldMapFullscreen()
+		face:SetShown(not fullscreen or not hasNativeDash)
+		for _, piece in ipairs(corners) do piece:SetShown(not fullscreen) end
+		if dash then dash:SetShown(fullscreen) end
+		if GameTooltip:IsOwned(button) then ShowTooltip() end
 	end
 
 	button:SetScript("OnEnter", function(self)
 		GameTooltip:SetOwner(self, "ANCHOR_BOTTOM")
-		GameTooltip:SetText(VIDEO_OPTIONS_FULLSCREEN or "Fullscreen")
-		GameTooltip:Show()
+		ShowTooltip()
 	end)
+	button:HookScript("OnShow", RefreshArtwork)
+	hooksecurefunc(frame, "SynchronizeDisplayState", RefreshArtwork)
 	button:SetScript("OnLeave", function() GameTooltip:Hide() end)
 	button:SetScript("OnClick", function()
 		if IsLocked() then return end
@@ -394,6 +409,7 @@ local function CreateFullscreenButton()
 			if not fullscreenWasMaximized then arrow:Maximize() end
 			Apply()
 		end
+		RefreshArtwork()
 	end)
 	hooksecurefunc(frame, "UpdateMaximizedSize", function()
 		if fullscreenWasMaximized ~= nil then Apply() end
