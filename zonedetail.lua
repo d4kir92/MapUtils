@@ -15,7 +15,6 @@ local NO_TINT = {1, 1, 1, 1}
 local MASK_PATH = "Interface\\AddOns\\MapUtils\\media\\zonemasks\\"
 local EDGE_PATH = MASK_PATH .. "edge"
 local ROUND_PATH = MASK_PATH .. "round"
-local CITY_FADE = {0.05, 0.2}
 local TILE_SHIFTS = {
 	["tbc"] = {
 		[1414530] = {165.6, 0}
@@ -29,8 +28,8 @@ local ART_SHIFTS = {
 	}
 }
 local UNDERGROUND = {
-	[1455] = true,
-	[1458] = true
+	[1455] = {"ironforge-detail", -4350, -600},
+	[1458] = {"undercity-detail", 2124, 924}
 }
 local HIGHLIGHT_CLIP = {
 	[1941] = true,
@@ -644,28 +643,11 @@ local function DrawCity(mapID, width, height)
 	local frameHeight = (bottom - top) * height
 	city.scaleX = frameWidth / layer.layerWidth
 	city.scaleY = frameHeight / layer.layerHeight
-	city.worldWidth = right - left
 	city.frame:ClearAllPoints()
 	city.frame:SetPoint("TOPLEFT", container, "TOPLEFT", left * width, -top * height)
 	city.frame:SetSize(frameWidth, frameHeight)
 	DrawBase(city, mapID, layer)
-	city.frame:SetAlpha(0)
-	city.frame:Show()
-end
-
-local function UpdateCityAlpha()
-	if container == nil or not container:IsShown() or container.refWidth == nil then return end
-	local scrollContainer = WorldMapFrame.ScrollContainer
-	local scale = container:GetScale() * scrollContainer.Child:GetScale()
-	local viewWidth = scrollContainer:GetWidth()
-	if scale == container.cityScale or viewWidth == nil or viewWidth <= 0 then return end
-	container.cityScale = scale
-	for _, city in pairs(cities) do
-		if city.count > 0 and city.worldWidth ~= nil then
-			local share = city.worldWidth * container.refWidth * scale / viewWidth
-			city.frame:SetAlpha(math.max(0, math.min(1, (share - CITY_FADE[1]) / (CITY_FADE[2] - CITY_FADE[1]))))
-		end
-	end
+	city.frame:Hide()
 end
 
 local function DrawContinent(continentID, refWidth, refHeight)
@@ -723,7 +705,7 @@ local function ShowBase(shown)
 		texture:SetShown(shown and texture.used == true)
 	end
 
-	for _, list in ipairs({unders, zones, cities}) do
+	for _, list in ipairs({unders, zones}) do
 		for _, art in pairs(list) do
 			art.frame:SetShown(shown and art.count > 0)
 		end
@@ -786,8 +768,6 @@ local function Build(mode, space)
 		end
 	end
 
-	container.cityScale = nil
-
 	return true
 end
 
@@ -812,7 +792,8 @@ end
 
 local MinimapLayer
 local function SyncBlizzardArt()
-	local hide = container ~= nil and container:IsShown() and container.built == MODE_FULL and not container.cityMode
+	local cityDetail = MinimapLayer.cityDetailHost ~= nil and MinimapLayer.cityDetailHost == WorldMapFrame:GetMapID()
+	local hide = cityDetail or container ~= nil and container:IsShown() and container.built == MODE_FULL and not container.cityMode
 	if container and container:IsShown() and not hide and MinimapLayer.frame then
 		local level = container:GetFrameLevel() + 4
 		for pin in WorldMapFrame:EnumeratePinsByTemplate("MapExplorationPinTemplate") do
@@ -890,19 +871,18 @@ local function Update(force)
 	MinimapLayer.frame:SetAllPoints(container)
 	MinimapLayer.frame:SetFrameLevel(level + 4)
 	MinimapLayer.frame:Show()
-	for cityMapID, city in pairs(cities) do
-		city.frame:SetFrameLevel(level + (cityMapID == 1458 and 5 or 3))
+	for _, city in pairs(cities) do
+		city.frame:SetFrameLevel(level + 5)
 	end
 
 	container:Show()
-	container.cityScale = nil
-	UpdateCityAlpha()
 	MinimapLayer.signature = nil
 	MinimapLayer.Update()
 end
 
 function MapUtils:RefreshZoneDetail()
 	Update(true)
+	if container ~= nil then MinimapLayer.UpdateCityDetail() end
 	SyncBlizzardArt()
 end
 
@@ -1110,6 +1090,8 @@ function MinimapLayer.Acquire(continentID, mask)
 	local texture = tremove(pool)
 	if texture == nil then
 		texture = MinimapLayer.frame:CreateTexture(nil, "ARTWORK")
+		if texture.SetSnapToPixelGrid ~= nil then texture:SetSnapToPixelGrid(false) end
+		if texture.SetTexelSnappingBias ~= nil then texture:SetTexelSnappingBias(0) end
 		texture.continentID = continentID
 		if texture.SetDesaturation ~= nil then texture:SetDesaturation(MinimapLayer.desaturation) end
 	end
@@ -1154,7 +1136,7 @@ function MinimapLayer.CollectExploration(continentID, mapID, usedMasks)
 						MinimapLayer.explorationMasks[index] = mask
 					end
 
-					mask:SetTexture(fileID, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+					mask:SetTexture(fileID, "CLAMP", "CLAMP")
 					mask:ClearAllPoints()
 					mask:SetPoint("TOPLEFT", container, "TOPLEFT", x * container.refWidth, -y * container.refHeight)
 					mask:SetSize(fileWidth * sx * container.refWidth, fileHeight * sy * container.refHeight)
@@ -1210,7 +1192,7 @@ function MinimapLayer.Place(wanted, key, continentID, mask, transform, northX, w
 			texture:SetTexture(MinimapLayer.lodPath .. name, nil, nil, "LINEAR")
 			texture:SetTexCoord(x / group, (x + 1) / group, y / group, (y + 1) / group)
 		else
-			texture:SetTexture(source, nil, nil, "LINEAR")
+			texture:SetTexture(source, "CLAMP", "CLAMP", "LINEAR")
 			texture:SetTexCoord(0, 1, 0, 1)
 		end
 		texture:ClearAllPoints()
@@ -1241,7 +1223,7 @@ function MinimapLayer.Place(wanted, key, continentID, mask, transform, northX, w
 			texture:SetDrawLayer("ARTWORK", 0)
 			texture:SetDesaturation(MinimapLayer.desaturation)
 			texture:SetVertexColor(unpack(MinimapLayer.tint))
-			texture:SetTexture(source, nil, nil, "LINEAR")
+			texture:SetTexture(source, "CLAMP", "CLAMP", "LINEAR")
 			texture:SetTexCoord((l - left) / width, (r - left) / width, (t - top) / height, (b - top) / height)
 			texture:ClearAllPoints()
 			texture:SetPoint("TOPLEFT", container, "TOPLEFT", l * container.refWidth, -t * container.refHeight)
@@ -1309,57 +1291,94 @@ function MapUtils:AddMinimapLOD(dataFlavor, instance, group, data)
 	}
 end
 
-function MinimapLayer.UpdateUndercity()
-	local scroll = WorldMapFrame.ScrollContainer
-	local style = GetStyle()
-	local flavor = MapUtils:GetFlavor()
-	if WorldMapFrame:GetMapID() ~= 1458 or style == "MAP" or flavor ~= "era" and flavor ~= "tbc" and flavor ~= "forever" then
-		if MinimapLayer.undercity ~= nil then MinimapLayer.undercity:Hide() end
-
-		return
-	end
-
-	local width, height = scroll.Child:GetSize()
-	local scale, minScale = scroll:GetCanvasScale(), scroll:GetScaleForMinZoom()
-	if width == nil or height == nil or width <= 0 or height <= 0 or scale == nil or minScale == nil or minScale <= 0 then return end
-	local frame = MinimapLayer.undercity
+function MinimapLayer.ShowCityDetail(mapID, detail, host, width, height)
+	local child = WorldMapFrame.ScrollContainer.Child
+	local frame = detail.frame
 	if frame == nil then
-		frame = CreateFrame("FRAME", nil, scroll.Child)
+		frame = CreateFrame("FRAME", nil, child)
 		frame:EnableMouse(false)
 		frame.texture = frame:CreateTexture(nil, "ARTWORK")
-		frame.texture:SetTexture("Interface\\AddOns\\MapUtils\\media\\undercity-detail", nil, nil, "TRILINEAR")
+		frame.texture:SetTexture("Interface\\AddOns\\MapUtils\\media\\" .. detail[1], nil, nil, "TRILINEAR")
 		frame.texture:SetAllPoints(frame)
 		frame.texture:SetDesaturation(MinimapLayer.desaturation)
 		frame.texture:SetVertexColor(unpack(MinimapLayer.tint))
-		MinimapLayer.undercity = frame
+		detail.frame = frame
 	end
 
-	if frame.width ~= width or frame.height ~= height then
-		local firstInstance, first = C_Map.GetWorldPosFromMapPos(1458, CreateVector2D(0, 0))
-		local lastInstance, last = C_Map.GetWorldPosFromMapPos(1458, CreateVector2D(1, 1))
-		if first == nil or last == nil or firstInstance ~= 0 or lastInstance ~= 0 then
-			frame:Hide()
-
-			return
-		end
-
+	if frame.host ~= host or frame.width ~= width or frame.height ~= height then
+		local firstInstance, first = C_Map.GetWorldPosFromMapPos(mapID, CreateVector2D(0, 0))
+		local lastInstance, last = C_Map.GetWorldPosFromMapPos(mapID, CreateVector2D(1, 1))
+		if first == nil or last == nil or firstInstance ~= 0 or lastInstance ~= 0 then return false end
 		local north, west = first:GetXY()
 		local south, east = last:GetXY()
-		if north <= south or west <= east then
-			frame:Hide()
+		if north <= south or west <= east then return false end
 
-			return
+		local left, right, top, bottom = 0, 1, 0, 1
+		if host ~= mapID then
+			local hostLeft, hostRight, hostTop, hostBottom = RawSpaceRect(host)
+			local cityLeft, cityRight, cityTop, cityBottom = ArtRect(mapID, container.space)
+			if hostLeft == nil or cityLeft == nil then return false end
+			left, right = hostLeft + cityLeft * (hostRight - hostLeft), hostLeft + cityRight * (hostRight - hostLeft)
+			top, bottom = hostTop + cityTop * (hostBottom - hostTop), hostTop + cityBottom * (hostBottom - hostTop)
 		end
 
+		local scaleX = (right - left) * width / (west - east)
+		local scaleY = (bottom - top) * height / (north - south)
 		frame:ClearAllPoints()
-		frame:SetPoint("TOPLEFT", scroll.Child, "TOPLEFT", (west - 924) / (west - east) * width, -(north - 2124) / (north - south) * height)
-		frame:SetSize(1024 / (west - east) * width, 1024 / (north - south) * height)
-		frame.width, frame.height = width, height
+		frame:SetPoint("TOPLEFT", child, "TOPLEFT", left * width + (west - detail[3]) * scaleX, -top * height - (north - detail[2]) * scaleY)
+		frame:SetSize(1024 * scaleX, 1024 * scaleY)
+		frame.host, frame.width, frame.height = host, width, height
 	end
 
-	frame:SetFrameLevel(scroll.Child:GetFrameLevel() + FRAME_LEVEL_OFFSET + 5)
-	frame:SetAlpha(style == "TERRAIN" and 1 or math.max(0, math.min(1, (scale / minScale - 1.1) / 1.4)))
+	frame:SetFrameLevel(child:GetFrameLevel() + FRAME_LEVEL_OFFSET + 6)
 	frame:Show()
+
+	return true
+end
+
+function MinimapLayer.UpdateCityDetail()
+	local host = WorldMapFrame:GetMapID()
+	local scroll = WorldMapFrame.ScrollContainer
+	local style = GetStyle()
+	local flavor = MapUtils:GetFlavor()
+	local supported = flavor == "era" or flavor == "tbc" or flavor == "forever"
+	local width, height = scroll.Child:GetSize()
+	local world = container:IsShown() and container.built == MODE_FULL and not container.cityMode
+	if MinimapLayer.lastCityDetailMap ~= host then
+		local detail = UNDERGROUND[host]
+		MinimapLayer.keepCityDetail = detail ~= nil and detail.frame ~= nil and detail.frame:IsShown()
+		MinimapLayer.lastCityDetailMap = host
+	end
+
+	local terrainFrame = MinimapLayer.frame
+	local terrainReady = terrainFrame ~= nil and style ~= "MAP" and terrainFrame:GetAlpha() >= MinimapLayer.maxAlpha
+	local cityTerrain = container:IsShown() and container.cityMode and terrainReady
+	if terrainFrame ~= nil then terrainFrame:SetShown(not container.cityMode or cityTerrain) end
+
+	local worldTerrain = world and (style == "TERRAIN" or terrainReady)
+	for mapID, city in pairs(cities) do
+		if not UNDERGROUND[mapID] then city.frame:SetShown(world and city.count > 0 and not worldTerrain) end
+	end
+
+	MinimapLayer.cityDetailHost = cityTerrain and host or nil
+	for mapID, detail in pairs(UNDERGROUND) do
+		local city = cities[mapID]
+		local show = false
+		if supported and style ~= "MAP" and width > 0 and height > 0 then
+			if host == mapID then
+				local scale, minScale = scroll:GetCanvasScale(), scroll:GetScaleForMinZoom()
+				local maxScale = scroll.GetScaleForMaxZoom and scroll:GetScaleForMaxZoom()
+				show = style == "TERRAIN" or MinimapLayer.keepCityDetail or scale and minScale and maxScale and scale > minScale and scale >= math.min(minScale * 1.8, (minScale + maxScale) / 2)
+			elseif worldTerrain and city and city.count > 0 then
+				show = true
+			end
+		end
+
+		show = show and MinimapLayer.ShowCityDetail(mapID, detail, host, width, height)
+		if show and host == mapID then MinimapLayer.cityDetailHost = host end
+		if not show and detail.frame then detail.frame:Hide() end
+		if city then city.frame:SetShown(world and city.count > 0 and not show) end
+	end
 end
 
 function MinimapLayer.Update()
@@ -1562,23 +1581,21 @@ local function Install()
 	container = CreateFrame("FRAME", nil, child)
 	container:EnableMouse(false)
 	container:Hide()
-	hooksecurefunc(
-		WorldMapFrame,
-		"OnMapChanged",
-		function()
-			Update(false)
-			SyncBlizzardArt()
-		end
-	)
-	WorldMapFrame:HookScript("OnShow", function() Update(false) end)
-	child:HookScript("OnSizeChanged", function() Update(false) end)
+	local function Refresh()
+		Update(false)
+		MinimapLayer.UpdateCityDetail()
+		SyncBlizzardArt()
+	end
+
+	hooksecurefunc(WorldMapFrame, "OnMapChanged", Refresh)
+	WorldMapFrame:HookScript("OnShow", Refresh)
+	child:HookScript("OnSizeChanged", Refresh)
 	WorldMapFrame.ScrollContainer:HookScript(
 		"OnUpdate",
 		function()
-			SyncBlizzardArt()
-			UpdateCityAlpha()
 			MinimapLayer.Update()
-			MinimapLayer.UpdateUndercity()
+			MinimapLayer.UpdateCityDetail()
+			SyncBlizzardArt()
 		end
 	)
 
@@ -1595,7 +1612,7 @@ loader:SetScript(
 		if event == "MAP_EXPLORATION_UPDATED" then
 			if container then
 				container.built = nil
-				if WorldMapFrame:IsShown() then Update(true) end
+				if WorldMapFrame:IsShown() then MapUtils:RefreshZoneDetail() end
 			end
 
 			return
