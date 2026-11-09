@@ -1190,7 +1190,7 @@ function MinimapLayer.UpdateExploration(host)
 	end
 end
 
-function MinimapLayer.Place(wanted, key, continentID, mask, transform, northX, westY, size, source, fogTint)
+function MinimapLayer.Place(wanted, key, continentID, mask, transform, northX, westY, size, source, fogTint, fadedLOD, tileX, tileY)
 	local u1, v1 = MinimapLayer.ToWorld(transform, northX, westY)
 	local u2, v2 = MinimapLayer.ToWorld(transform, northX - size, westY - size)
 	local left, right = math.min(u1, u2), math.max(u1, u2)
@@ -1200,10 +1200,19 @@ function MinimapLayer.Place(wanted, key, continentID, mask, transform, northX, w
 	if not MinimapLayer.active[key] then
 		local texture = MinimapLayer.Acquire(continentID, mask)
 		texture:SetDrawLayer("ARTWORK", -1)
-		texture:SetDesaturation(fogTint[5] and 1 or MinimapLayer.desaturation)
-		texture:SetVertexColor(fogTint[1] * MinimapLayer.tint[1], fogTint[2] * MinimapLayer.tint[2], fogTint[3] * MinimapLayer.tint[3], fogTint[4])
-		texture:SetTexture(source, nil, nil, "LINEAR")
-		texture:SetTexCoord(0, 1, 0, 1)
+		local desaturation = 1 - (1 - MinimapLayer.desaturation) * fogTint[4]
+		texture:SetDesaturation(fogTint[5] and 1 or desaturation)
+		texture:SetVertexColor(fogTint[1] * MinimapLayer.tint[1], fogTint[2] * MinimapLayer.tint[2], fogTint[3] * MinimapLayer.tint[3], 1)
+		local group = fadedLOD and fadedLOD.group
+		local name = group and fadedLOD.pieces[math.floor(tileX / group) * 64 + math.floor(tileY / group)]
+		if name then
+			local x, y = tileX % group, tileY % group
+			texture:SetTexture(MinimapLayer.lodPath .. name, nil, nil, "LINEAR")
+			texture:SetTexCoord(x / group, (x + 1) / group, y / group, (y + 1) / group)
+		else
+			texture:SetTexture(source, nil, nil, "LINEAR")
+			texture:SetTexCoord(0, 1, 0, 1)
+		end
 		texture:ClearAllPoints()
 		texture:SetPoint("TOPLEFT", container, "TOPLEFT", left * container.refWidth, -top * container.refHeight)
 		texture:SetSize(width * container.refWidth, height * container.refHeight)
@@ -1442,13 +1451,14 @@ function MinimapLayer.Update()
 								end
 							end
 						else
+							local fadedLOD = fogTint[4] < 1 and MinimapLayer.GetLOD(source.instance)
 							for tileX = x0, x1 do
 								for tileY = y0, y1 do
 									local fileID = tiles[tileX * 64 + tileY]
 									if fileID ~= nil then
 										local key = source.id * 4096 + tileX * 64 + tileY
 										local tileMask = MinimapLayer.GetWaterMask(source, tileX, tileY, transform) or mask
-										MinimapLayer.Place(wanted, key, continentID, tileMask, transform, (32 - tileY) * MinimapLayer.tile, (32 - tileX) * MinimapLayer.tile, MinimapLayer.tile, fileID, fogTint)
+										MinimapLayer.Place(wanted, key, continentID, tileMask, transform, (32 - tileY) * MinimapLayer.tile, (32 - tileX) * MinimapLayer.tile, MinimapLayer.tile, fileID, fogTint, fadedLOD, tileX, tileY)
 									end
 								end
 							end
