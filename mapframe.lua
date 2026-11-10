@@ -1266,6 +1266,43 @@ function SmoothZoom.InstallCursorFix()
 	container.GetCursorPosition = SmoothZoom.ScaledCursorPosition
 end
 
+function SmoothZoom.InstallSpokenPlacesDragGuard()
+	local places = _G.SpokenPlaces
+	local container = WheelZoom.container
+	if container == nil or places == nil or type(places.AreaAt) ~= "function" then return end
+
+	local startX, startY, dragged
+	local function CheckDrag()
+		local x, y = GetCursorPosition()
+		local scale = container:GetEffectiveScale()
+		local dx, dy = x - startX, y - startY
+		dragged = dragged or dx * dx + dy * dy > 20 * scale * scale
+		return dragged
+	end
+
+	container:HookScript("OnMouseDown", function(_, button)
+		if button ~= "LeftButton" then return end
+		startX, startY = GetCursorPosition()
+		dragged = false
+	end)
+	container:HookScript("OnUpdate", function()
+		if startX == nil then return end
+		if IsMouseButtonDown("LeftButton") then
+			CheckDrag()
+		else
+			startX = nil
+		end
+	end)
+	container:HookScript("OnHide", function() startX = nil end)
+
+	local areaAt = places.AreaAt
+	places.AreaAt = function(self, ...)
+		if startX ~= nil and not IsMouseButtonDown("LeftButton") and CheckDrag() then return nil end
+
+		return areaAt(self, ...)
+	end
+end
+
 function MapLevelZoom.Install()
 	local container = WheelZoom.container
 	if MapLevelZoom.installed or container == nil then return end
@@ -1374,6 +1411,7 @@ MapLevelZoom.loader:RegisterEvent("PLAYER_LOGIN")
 MapLevelZoom.loader:SetScript("OnEvent", function(sel)
 	sel:UnregisterAllEvents()
 	SmoothZoom.InstallCursorFix()
+	SmoothZoom.InstallSpokenPlacesDragGuard()
 	C_Timer.After(WheelZoom.installDelay, MapLevelZoom.Install)
 	MapUtils:InstallCombatPins()
 end)
