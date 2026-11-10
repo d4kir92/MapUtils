@@ -290,8 +290,8 @@ function MapUtils:InitSetting()
 			AddTooltip(control, "LID_" .. key, "LID_" .. key .. "DESC")
 		end
 	end
+	if MapUtils:IsForever() or MapUtils.RefreshQuestTurnIns or MapUtils.RefreshQuestGivers then AddCategory("QUESTS", 2, nil, ADDED_1104) end
 	if MapUtils:IsForever() then AddCheckbox("REMEMBERQUESTCATEGORIES", true, function() MapUtils:RestoreQuestCategories() end) end
-	if MapUtils.RefreshQuestTurnIns or MapUtils.RefreshQuestGivers then AddCategory("QUESTS", 2, nil, ADDED_1104) end
 	if MapUtils.RefreshQuestGivers then
 		AddTooltip(AddCheckbox("QUESTGIVERWORLDMAPPINS", true, function() MapUtils:RefreshQuestGivers() end, nil, ADDED_1104), "LID_QUESTGIVERWORLDMAPPINS", "LID_QUESTGIVERWORLDMAPPINSDESC")
 		for _, key in ipairs({"QUESTGIVEREVENT", "QUESTGIVERDAILY", "QUESTGIVERREP"}) do
@@ -346,8 +346,10 @@ function MapUtils:InitSetting()
 		)
 	end
 
-	local mapStyle = AddDropdown("MAPSTYLE", "MIXED", mapStyles, function() MapUtils:RefreshZoneDetail() end, nil, ADDED_1022)
-	AddTooltip(mapStyle, "LID_MAPSTYLE", "LID_MAPSTYLEDESC")
+	local zoneStyle = AddDropdown("MAPSTYLE", "MIXED", mapStyles, function() MapUtils:RefreshZoneDetail() end, "LID_ZONEMAPSTYLE", ADDED_1022)
+	AddTooltip(zoneStyle, "LID_ZONEMAPSTYLE", "LID_MAPSTYLEDESC")
+	local cityStyle = AddDropdown("CITYMAPSTYLE", MapUtils:GetConfig("MAPSTYLE", "MIXED"), mapStyles, function() MapUtils:RefreshZoneDetail() end, nil, ADDED_1022)
+	AddTooltip(cityStyle, "LID_CITYMAPSTYLE", "LID_MAPSTYLEDESC")
 	AddCategory("NAVIGATION", 2, nil, ADDED_0928)
 	AddTooltip(AddCheckbox("ALWAYSSHOWWAYPOINT", false, nil, nil, ADDED_0928), "LID_ALWAYSSHOWWAYPOINT", "LID_ALWAYSSHOWWAYPOINTDESC")
 	AddCategory("MAPFADE", 2, nil, ADDED_0927)
@@ -373,7 +375,7 @@ function MapUtils:InitSetting()
 		if MapUtils:IsRevealedByLeatrix() then revealLabel = MapUtils:Trans("LID_REVEALMAP") .. " |cffff8000(" .. MapUtils:Trans("LID_REVEALLEATRIX") .. ")|r" end
 		AddCheckbox("REVEALMAP", true, function() MapUtils:RefreshReveal() MapUtils:RefreshZoneDetail() end, revealLabel, ADDED_0928)
 		local tint = AddDropdown("REVEALTINT", "BLUE", MapUtils:GetRevealTintChoices(), function() MapUtils:RefreshReveal() MapUtils:RefreshZoneDetail() end, nil, ADDED_0928)
-		maset:AddDependency(tint, function() return type(MAUTTAB) == "table" and (MAUTTAB["REVEALMAP"] == true or MAUTTAB["MAPSTYLE"] ~= "MAP") end, 0)
+		maset:AddDependency(tint, function() return type(MAUTTAB) == "table" and (MAUTTAB["REVEALMAP"] == true or MAUTTAB["MAPSTYLE"] ~= "MAP" or (MAUTTAB["CITYMAPSTYLE"] or MAUTTAB["MAPSTYLE"]) ~= "MAP") end, 0)
 	end
 
 	AddCategory("BATTLEFIELDMAP", nil, nil, ADDED_0927)

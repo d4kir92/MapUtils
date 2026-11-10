@@ -27,6 +27,17 @@ local ART_SHIFTS = {
 		[1950] = -0.0761
 	}
 }
+local CITY_MAPS = {
+	[1453] = true,
+	[1454] = true,
+	[1455] = true,
+	[1456] = true,
+	[1457] = true,
+	[1458] = true,
+	[1947] = true,
+	[1954] = true,
+	[1955] = true
+}
 local UNDERGROUND = {
 	[1455] = {"ironforge-detail", -4350, -600},
 	[1458] = {"undercity-detail", 2124, 924}
@@ -49,16 +60,6 @@ local base = {
 	["continents"] = {},
 	["world"] = {}
 }
-
-local function GetStyle()
-	return type(MAUTTAB) == "table" and MAUTTAB["MAPSTYLE"] or "MIXED"
-end
-
-local function GetMode()
-	if MapUtils.IsOneMap and MapUtils:IsOneMap() then return MODE_FULL end
-
-	return GetStyle() == "MAP" and MODE_OFF or MODE_AREAS
-end
 
 local function NewArt()
 	local frame = CreateFrame("FRAME", nil, container)
@@ -434,6 +435,29 @@ local function GetSpace(mapID)
 	return continentID and SPACE_OF[continentID]
 end
 
+local function GetStyle(mapID)
+	if type(MAUTTAB) ~= "table" then return "MIXED" end
+	local zoneStyle = MAUTTAB["MAPSTYLE"] or "MIXED"
+	local cityStyle = MAUTTAB["CITYMAPSTYLE"] or zoneStyle
+	if mapID == nil or cityStyle == zoneStyle then return zoneStyle end
+	return CITY_MAPS[mapID] and cityStyle or zoneStyle
+end
+
+local function GetEmbeddedCityStyle(mapID)
+	if not mapID then return nil end
+	local style = type(MAUTTAB) == "table" and MAUTTAB["CITYMAPSTYLE"]
+	if not style or style == GetStyle() then return nil end
+	if CITY_MAPS[mapID] then return MapUtils:IsOneMap() and style or nil end
+	local info = C_Map.GetMapInfo(mapID)
+	if info and info.mapType == Enum.UIMapType.Zone then return style end
+end
+
+local function GetMode(mapID)
+	if MapUtils.IsOneMap and MapUtils:IsOneMap() then return MODE_FULL end
+
+	return GetStyle(mapID) == "MAP" and not GetEmbeddedCityStyle(mapID) and MODE_OFF or MODE_AREAS
+end
+
 local function RawSpaceRect(mapID)
 	if mapID == nil then return nil end
 	local space = GetSpace(mapID)
@@ -516,7 +540,7 @@ function MapUtils:GetZoneDetailCityAt(space, x, y)
 end
 
 function MapUtils:GetZoneDetailCityZone(mapID)
-	local mode = GetMode()
+	local mode = GetMode(mapID)
 	if mode ~= MODE_AREAS and mode ~= MODE_FULL or container == nil or container.built == nil or mapID == nil or HasArt(mapID) then return nil end
 	local info = C_Map.GetMapInfo(mapID)
 	local continentID = info and info.mapType == Enum.UIMapType.Zone and GetContinent(mapID)
@@ -665,6 +689,7 @@ local function DrawCity(mapID, width, height)
 	city.frame:ClearAllPoints()
 	city.frame:SetPoint("TOPLEFT", container, "TOPLEFT", left * width, -top * height)
 	city.frame:SetSize(frameWidth, frameHeight)
+	city.bounds = {left, right, top, bottom}
 	DrawBase(city, mapID, layer)
 	city.frame:Hide()
 end
@@ -785,6 +810,12 @@ local function Build(mode, space)
 				if not HasArt(info.mapID) then DrawCity(info.mapID, refWidth, refHeight) end
 			end
 		end
+
+		if SPACE_OF[continentID] == space and base.continents[continentID].drawn and (mode == MODE_FULL or GetEmbeddedCityStyle(WorldMapFrame:GetMapID())) then
+			for mapID in pairs(CITY_MAPS) do
+				if GetContinent(mapID) == continentID and (cities[mapID] == nil or cities[mapID].count == 0) then DrawCity(mapID, refWidth, refHeight) end
+			end
+		end
 	end
 
 	return true
@@ -812,7 +843,7 @@ end
 local MinimapLayer
 local function SyncBlizzardArt()
 	local cityDetail = MinimapLayer.cityDetailHost ~= nil and MinimapLayer.cityDetailHost == WorldMapFrame:GetMapID()
-	local hide = cityDetail or container ~= nil and container:IsShown() and container.built == MODE_FULL and not container.cityMode
+	local hide = cityDetail or container ~= nil and container:IsShown() and container.built == MODE_FULL and (not container.cityMode or GetEmbeddedCityStyle(WorldMapFrame:GetMapID()) ~= nil)
 	if container and container:IsShown() and not hide and MinimapLayer.frame then
 		local level = container:GetFrameLevel() + 4
 		for pin in WorldMapFrame:EnumeratePinsByTemplate("MapExplorationPinTemplate") do
@@ -820,6 +851,14 @@ local function SyncBlizzardArt()
 		end
 
 		if MinimapLayer.frame:GetFrameLevel() ~= level then MinimapLayer.frame:SetFrameLevel(level) end
+	end
+
+	local cityLevel = MinimapLayer.frame and MinimapLayer.frame:GetFrameLevel() + 1
+	if cityLevel and GetEmbeddedCityStyle(WorldMapFrame:GetMapID()) then
+		for mapID, city in pairs(cities) do
+			if CITY_MAPS[mapID] and city.frame:GetFrameLevel() ~= cityLevel then city.frame:SetFrameLevel(cityLevel) end
+			if city.terrain and city.terrain:GetFrameLevel() ~= cityLevel + 1 then city.terrain:SetFrameLevel(cityLevel + 1) end
+		end
 	end
 
 	if not hide and not container.blizzardHidden then return end
@@ -837,8 +876,8 @@ end
 
 local function Update(force)
 	if container == nil then return end
-	local mode = GetMode()
 	local mapID = WorldMapFrame:GetMapID()
+	local mode = GetMode(mapID)
 	local child = WorldMapFrame.ScrollContainer.Child
 	local width, height = child:GetWidth(), child:GetHeight()
 	if mode ~= MODE_AREAS and mode ~= MODE_FULL or width == nil or width <= 0 or height == nil or height <= 0 or RawSpaceRect(mapID) == nil then
@@ -864,7 +903,7 @@ local function Update(force)
 		return
 	end
 
-	ShowBase(mode == MODE_FULL and not container.cityMode)
+	ShowBase(mode == MODE_FULL and (not container.cityMode or GetEmbeddedCityStyle(mapID) ~= nil))
 
 	local signature = format("%s:%.1f:%.1f", tostring(mapID), width, height)
 	if signature ~= container.signature then
@@ -1098,7 +1137,7 @@ function MinimapLayer.HideAll()
 	MinimapLayer.signature = nil
 end
 
-function MinimapLayer.Acquire(continentID, mask)
+function MinimapLayer.Acquire(continentID, mask, parent)
 	local pool = MinimapLayer.pools[continentID]
 	if pool == nil then
 		pool = {}
@@ -1114,6 +1153,7 @@ function MinimapLayer.Acquire(continentID, mask)
 		if texture.SetDesaturation ~= nil then texture:SetDesaturation(MinimapLayer.desaturation) end
 	end
 
+	texture:SetParent(parent or MinimapLayer.frame)
 	if texture.mask ~= mask then
 		if texture.mask ~= nil then texture:RemoveMaskTexture(texture.mask) end
 		if mask ~= nil then texture:AddMaskTexture(mask) end
@@ -1190,7 +1230,7 @@ function MinimapLayer.UpdateExploration(host)
 	end
 end
 
-function MinimapLayer.Place(wanted, key, continentID, mask, transform, northX, westY, size, source, fogTint, fadedLOD, tileX, tileY)
+function MinimapLayer.Place(wanted, key, continentID, mask, transform, northX, westY, size, source, fogTint, fadedLOD, tileX, tileY, city)
 	local u1, v1 = MinimapLayer.ToWorld(transform, northX, westY)
 	local u2, v2 = MinimapLayer.ToWorld(transform, northX - size, westY - size)
 	local left, right = math.min(u1, u2), math.max(u1, u2)
@@ -1198,7 +1238,7 @@ function MinimapLayer.Place(wanted, key, continentID, mask, transform, northX, w
 	local width, height = right - left, bottom - top
 	wanted[key] = true
 	if not MinimapLayer.active[key] then
-		local texture = MinimapLayer.Acquire(continentID, mask)
+		local texture = MinimapLayer.Acquire(continentID, mask, city and city.terrain)
 		texture:SetDrawLayer("ARTWORK", -1)
 		local desaturation = 1 - (1 - MinimapLayer.desaturation) * fogTint[4]
 		texture:SetDesaturation(fogTint[5] and 1 or desaturation)
@@ -1220,6 +1260,15 @@ function MinimapLayer.Place(wanted, key, continentID, mask, transform, northX, w
 		MinimapLayer.active[key] = texture
 	end
 
+	if not city then
+		for mapID, overlay in pairs(MinimapLayer.cityOverlays) do
+			local l, r, t, b = unpack(overlay.bounds)
+			if left < r and right > l and top < b and bottom > t then
+				MinimapLayer.Place(wanted, key .. ":city:" .. mapID, continentID, overlay.mask, transform, northX, westY, size, source, fogTint, fadedLOD, tileX, tileY, overlay)
+			end
+		end
+	end
+
 	local pieces = MinimapLayer.intersections[key]
 	if not pieces then
 		pieces = {}
@@ -1237,7 +1286,7 @@ function MinimapLayer.Place(wanted, key, continentID, mask, transform, northX, w
 		local l, r, t, b, explorationMask, pieceKey = unpack(piece)
 		wanted[pieceKey] = true
 		if not MinimapLayer.active[pieceKey] then
-			local texture = MinimapLayer.Acquire(continentID, mask)
+			local texture = MinimapLayer.Acquire(continentID, mask, city and city.terrain)
 			texture:SetDrawLayer("ARTWORK", 0)
 			texture:SetDesaturation(MinimapLayer.desaturation)
 			texture:SetVertexColor(unpack(MinimapLayer.tint))
@@ -1309,7 +1358,7 @@ function MapUtils:AddMinimapLOD(dataFlavor, instance, group, data)
 	}
 end
 
-function MinimapLayer.ShowCityDetail(mapID, detail, host, width, height)
+function MinimapLayer.ShowCityDetail(mapID, detail, host, width, height, level)
 	local child = WorldMapFrame.ScrollContainer.Child
 	local frame = detail.frame
 	if frame == nil then
@@ -1348,7 +1397,7 @@ function MinimapLayer.ShowCityDetail(mapID, detail, host, width, height)
 		frame.host, frame.width, frame.height = host, width, height
 	end
 
-	frame:SetFrameLevel(child:GetFrameLevel() + FRAME_LEVEL_OFFSET + 6)
+	frame:SetFrameLevel(level or child:GetFrameLevel() + FRAME_LEVEL_OFFSET + 6)
 
 	return true
 end
@@ -1360,15 +1409,18 @@ end
 function MinimapLayer.UpdateCityDetail()
 	local host = WorldMapFrame:GetMapID()
 	local scroll = WorldMapFrame.ScrollContainer
-	local style = GetStyle()
+	local style = GetStyle(host)
 	local flavor = MapUtils:GetFlavor()
 	local supported = flavor == "era" or flavor == "tbc" or flavor == "forever"
 	local width, height = scroll.Child:GetSize()
 	local world = container:IsShown() and container.built == MODE_FULL and not container.cityMode
 	local terrainFrame = MinimapLayer.frame
 	local terrainAlpha = style ~= "MAP" and terrainFrame and terrainFrame:GetAlpha() or 0
-	for _, city in pairs(cities) do
-		city.frame:SetShown(world and city.count > 0)
+	local embeddedStyle = GetEmbeddedCityStyle(host)
+	for mapID, city in pairs(cities) do
+		local embedded = embeddedStyle ~= nil and CITY_MAPS[mapID] == true and container:IsShown()
+		city.frame:SetShown((world or embedded) and city.count > 0)
+		if city.terrain then city.terrain:SetShown(embedded and embeddedStyle ~= "MAP" and not UNDERGROUND[mapID]) end
 	end
 
 	MinimapLayer.cityDetailHost = nil
@@ -1376,11 +1428,21 @@ function MinimapLayer.UpdateCityDetail()
 		local city = cities[mapID]
 		local alpha = 0
 		local onCityMap = host == mapID
-		local canShow = supported and style ~= "MAP" and width > 0 and height > 0 and (onCityMap or world and city and city.count > 0)
-		if canShow and MinimapLayer.ShowCityDetail(mapID, detail, host, width, height) then
-			if style == "TERRAIN" then
+		local embedded = embeddedStyle and city and city.frame:IsShown()
+		local detailStyle = embedded and embeddedStyle or style
+		local canShow = supported and detailStyle ~= "MAP" and width > 0 and height > 0 and (onCityMap or embedded or world and city and city.count > 0)
+		local level = embedded and city.frame:GetFrameLevel() + 2
+		if canShow and MinimapLayer.ShowCityDetail(mapID, detail, host, width, height, level) then
+			local mask = embedded and city.mask or nil
+			if detail.frame.cityMask ~= mask then
+				if detail.frame.cityMask then detail.frame.texture:RemoveMaskTexture(detail.frame.cityMask) end
+				if mask then detail.frame.texture:AddMaskTexture(mask) end
+				detail.frame.cityMask = mask
+			end
+
+			if detailStyle == "TERRAIN" then
 				alpha = MinimapLayer.maxAlpha
-			elseif onCityMap then
+			elseif onCityMap or embedded then
 				local tilePixels = detail.frame:GetWidth() * MinimapLayer.tile / 1024 * scroll:GetCanvasScale()
 				alpha = MinimapLayer.maxAlpha * math.max(0, math.min(1, MinimapLayer.GetTerrainShare(tilePixels)))
 			else
@@ -1399,8 +1461,11 @@ end
 
 function MinimapLayer.Update()
 	if container == nil or MinimapLayer.frame == nil then return end
-	local style = GetStyle()
-	if not container:IsShown() or container.refWidth == nil or style == "MAP" then
+	local host = WorldMapFrame:GetMapID()
+	local embeddedStyle = GetEmbeddedCityStyle(host)
+	local style = GetStyle(not embeddedStyle and host or nil)
+	local cityTerrain = embeddedStyle and embeddedStyle ~= "MAP"
+	if not container:IsShown() or container.refWidth == nil or style == "MAP" and not cityTerrain then
 		if MinimapLayer.signature ~= nil or next(MinimapLayer.active) ~= nil then MinimapLayer.HideAll() end
 
 		return
@@ -1409,7 +1474,6 @@ function MinimapLayer.Update()
 	local terrain = style == "TERRAIN"
 	local fogTint = MapUtils:GetSelectedRevealTint()
 	local scrollContainer = WorldMapFrame.ScrollContainer
-	local host = WorldMapFrame:GetMapID()
 	local hostLeft, hostRight, hostTop, hostBottom = GetHostRect(host)
 	local scale = scrollContainer:GetCanvasScale()
 	local x, y = scrollContainer:GetCurrentScrollX(), scrollContainer:GetCurrentScrollY()
@@ -1425,6 +1489,17 @@ function MinimapLayer.Update()
 	local halfV = scrollContainer:GetHeight() / (2 * scale * height) / spaceHeight
 	local wanted = {}
 	local alpha = 0
+	local cityAlpha = 0
+	MinimapLayer.cityOverlays = {}
+	if cityTerrain then
+		for mapID, city in pairs(cities) do
+			if CITY_MAPS[mapID] and not UNDERGROUND[mapID] and city.count > 0 then
+				if not city.terrain then city.terrain = CreateFrame("FRAME", nil, city.frame) end
+				MinimapLayer.cityOverlays[mapID] = city
+			end
+		end
+	end
+
 	for _, continentID in ipairs(CONTINENTS) do
 		local entry = base.continents[continentID]
 		for _, source in ipairs(entry and entry.drawn and MinimapLayer.GetSources(continentID) or {}) do
@@ -1439,10 +1514,11 @@ function MinimapLayer.Update()
 			if tiles then
 				local tileU = math.abs(transform[4]) * MinimapLayer.tile
 				local tilePixels = tileU * spaceWidth * width * scale
-				local share = MinimapLayer.GetTerrainShare(tilePixels)
-				if terrain then share = 1 end
+				local zoomShare = MinimapLayer.GetTerrainShare(tilePixels)
+				local share = terrain and 1 or style ~= "MAP" and zoomShare or 0
+				local cityShare = embeddedStyle == "TERRAIN" and 1 or cityTerrain and zoomShare or 0
 				info.tilePixels, info.share = tilePixels, share
-				if share > 0 then
+				if share > 0 or cityShare > 0 then
 					local minX, maxX, minY, maxY
 					for _, corner in ipairs({{-1, -1}, {1, -1}, {-1, 1}, {1, 1}}) do
 						local yardX, yardY = MinimapLayer.ToYards(transform, centerU + corner[1] * halfU, centerV + corner[2] * halfV)
@@ -1460,9 +1536,11 @@ function MinimapLayer.Update()
 					local y0, y1 = math.max(0, math.floor(32 - maxX / MinimapLayer.tile)), math.min(63, math.floor(32 - minX / MinimapLayer.tile))
 					local count = (x1 - x0 + 1) * (y1 - y0 + 1)
 					info.range = format("x %d-%d y %d-%d (%d)", x0, x1, y0, y1, count)
-					local lod = terrain and count > MinimapLayer.terrainMaxTiles and MinimapLayer.GetLOD(source.instance)
-					if minX <= maxX and minY <= maxY and x1 >= x0 and y1 >= y0 and (count <= (terrain and MinimapLayer.terrainMaxTiles or MinimapLayer.maxTiles) or lod) then
-						alpha = math.max(alpha, MinimapLayer.maxAlpha * math.min(1, share))
+					local useTerrain = terrain or embeddedStyle == "TERRAIN"
+					local lod = useTerrain and count > MinimapLayer.terrainMaxTiles and MinimapLayer.GetLOD(source.instance)
+					if minX <= maxX and minY <= maxY and x1 >= x0 and y1 >= y0 and (count <= (useTerrain and MinimapLayer.terrainMaxTiles or MinimapLayer.maxTiles) or lod) then
+						if terrain or count <= MinimapLayer.maxTiles then alpha = math.max(alpha, MinimapLayer.maxAlpha * math.min(1, share)) end
+						if embeddedStyle == "TERRAIN" or count <= MinimapLayer.maxTiles then cityAlpha = math.max(cityAlpha, MinimapLayer.maxAlpha * math.min(1, cityShare)) end
 						info.drawn = lod and "lod" or "tiles"
 						local mask = MinimapLayer.GetMask(continentID)
 						if lod then
@@ -1501,10 +1579,13 @@ function MinimapLayer.Update()
 	end
 
 	MinimapLayer.frame:SetAlpha(alpha)
+	for _, city in pairs(MinimapLayer.cityOverlays) do
+		city.terrain:SetAlpha(cityAlpha)
+	end
 end
 
 function MapUtils:GetZoneDetailTilePixelsPerScale(mapID)
-	local style = GetStyle()
+	local style = GetStyle(mapID)
 	if container == nil or container.refWidth == nil or style == "MAP" then return nil end
 	local left, right = GetSpaceRect(mapID)
 	local continentID = left and GetContinent(mapID)
@@ -1526,9 +1607,9 @@ end
 function MapUtils:PrintMinimapTileDebug()
 	local host = WorldMapFrame and WorldMapFrame:GetMapID()
 	local scrollContainer = WorldMapFrame and WorldMapFrame.ScrollContainer
-	local style = GetStyle()
+	local style = GetStyle(host)
 	MinimapLayer.debugLines = {}
-	MinimapLayer.DebugLine(format("Tiles: host %s, flavor %s, style %s, mode %s, space %s", tostring(host), tostring(MapUtils.GetRevealFlavor and MapUtils:GetRevealFlavor()), tostring(style), GetMode(), tostring(container and container.space)))
+	MinimapLayer.DebugLine(format("Tiles: host %s, flavor %s, style %s, mode %s, space %s", tostring(host), tostring(MapUtils.GetRevealFlavor and MapUtils:GetRevealFlavor()), tostring(style), GetMode(host), tostring(container and container.space)))
 	if container == nil then return end
 	MinimapLayer.DebugLine(format("container shown %s, cityMode %s, hostRect %s, scale %s, frame alpha %s", tostring(container:IsShown()), tostring(container.cityMode), tostring(GetSpaceRect(host) ~= nil), scrollContainer and format("%.3f", scrollContainer:GetCanvasScale()) or "?", MinimapLayer.frame and format("%.2f", MinimapLayer.frame:GetAlpha()) or "?"))
 	for _, continentID in ipairs(CONTINENTS) do
