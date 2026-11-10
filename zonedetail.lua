@@ -456,7 +456,8 @@ local function GetSpaceRect(mapID)
 		local continentID = GetContinent(mapID)
 		local entry = continentID and base.continents[continentID]
 		if not entry or not entry.drawn then return nil end
-		if mapID ~= continentID and not HasArt(mapID) then return nil end
+		local city = cities[mapID]
+		if mapID ~= continentID and not HasArt(mapID) and (UNDERGROUND[mapID] or city == nil or city.count == 0) then return nil end
 	end
 
 	return RawSpaceRect(mapID)
@@ -494,6 +495,24 @@ end
 
 function MapUtils:GetZoneDetailRawRect(mapID)
 	return RawSpaceRect(mapID)
+end
+
+function MapUtils:GetZoneDetailCityAt(space, x, y)
+	if container == nil or container.space ~= space then return nil end
+	local best, bestArea
+	for mapID, city in pairs(cities) do
+		if city.count > 0 then
+			local left, right, top, bottom = C_Map.GetMapRectOnMap(mapID, space)
+			if left ~= nil and x >= left and x <= right and y >= top and y <= bottom then
+				local area = (right - left) * (bottom - top)
+				if area > 0 and (bestArea == nil or area < bestArea) then
+					best, bestArea = mapID, area
+				end
+			end
+		end
+	end
+
+	return best
 end
 
 function MapUtils:GetZoneDetailCityZone(mapID)
