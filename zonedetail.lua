@@ -457,7 +457,7 @@ local function GetSpaceRect(mapID)
 		local entry = continentID and base.continents[continentID]
 		if not entry or not entry.drawn then return nil end
 		local city = cities[mapID]
-		if mapID ~= continentID and not HasArt(mapID) and (UNDERGROUND[mapID] or city == nil or city.count == 0) then return nil end
+		if mapID ~= continentID and not HasArt(mapID) and (city == nil or city.count == 0) then return nil end
 	end
 
 	return RawSpaceRect(mapID)
@@ -732,7 +732,7 @@ local function ShowBase(shown)
 end
 
 local function GetCityHostRect(mapID)
-	if UNDERGROUND[mapID] or MapUtils:GetZoneDetailCityZone(mapID) == nil then return nil end
+	if MapUtils:GetZoneDetailCityZone(mapID) == nil then return nil end
 
 	return RawSpaceRect(mapID)
 end

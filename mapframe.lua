@@ -742,6 +742,7 @@ end
 
 function SmoothZoom.GetMinScale(container)
 	local minScale = container:GetScaleForMinZoom()
+	if MapUtils.GetZoneDetailCityZone ~= nil and MapUtils:GetZoneDetailCityZone(container.mapID) ~= nil then return minScale end
 	local parent = SmoothZoom.IsSpace(container.mapID) and SmoothZoom.GetParent(container.mapID)
 	if not parent then return minScale end
 	local relaxed = minScale * SmoothZoom.leave
@@ -1135,7 +1136,6 @@ end
 function SmoothZoom.LeaveCity(container, delta, base)
 	if delta >= 0 or not MapUtils:IsOneMap() or InCombatLockdown() or MapUtils.GetZoneDetailCityZone == nil then return false end
 	if base * SmoothZoom.factor ^ delta >= container:GetScaleForMinZoom() * 1.001 then return false end
-	if SmoothZoom.IsSpace(container.mapID) then return false end
 	local zone = MapUtils:GetZoneDetailCityZone(container.mapID)
 	if zone == nil then return false end
 	SmoothZoom.anim = nil
@@ -1160,7 +1160,7 @@ function SmoothZoom.OnMouseWheel(container, delta)
 	if anim ~= nil and anim.mapID ~= container.mapID then anim = nil end
 	local base = anim and anim.target or container:GetCanvasScale()
 	local before = container:GetCanvasScale()
-	if SmoothZoom.LeaveToParent(container, delta, base) or SmoothZoom.LeaveCity(container, delta, base) then base = base * container:GetCanvasScale() / before end
+	if SmoothZoom.LeaveCity(container, delta, base) or SmoothZoom.LeaveToParent(container, delta, base) then base = base * container:GetCanvasScale() / before end
 	local minScale, maxScale = SmoothZoom.GetMinScale(container), SmoothZoom.GetMaxScale(container)
 	if delta > 0 then maxScale = math.max(maxScale, base) else minScale = math.min(minScale, base) end
 	local target = Clamp(base * SmoothZoom.factor ^ delta, minScale, maxScale)
