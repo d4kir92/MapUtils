@@ -780,22 +780,24 @@ end
 
 function SmoothZoom.GetExtents(container, scale)
 	local minX, maxX, minY, maxY = container:CalculateScrollExtentsAtScale(scale)
-	if not SmoothZoom.IsSpace(container.mapID) then return minX, maxX, minY, maxY end
-	local left, right, top, bottom = SmoothZoom.GetPanRect(container.mapID)
+	if not MapUtils:IsOneMap() or container.mapID == nil or scale <= 0 then return minX, maxX, minY, maxY end
+	local left, right, top, bottom = 0, 1, 0, 1
+	if SmoothZoom.IsSpace(container.mapID) then left, right, top, bottom = SmoothZoom.GetPanRect(container.mapID) end
 	local width, height = container.Child:GetSize()
 	if left == nil or width == nil or width <= 0 or height == nil or height <= 0 then return minX, maxX, minY, maxY end
-	local halfWidth = container:GetWidth() / (2 * scale * width)
-	local halfHeight = container:GetHeight() / (2 * scale * height)
-	minX, maxX = left + halfWidth, right - halfWidth
-	minY, maxY = top + halfHeight, bottom - halfHeight
-	if minX > maxX then minX, maxX = (left + right) / 2, (left + right) / 2 end
-	if minY > maxY then minY, maxY = (top + bottom) / 2, (top + bottom) / 2 end
+	local viewWidth, viewHeight = container:GetWidth(), container:GetHeight()
+	local scaledWidth, scaledHeight = scale * width, scale * height
+	local visibleSize = 10 / container:GetEffectiveScale()
+	local visibleWidth = math.min(visibleSize, viewWidth, (right - left) * scaledWidth)
+	local visibleHeight = math.min(visibleSize, viewHeight, (bottom - top) * scaledHeight)
+	local offsetX = (viewWidth / 2 - visibleWidth) / scaledWidth
+	local offsetY = (viewHeight / 2 - visibleHeight) / scaledHeight
 
-	return minX, maxX, minY, maxY
+	return left - offsetX, right + offsetX, top - offsetY, bottom + offsetY
 end
 
 function SmoothZoom.WidenExtents(container)
-	if not MapUtils:IsOneMap() or not SmoothZoom.IsSpace(container.mapID) then return end
+	if not MapUtils:IsOneMap() or container.mapID == nil then return end
 	container.scrollXExtentsMin, container.scrollXExtentsMax, container.scrollYExtentsMin, container.scrollYExtentsMax = SmoothZoom.GetExtents(container, container:GetCanvasScale())
 end
 
@@ -1068,9 +1070,7 @@ function SmoothZoom.SyncWheelMode(container)
 end
 
 function SmoothZoom.CanPan(container)
-	if SmoothZoom.IsSpace(container.mapID) then return true end
-
-	return container:GetCanvasScale() > (container.baseScale or 0)
+	return container.mapID ~= nil
 end
 
 function SmoothZoom.SyncCanPan(container)
