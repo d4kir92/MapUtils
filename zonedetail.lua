@@ -1382,7 +1382,7 @@ function MinimapLayer.Update()
 	if container == nil or MinimapLayer.frame == nil then return end
 	local style = GetStyle()
 	if not container:IsShown() or container.refWidth == nil or style == "MAP" then
-		if MinimapLayer.signature ~= nil then MinimapLayer.HideAll() end
+		if MinimapLayer.signature ~= nil or next(MinimapLayer.active) ~= nil then MinimapLayer.HideAll() end
 
 		return
 	end
