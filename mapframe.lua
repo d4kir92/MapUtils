@@ -802,9 +802,10 @@ function SmoothZoom.WidenExtents(container)
 	container.scrollXExtentsMin, container.scrollXExtentsMax, container.scrollYExtentsMin, container.scrollYExtentsMax = SmoothZoom.GetExtents(container, container:GetCanvasScale())
 end
 
-function SmoothZoom.SetView(container, scale, x, y, targetScale, targetX, targetY)
+function SmoothZoom.SetView(container, scale, x, y, targetScale, targetX, targetY, preserveCityScale)
 	local minScale, maxScale = SmoothZoom.GetMinScale(container), SmoothZoom.GetMaxScale(container)
-	if SmoothZoom.IsSpace(container.mapID) then maxScale = math.max(maxScale, scale, targetScale) end
+	if preserveCityScale then minScale = math.min(minScale, scale, targetScale) end
+	if preserveCityScale or SmoothZoom.IsSpace(container.mapID) then maxScale = math.max(maxScale, scale, targetScale) end
 	scale = Clamp(scale, minScale, maxScale)
 	targetScale = Clamp(targetScale, minScale, maxScale)
 	container.currentScale = scale
@@ -834,7 +835,7 @@ function SmoothZoom.Switch(container, target, keepCurrentView)
 	local layer = layers and layers[1]
 	local width = container.Child:GetWidth()
 	if fromLeft == nil or toLeft == nil or layer == nil or layer.layerWidth == nil or layer.layerWidth <= 0 or width == nil or width <= 0 then return false end
-	local factor = (fromRight - fromLeft) * width / ((toRight - toLeft) * layer.layerWidth)
+	local city = MapUtils:GetZoneDetailCityZone(target) ~= nil
 	local function mapX(value) return toLeft + (value - fromLeft) / (fromRight - fromLeft) * (toRight - toLeft) end
 	local function mapY(value) return toTop + (value - fromTop) / (fromBottom - fromTop) * (toBottom - toTop) end
 	local scale = container:GetCanvasScale()
@@ -849,7 +850,10 @@ function SmoothZoom.Switch(container, target, keepCurrentView)
 	WheelZoom.own = false
 	if container.mapID ~= target then return false end
 	SmoothZoom.pickMapID = target
-	SmoothZoom.SetView(container, scale * factor, mapX(x), mapY(y), targetScale * factor, mapX(targetX), mapY(targetY))
+	local targetWidth = container.Child:GetWidth()
+	if targetWidth == nil or targetWidth <= 0 then targetWidth = layer.layerWidth end
+	local factor = (fromRight - fromLeft) * width / ((toRight - toLeft) * targetWidth)
+	SmoothZoom.SetView(container, scale * factor, mapX(x), mapY(y), targetScale * factor, mapX(targetX), mapY(targetY), city)
 	SmoothZoom.ShowLoadedArt()
 	if MapUtils.UpdateWorldPinsNow ~= nil then MapUtils.UpdateWorldPinsNow() end
 
@@ -1054,7 +1058,7 @@ function SmoothZoom.Step(container, elapsed)
 
 	anim.scale = nextScale
 	local x, y = anim.anchorX - anim.offsetX / nextScale, anim.anchorY - anim.offsetY / nextScale
-	SmoothZoom.SetView(container, nextScale, x, y, nextScale, x, y)
+	SmoothZoom.SetView(container, nextScale, x, y, nextScale, x, y, anim.preserveCityScale)
 end
 
 function SmoothZoom.SyncWheelMode(container)
@@ -1162,7 +1166,9 @@ function SmoothZoom.OnMouseWheel(container, delta)
 	local before = container:GetCanvasScale()
 	if SmoothZoom.LeaveCity(container, delta, base) or SmoothZoom.LeaveToParent(container, delta, base) then base = base * container:GetCanvasScale() / before end
 	local minScale, maxScale = SmoothZoom.GetMinScale(container), SmoothZoom.GetMaxScale(container)
-	if delta > 0 then maxScale = math.max(maxScale, base) else minScale = math.min(minScale, base) end
+	local city = MapUtils:GetZoneDetailCityZone(container.mapID) ~= nil
+	if delta > 0 then maxScale = math.max(maxScale, base) end
+	if delta < 0 or city then minScale = math.min(minScale, base) end
 	local target = Clamp(base * SmoothZoom.factor ^ delta, minScale, maxScale)
 	local cursorX, cursorY, scale, scrollX, scrollY = SmoothZoom.CursorAnchor(container)
 	if cursorX == nil or target <= 0 then return end
@@ -1173,6 +1179,7 @@ function SmoothZoom.OnMouseWheel(container, delta)
 	SmoothZoom.anim = {
 		["mapID"] = container.mapID,
 		["target"] = target,
+		["preserveCityScale"] = city,
 		["anchorX"] = cursorX,
 		["anchorY"] = cursorY,
 		["offsetX"] = (cursorX - scrollX) * scale,
