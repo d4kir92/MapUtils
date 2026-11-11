@@ -14,6 +14,8 @@ local FRAME_LEVEL_OFFSET = 5
 local NO_TINT = {1, 1, 1, 1}
 local MASK_PATH = "Interface\\AddOns\\MapUtils\\media\\zonemasks\\"
 local EDGE_PATH = MASK_PATH .. "edge"
+local TERRAIN_FADE_START = 660
+local TERRAIN_FADE_END = 800
 local ROUND_PATH = MASK_PATH .. "round"
 local TILE_SHIFTS = {
 	["tbc"] = {
@@ -100,7 +102,7 @@ local function GetCity(mapID)
 	if city == nil then
 		city = NewArt()
 		city.mask = city.frame:CreateMaskTexture()
-		city.mask:SetTexture(ROUND_PATH, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+		city.mask:SetTexture(CITY_MAPS[mapID] and MASK_PATH .. "city_" .. mapID or ROUND_PATH, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
 		city.mask:SetAllPoints(city.frame)
 		city.masked = true
 		cities[mapID] = city
@@ -443,13 +445,28 @@ local function GetStyle(mapID)
 	return CITY_MAPS[mapID] and cityStyle or zoneStyle
 end
 
+function MapUtils:GetTerrainFadeThresholds(city)
+	local settings = type(MAUTTAB) == "table" and MAUTTAB or {}
+	local prefix = city and "CITYTERRAINFADE" or "ZONETERRAINFADE"
+	local start = tonumber(settings[prefix .. "START"]) or TERRAIN_FADE_START
+	local finish = tonumber(settings[prefix .. "END"]) or TERRAIN_FADE_END
+
+	return start, math.max(start + 10, finish)
+end
+
 local function GetEmbeddedCityStyle(mapID)
 	if not mapID then return nil end
 	local style = type(MAUTTAB) == "table" and MAUTTAB["CITYMAPSTYLE"]
-	if not style or style == GetStyle() then return nil end
+	if not style then return nil end
+	if style == GetStyle() then
+		if style ~= "MIXED" then return nil end
+		local zoneStart, zoneEnd = MapUtils:GetTerrainFadeThresholds(false)
+		local cityStart, cityEnd = MapUtils:GetTerrainFadeThresholds(true)
+		if zoneStart == cityStart and zoneEnd == cityEnd then return nil end
+	end
 	if CITY_MAPS[mapID] then return MapUtils:IsOneMap() and style or nil end
 	local info = C_Map.GetMapInfo(mapID)
-	if info and info.mapType == Enum.UIMapType.Zone then return style end
+	if info and info.mapType == Enum.UIMapType.Zone or MapUtils:IsOneMap() and GetSpace(mapID) then return style end
 end
 
 local function GetMode(mapID)
@@ -963,8 +980,6 @@ MinimapLayer = {
 	explored = {},
 	active = {},
 	pools = {},
-	fadeStart = 660,
-	fadeEnd = 800,
 	maxAlpha = 1,
 	maxTiles = 100,
 	desaturation = 0.35,
@@ -1402,20 +1417,19 @@ function MinimapLayer.ShowCityDetail(mapID, detail, host, width, height, level)
 	return true
 end
 
-function MinimapLayer.GetTerrainShare(tilePixels)
-	return (tilePixels - MinimapLayer.fadeStart) / (MinimapLayer.fadeEnd - MinimapLayer.fadeStart)
+function MinimapLayer.GetTerrainShare(tilePixels, start, finish)
+	return (tilePixels - start) / (finish - start)
 end
 
 function MinimapLayer.UpdateCityDetail()
 	local host = WorldMapFrame:GetMapID()
 	local scroll = WorldMapFrame.ScrollContainer
-	local style = GetStyle(host)
 	local flavor = MapUtils:GetFlavor()
 	local supported = flavor == "era" or flavor == "tbc" or flavor == "forever"
 	local width, height = scroll.Child:GetSize()
 	local world = container:IsShown() and container.built == MODE_FULL and not container.cityMode
+	local cityStart, cityEnd = MapUtils:GetTerrainFadeThresholds(true)
 	local terrainFrame = MinimapLayer.frame
-	local terrainAlpha = style ~= "MAP" and terrainFrame and terrainFrame:GetAlpha() or 0
 	local embeddedStyle = GetEmbeddedCityStyle(host)
 	for mapID, city in pairs(cities) do
 		local embedded = embeddedStyle ~= nil and CITY_MAPS[mapID] == true and container:IsShown()
@@ -1429,11 +1443,11 @@ function MinimapLayer.UpdateCityDetail()
 		local alpha = 0
 		local onCityMap = host == mapID
 		local embedded = embeddedStyle and city and city.frame:IsShown()
-		local detailStyle = embedded and embeddedStyle or style
+		local detailStyle = GetStyle(mapID)
 		local canShow = supported and detailStyle ~= "MAP" and width > 0 and height > 0 and (onCityMap or embedded or world and city and city.count > 0)
 		local level = embedded and city.frame:GetFrameLevel() + 2
 		if canShow and MinimapLayer.ShowCityDetail(mapID, detail, host, width, height, level) then
-			local mask = embedded and city.mask or nil
+			local mask = (embedded or world and not onCityMap) and city and city.mask or nil
 			if detail.frame.cityMask ~= mask then
 				if detail.frame.cityMask then detail.frame.texture:RemoveMaskTexture(detail.frame.cityMask) end
 				if mask then detail.frame.texture:AddMaskTexture(mask) end
@@ -1444,9 +1458,9 @@ function MinimapLayer.UpdateCityDetail()
 				alpha = MinimapLayer.maxAlpha
 			elseif onCityMap or embedded then
 				local tilePixels = detail.frame:GetWidth() * MinimapLayer.tile / 1024 * scroll:GetCanvasScale()
-				alpha = MinimapLayer.maxAlpha * math.max(0, math.min(1, MinimapLayer.GetTerrainShare(tilePixels)))
-			else
-				alpha = terrainAlpha
+				alpha = MinimapLayer.maxAlpha * math.max(0, math.min(1, MinimapLayer.GetTerrainShare(tilePixels, cityStart, cityEnd)))
+			elseif terrainFrame then
+				alpha = terrainFrame:GetAlpha()
 			end
 		end
 
@@ -1472,6 +1486,8 @@ function MinimapLayer.Update()
 	end
 
 	local terrain = style == "TERRAIN"
+	local zoneStart, zoneEnd = MapUtils:GetTerrainFadeThresholds(not embeddedStyle and CITY_MAPS[host])
+	local cityStart, cityEnd = MapUtils:GetTerrainFadeThresholds(true)
 	local fogTint = MapUtils:GetSelectedRevealTint()
 	local scrollContainer = WorldMapFrame.ScrollContainer
 	local hostLeft, hostRight, hostTop, hostBottom = GetHostRect(host)
@@ -1514,9 +1530,8 @@ function MinimapLayer.Update()
 			if tiles then
 				local tileU = math.abs(transform[4]) * MinimapLayer.tile
 				local tilePixels = tileU * spaceWidth * width * scale
-				local zoomShare = MinimapLayer.GetTerrainShare(tilePixels)
-				local share = terrain and 1 or style ~= "MAP" and zoomShare or 0
-				local cityShare = embeddedStyle == "TERRAIN" and 1 or cityTerrain and zoomShare or 0
+				local share = terrain and 1 or style ~= "MAP" and MinimapLayer.GetTerrainShare(tilePixels, zoneStart, zoneEnd) or 0
+				local cityShare = embeddedStyle == "TERRAIN" and 1 or cityTerrain and MinimapLayer.GetTerrainShare(tilePixels, cityStart, cityEnd) or 0
 				info.tilePixels, info.share = tilePixels, share
 				if share > 0 or cityShare > 0 then
 					local minX, maxX, minY, maxY
@@ -1586,7 +1601,9 @@ end
 
 function MapUtils:GetZoneDetailTilePixelsPerScale(mapID)
 	local style = GetStyle(mapID)
-	if container == nil or container.refWidth == nil or style == "MAP" then return nil end
+	if container == nil or container.refWidth == nil or style == "MAP" and GetEmbeddedCityStyle(mapID) ~= "MIXED" then return nil end
+	local detail = UNDERGROUND[mapID]
+	if detail and detail.frame and detail.frame.host == mapID then return detail.frame:GetWidth() * MinimapLayer.tile / 1024 end
 	local left, right = GetSpaceRect(mapID)
 	local continentID = left and GetContinent(mapID)
 	local entry = continentID and base.continents[continentID]
@@ -1600,8 +1617,18 @@ function MapUtils:GetZoneDetailTilePixelsPerScale(mapID)
 	return math.abs(transform[4]) * MinimapLayer.tile * (right - left) * width
 end
 
-function MapUtils:GetZoneDetailTileFullPixels()
-	return MinimapLayer.fadeEnd
+function MapUtils:GetZoneDetailTileFullPixels(mapID)
+	local style = GetStyle(mapID)
+	local _, finish = MapUtils:GetTerrainFadeThresholds(CITY_MAPS[mapID])
+	if GetEmbeddedCityStyle(mapID) == "MIXED" then
+		local _, zoneEnd = MapUtils:GetTerrainFadeThresholds(false)
+		local _, cityEnd = MapUtils:GetTerrainFadeThresholds(true)
+		finish = math.max(GetStyle() == "MIXED" and zoneEnd or 0, cityEnd)
+	elseif style ~= "MIXED" then
+		finish = TERRAIN_FADE_END
+	end
+
+	return finish
 end
 
 function MapUtils:PrintMinimapTileDebug()

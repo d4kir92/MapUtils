@@ -792,14 +792,16 @@ end
 
 function SmoothZoom.GetMaxScale(container)
 	local maxScale = container:GetScaleForMaxZoom()
-	if container.mapID == 1458 then return math.max(maxScale, container:GetScaleForMinZoom() * SmoothZoom.zoneZoom) end
-	if not SmoothZoom.IsSpace(container.mapID) then return maxScale end
-	local info = C_Map.GetMapInfo(container.mapID)
-	local zoom = (info and info.mapType == Enum.UIMapType.Zone) and SmoothZoom.zoneZoom or SmoothZoom.spaceZoom
-	maxScale = math.max(maxScale, container:GetScaleForMinZoom() * zoom)
-	if info and info.mapType == Enum.UIMapType.Zone and MapUtils.GetZoneDetailTilePixelsPerScale ~= nil then
-		local perScale = MapUtils:GetZoneDetailTilePixelsPerScale(container.mapID)
-		if perScale ~= nil and perScale > 0 then maxScale = math.max(maxScale, MapUtils:GetZoneDetailTileFullPixels() * SmoothZoom.tileFullMargin / perScale) end
+	local mapID = container.mapID
+	local info = mapID and C_Map.GetMapInfo(mapID)
+	local zone = info and info.mapType == Enum.UIMapType.Zone
+	if mapID == 1458 or SmoothZoom.IsSpace(mapID) then
+		local zoom = (zone or mapID == 1458) and SmoothZoom.zoneZoom or SmoothZoom.spaceZoom
+		maxScale = math.max(maxScale, container:GetScaleForMinZoom() * zoom)
+	end
+	if zone and MapUtils.GetZoneDetailTilePixelsPerScale ~= nil then
+		local perScale = MapUtils:GetZoneDetailTilePixelsPerScale(mapID)
+		if perScale ~= nil and perScale > 0 then maxScale = math.max(maxScale, MapUtils:GetZoneDetailTileFullPixels(mapID) * SmoothZoom.tileFullMargin / perScale) end
 	end
 
 	return maxScale

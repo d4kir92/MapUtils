@@ -228,7 +228,7 @@ local function AddDropdown(key, default, choices, func, label, added)
 	})
 end
 
-local function AddSlider(key, default, minValue, maxValue, step, func, label, added)
+local function AddSlider(key, default, minValue, maxValue, step, func, label, added, commitOnRelease)
 	return maset:AddSlider({
 		["label"] = label or ("LID_" .. key),
 		["search"] = key,
@@ -238,11 +238,37 @@ local function AddSlider(key, default, minValue, maxValue, step, func, label, ad
 		["max"] = maxValue,
 		["step"] = step,
 		["decimals"] = 0,
+		["commitOnRelease"] = commitOnRelease,
 		["func"] = function(value)
 			MapUtils:SV(MAUTTAB, key, value)
 			if func then func() end
 		end
 	})
+end
+
+local function AddTerrainFadeSliders(prefix, city)
+	local startValue, endValue = MapUtils:GetTerrainFadeThresholds(city)
+	local start, finish
+	start = AddSlider(prefix .. "START", startValue, 0, 1990, 10, function()
+		if start.value >= finish.value then
+			finish.slider:SetValue(start.value + 10)
+		else
+			MapUtils:RefreshZoneDetail()
+		end
+	end, nil, "2026-11-11", true)
+	finish = AddSlider(prefix .. "END", endValue, 10, 2000, 10, function()
+		if finish.value <= start.value then
+			start.slider:SetValue(finish.value - 10)
+		else
+			MapUtils:RefreshZoneDetail()
+		end
+	end, nil, "2026-11-11", true)
+
+	return function(style)
+		local shown = style == "MIXED"
+		maset:SetElementShown(start, shown)
+		maset:SetElementShown(finish, shown)
+	end
 end
 
 local function HandleSlash(args)
@@ -370,10 +396,21 @@ function MapUtils:InitSetting()
 		)
 	end
 
-	local zoneStyle = AddDropdown("MAPSTYLE", "MIXED", mapStyles, function() MapUtils:RefreshZoneDetail() end, "LID_ZONEMAPSTYLE", ADDED_1022)
+	local showZoneFade, showCityFade
+	local zoneStyle = AddDropdown("MAPSTYLE", "MIXED", mapStyles, function(style)
+		showZoneFade(style)
+		MapUtils:RefreshZoneDetail()
+	end, "LID_ZONEMAPSTYLE", ADDED_1022)
 	AddTooltip(zoneStyle, "LID_ZONEMAPSTYLE", "LID_MAPSTYLEDESC")
-	local cityStyle = AddDropdown("CITYMAPSTYLE", MapUtils:GetConfig("MAPSTYLE", "MIXED"), mapStyles, function() MapUtils:RefreshZoneDetail() end, nil, ADDED_1022)
+	showZoneFade = AddTerrainFadeSliders("ZONETERRAINFADE", false)
+	showZoneFade(MapUtils:GetConfig("MAPSTYLE", "MIXED"))
+	local cityStyle = AddDropdown("CITYMAPSTYLE", MapUtils:GetConfig("MAPSTYLE", "MIXED"), mapStyles, function(style)
+		showCityFade(style)
+		MapUtils:RefreshZoneDetail()
+	end, nil, ADDED_1022)
 	AddTooltip(cityStyle, "LID_CITYMAPSTYLE", "LID_MAPSTYLEDESC")
+	showCityFade = AddTerrainFadeSliders("CITYTERRAINFADE", true)
+	showCityFade(MapUtils:GetConfig("CITYMAPSTYLE", "MIXED"))
 	AddCategory("NAVIGATION", 2, nil, ADDED_0928)
 	AddTooltip(AddCheckbox("ALWAYSSHOWWAYPOINT", false, nil, nil, ADDED_0928), "LID_ALWAYSSHOWWAYPOINT", "LID_ALWAYSSHOWWAYPOINTDESC")
 	AddCategory("MAPFADE", 2, nil, ADDED_0927)
