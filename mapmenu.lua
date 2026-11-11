@@ -182,6 +182,30 @@ function MapUtils:LayoutMapMenuButton()
 	button:SetFrameLevel(anchor:GetFrameLevel())
 end
 
+function MapMenu.AddNewBadge(button)
+	local added = time({year = 2026, month = 11, day = 11, hour = 0})
+	local age = time() - added
+	local duration = 14 * 24 * 60 * 60
+	if age < 0 or age >= duration then return end
+
+	local template = "NewFeatureLabelTemplate"
+	local badge
+	if C_XMLUtil ~= nil and C_XMLUtil.GetTemplateInfo ~= nil and C_XMLUtil.GetTemplateInfo(template) ~= nil then
+		badge = CreateFrame("Frame", nil, button, template)
+		badge:SetScale(0.5)
+		badge:EnableMouse(false)
+		badge:Show()
+	else
+		badge = button:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+		local font = badge:GetFont()
+		badge:SetFont(font, 7, "OUTLINE")
+		badge:SetTextColor(0.4, 0.8, 1)
+		badge:SetText(MapUtils.UI:Text("LID_NEW"))
+	end
+	badge:SetPoint("CENTER", button, "BOTTOMRIGHT", -7, 10)
+	C_Timer.After(duration - age, function() badge:Hide() end)
+end
+
 function MapMenu.Create()
 	local border = map.BorderFrame
 	local arrow = border and border.MaximizeMinimizeFrame
@@ -211,6 +235,7 @@ function MapMenu.Create()
 
 	button:SetScript("OnSizeChanged", LayoutIcon)
 	LayoutIcon(button, button:GetSize())
+	MapMenu.AddNewBadge(button)
 	button:SetHighlightTexture("Interface\\Buttons\\UI-Common-MouseHilight", "ADD")
 	button:SetScript("OnMouseDown", function() icon:SetPoint("CENTER", button, "CENTER", 1, -1) end)
 	button:SetScript("OnMouseUp", function() icon:SetPoint("CENTER", button, "CENTER", 0, 0) end)
