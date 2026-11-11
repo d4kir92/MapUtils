@@ -132,6 +132,7 @@ MapUtils:AddTrans("itIT", "LID_SHOWPLAYERCOORDS", "Mostra coordinate del giocato
 MapUtils:AddTrans("itIT", "LID_SHOWQUESTPINS", "Mostra i segnalini delle missioni")
 MapUtils:AddTrans("itIT", "LID_SHOWUNEXPLORED", "Mostra inesplorati")
 MapUtils:AddTrans("itIT", "LID_SHOWUNEXPLOREDDESC", "Se disattivato, vengono mostrate solo le icone vicino alle quali questo personaggio è già stato. Le icone visitate vengono sempre salvate per personaggio, anche quando questa opzione è attiva.")
+MapUtils:AddTrans("itIT", "LID_SHOWWIDGET", "Mostra")
 MapUtils:AddTrans("itIT", "LID_SPIRITHEALER", "Guaritore spirituale")
 MapUtils:AddTrans("itIT", "LID_SPIRITHEALERS", "Guaritori spirituali")
 MapUtils:AddTrans("itIT", "LID_SPIRITHEALERSTYLE", "Stile icona")

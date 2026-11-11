@@ -132,6 +132,7 @@ MapUtils:AddTrans("esMX", "LID_SHOWPLAYERCOORDS", "Mostrar coordenadas del jugad
 MapUtils:AddTrans("esMX", "LID_SHOWQUESTPINS", "Mostrar marcadores de misiones")
 MapUtils:AddTrans("esMX", "LID_SHOWUNEXPLORED", "Mostrar inexplorados")
 MapUtils:AddTrans("esMX", "LID_SHOWUNEXPLOREDDESC", "Si se desactiva, solo se muestran los iconos cerca de los que ha estado este personaje. Los iconos visitados siempre se guardan por personaje, incluso con esta opción activada.")
+MapUtils:AddTrans("esMX", "LID_SHOWWIDGET", "Mostrar")
 MapUtils:AddTrans("esMX", "LID_SPIRITHEALER", "Ángel de la resurrección")
 MapUtils:AddTrans("esMX", "LID_SPIRITHEALERS", "Ángeles de la resurrección")
 MapUtils:AddTrans("esMX", "LID_SPIRITHEALERSTYLE", "Estilo de ícono")

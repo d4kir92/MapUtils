@@ -8,11 +8,6 @@ local MapMenu = {
 	navInset = 6,
 	cogAtlas = "QuestLog-icon-setting",
 	cogTexture = "Interface\\Buttons\\UI-OptionsButton",
-	guildColor = {
-		r = 0.2,
-		g = 1,
-		b = 0.4
-	},
 	offColor = {
 		r = 0.5,
 		g = 0.5,
@@ -47,16 +42,14 @@ function MapMenu.AddParty(entries)
 	end
 end
 
-function MapMenu.AddGuild(entries)
-	if not IsInGuild() or MapUtils.RefreshGuildMembers == nil or MapUtils.SetGuildOption == nil then return end
-	local shown = MapUtils:GetConfig("GUILDMEMBERPINS", true) == true
-	local text = MapUtils:Trans("LID_GUILDMEMBERS")
-	if not shown then text = "|cff808080" .. text .. "|r" end
+function MapMenu.AddPinToggles(entries)
+	if MapUtils.GetPinToggleEntries == nil then return end
+	local toggles = MapUtils:GetPinToggleEntries()
+	if #toggles == 0 then return end
 	tinsert(entries, {["divider"] = true})
-	tinsert(entries, {
-		["text"] = MapMenu.Circle(shown and MapMenu.guildColor or MapMenu.offColor) .. text,
-		["func"] = function() MapUtils:SetGuildOption("GUILDMEMBERPINS", not shown) end,
-	})
+	for _, entry in ipairs(toggles) do
+		tinsert(entries, entry)
+	end
 end
 
 function MapMenu.GetEntries()
@@ -77,8 +70,8 @@ function MapMenu.GetEntries()
 		}
 	}
 
+	MapMenu.AddPinToggles(entries)
 	MapMenu.AddParty(entries)
-	MapMenu.AddGuild(entries)
 
 	return entries
 end

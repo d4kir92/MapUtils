@@ -283,6 +283,13 @@ function ZoneInfo.Update()
 
 	if title == nil then title, body = ZoneInfo.GetZoneContent() end
 	body = body or ""
+	if MapUtils.IsMapEditElementVisible ~= nil and not MapUtils:IsMapEditElementVisible(ZoneInfo.element) then
+		ZoneInfo.key = nil
+		frame:Hide()
+
+		return
+	end
+
 	if MapUtils.IsMapEditMode ~= nil and MapUtils:IsMapEditMode() then title, body = ZoneInfo.GetSample() end
 	local align = MapUtils.GetMapEditAlign ~= nil and MapUtils:GetMapEditAlign(ZoneInfo.element) or "LEFT"
 	local key = format("%s|%s|%s", tostring(title), body, align)

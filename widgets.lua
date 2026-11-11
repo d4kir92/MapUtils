@@ -10,6 +10,7 @@ local Toggles = {
 	size = 18,
 	gap = 3,
 	iconInset = 1,
+	menuIcon = 14,
 	offAlpha = 0.4,
 	buttons = {},
 	categories = {
@@ -177,6 +178,28 @@ function Toggles.GetIcon(category)
 	return category.file, false
 end
 
+function Toggles.GetIconMarkup(category)
+	local icon, isAtlas = Toggles.GetIcon(category)
+	if isAtlas then return format("|A:%s:%d:%d|a ", icon, Toggles.menuIcon, Toggles.menuIcon) end
+
+	return format("|T%s:%d:%d|t ", icon, Toggles.menuIcon, Toggles.menuIcon)
+end
+
+function MapUtils:GetPinToggleEntries()
+	local entries = {}
+	for _, category in ipairs(Toggles.categories) do
+		if category.available == nil or category.available() then
+			tinsert(entries, {
+				["text"] = Toggles.GetIconMarkup(category) .. MapUtils:Trans(category.label),
+				["checked"] = function() return Toggles.IsOn(category) end,
+				["func"] = function() Toggles.Set(category, not Toggles.IsOn(category)) end,
+			})
+		end
+	end
+
+	return entries
+end
+
 function Toggles.ShowTooltip(button)
 	local category = button.category
 	GameTooltip:SetOwner(button, "ANCHOR_LEFT")
@@ -245,6 +268,7 @@ function Toggles.Layout()
 		frame:SetSize(length, Toggles.size)
 	end
 
+	frame:SetShown(MapUtils:IsMapEditElementVisible(Toggles.element))
 	Toggles.Refresh()
 end
 
@@ -266,6 +290,7 @@ function Toggles.Create()
 			scale = true
 		},
 		OnLayout = Toggles.Layout,
+		OnEditMode = Toggles.Layout,
 	}
 
 	MapUtils:RegisterMapEditElement(Toggles.element)
@@ -394,7 +419,7 @@ function Party.Layout(entries, align, vertical)
 	end
 
 	frame:SetSize(math.max(width, 1), math.max(height, 1))
-	frame:SetShown(#entries > 0)
+	frame:SetShown(#entries > 0 and MapUtils:IsMapEditElementVisible(Party.element))
 end
 
 function Party.Create()

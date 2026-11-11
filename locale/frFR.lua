@@ -132,6 +132,7 @@ MapUtils:AddTrans("frFR", "LID_SHOWPLAYERCOORDS", "Afficher les coordonnées du 
 MapUtils:AddTrans("frFR", "LID_SHOWQUESTPINS", "Afficher les repères de quête")
 MapUtils:AddTrans("frFR", "LID_SHOWUNEXPLORED", "Afficher les non explorés")
 MapUtils:AddTrans("frFR", "LID_SHOWUNEXPLOREDDESC", "Si désactivé, seules les icônes près desquelles ce personnage est passé sont affichées. Les icônes visitées sont toujours enregistrées par personnage, même lorsque cette option est activée.")
+MapUtils:AddTrans("frFR", "LID_SHOWWIDGET", "Afficher")
 MapUtils:AddTrans("frFR", "LID_SPIRITHEALER", "Gardien des âmes")
 MapUtils:AddTrans("frFR", "LID_SPIRITHEALERS", "Gardiens des âmes")
 MapUtils:AddTrans("frFR", "LID_SPIRITHEALERSTYLE", "Style d'icône")

@@ -132,6 +132,7 @@ MapUtils:AddTrans("ptBR", "LID_SHOWPLAYERCOORDS", "Mostrar coordenadas do jogado
 MapUtils:AddTrans("ptBR", "LID_SHOWQUESTPINS", "Mostrar marcadores de missões")
 MapUtils:AddTrans("ptBR", "LID_SHOWUNEXPLORED", "Mostrar inexplorados")
 MapUtils:AddTrans("ptBR", "LID_SHOWUNEXPLOREDDESC", "Se desativado, só são mostrados os ícones dos quais este personagem já esteve perto. Ícones visitados são sempre salvos por personagem, mesmo com esta opção ativada.")
+MapUtils:AddTrans("ptBR", "LID_SHOWWIDGET", "Mostrar")
 MapUtils:AddTrans("ptBR", "LID_SPIRITHEALER", "Curandeiro espiritual")
 MapUtils:AddTrans("ptBR", "LID_SPIRITHEALERS", "Curandeiros espirituais")
 MapUtils:AddTrans("ptBR", "LID_SPIRITHEALERSTYLE", "Estilo do ícone")

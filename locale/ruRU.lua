@@ -132,6 +132,7 @@ MapUtils:AddTrans("ruRU", "LID_SHOWPLAYERCOORDS", "Показывать коор
 MapUtils:AddTrans("ruRU", "LID_SHOWQUESTPINS", "Показать метки заданий")
 MapUtils:AddTrans("ruRU", "LID_SHOWUNEXPLORED", "Показывать неисследованные")
 MapUtils:AddTrans("ruRU", "LID_SHOWUNEXPLOREDDESC", "Если выключено, показываются только значки, рядом с которыми этот персонаж уже был. Посещённые значки всегда сохраняются для каждого персонажа, даже когда опция включена.")
+MapUtils:AddTrans("ruRU", "LID_SHOWWIDGET", "Показывать")
 MapUtils:AddTrans("ruRU", "LID_SPIRITHEALER", "Целитель душ")
 MapUtils:AddTrans("ruRU", "LID_SPIRITHEALERS", "Целители душ")
 MapUtils:AddTrans("ruRU", "LID_SPIRITHEALERSTYLE", "Стиль значка")

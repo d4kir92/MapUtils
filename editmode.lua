@@ -20,7 +20,8 @@ local EditMode = {
 	fallbackColor = {0.25, 0.6, 1},
 	selectedColor = {1, 0.82, 0},
 	guideColor = {1, 0.15, 0.15, 0.9},
-	settingNames = {"POINT", "X", "Y", "CX", "ALIGN", "SCALE", "ORIENT"},
+	settingNames = {"POINT", "X", "Y", "CX", "ALIGN", "SCALE", "ORIENT", "SHOWN"},
+	hiddenColor = {1, 0.2, 0.2},
 	aligns = {"AUTO", "LEFT", "CENTER", "RIGHT"},
 	alignKeys = {
 		["AUTO"] = "LID_ALIGNAUTO",
@@ -202,17 +203,41 @@ function EditMode.HasNineSlice()
 	return EditMode.nineSlice
 end
 
+function EditMode.IsShown(element)
+	return EditMode.Get(element, "SHOWN", true) ~= false
+end
+
+function EditMode.TintPieces(mover, hidden)
+	for name in pairs(EditMode.layout) do
+		local piece = mover[name]
+		if piece ~= nil then
+			piece:SetDesaturated(hidden)
+			if hidden then
+				piece:SetVertexColor(EditMode.hiddenColor[1], EditMode.hiddenColor[2], EditMode.hiddenColor[3])
+			else
+				piece:SetVertexColor(1, 1, 1)
+			end
+		end
+	end
+end
+
 function EditMode.Skin(mover, selected)
-	if mover.selected == selected then return end
+	if selected == nil then selected = mover.selected == true end
+	local hidden = mover.element ~= nil and not EditMode.IsShown(mover.element)
+	local state = format("%s:%s", tostring(selected), tostring(hidden))
+	if mover.skinState == state then return end
+	mover.skinState = state
 	mover.selected = selected
 	if EditMode.HasNineSlice() then
 		NineSliceUtil.ApplyLayout(mover, EditMode.layout, selected and EditMode.selectedKit or EditMode.highlightKit)
+		EditMode.TintPieces(mover, hidden)
 
 		return
 	end
 
 	if mover.SetBackdrop == nil then return end
 	local color = selected and EditMode.selectedColor or EditMode.fallbackColor
+	if hidden then color = EditMode.hiddenColor end
 	mover:SetBackdrop({
 		bgFile = "Interface\\Buttons\\WHITE8X8",
 		edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
@@ -398,6 +423,7 @@ function EditMode.CreateMover(element)
 	mover:SetScript("OnDragStart", function() EditMode.StartDrag(element) end)
 	mover:SetScript("OnDragStop", function() EditMode.StopDrag(element) end)
 	mover:SetScript("OnClick", function(_, button) if button == "RightButton" then EditMode.ShowPanel(element) end end)
+	mover.element = element
 	EditMode.Skin(mover, false)
 	mover:Hide()
 	element.mover = mover
@@ -473,6 +499,22 @@ function EditMode.CreatePanel()
 	local close = CreateFrame("Button", nil, panel, "UIPanelCloseButton")
 	close:SetPoint("TOPRIGHT", panel, "TOPRIGHT", 0, 0)
 	close:SetScript("OnClick", function() panel:Hide() end)
+	panel.shownRow = CreateFrame("Frame", nil, panel)
+	panel.shownRow:SetSize(226, 24)
+	panel.shownCheck = CreateFrame("CheckButton", nil, panel.shownRow, "UICheckButtonTemplate")
+	panel.shownCheck:SetSize(24, 24)
+	panel.shownCheck:SetPoint("LEFT", panel.shownRow, "LEFT", -4, 0)
+	panel.shownLabel = panel.shownRow:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+	panel.shownLabel:SetPoint("LEFT", panel.shownCheck, "RIGHT", 2, 0)
+	panel.shownLabel:SetText(MapUtils:Trans("LID_SHOWWIDGET"))
+	panel.shownCheck:SetScript("OnClick", function(self)
+		local element = panel.element
+		if element == nil then return end
+		EditMode.Set(element, "SHOWN", self:GetChecked() == true)
+		EditMode.Apply(element)
+		EditMode.Skin(element.mover)
+	end)
+
 	panel.alignRow = EditMode.CreateChoiceRow(panel, "LID_TEXTALIGN", function(self) EditMode.ShowChoiceMenu(self, "ALIGN", EditMode.aligns, EditMode.alignKeys, "AUTO") end)
 	panel.orientRow = EditMode.CreateChoiceRow(panel, "LID_ORIENTATION", function(self) EditMode.ShowChoiceMenu(self, "ORIENT", EditMode.orients, EditMode.orientKeys, panel.element.defaultOrientation or "VERTICAL") end)
 	panel.scaleRow = CreateFrame("Frame", nil, panel)
@@ -504,6 +546,7 @@ end
 function EditMode.LayoutPanel(panel, element)
 	local y = -36
 	local rows = {
+		{panel.shownRow, true, 28},
 		{panel.alignRow, EditMode.HasOption(element, "align"), 28},
 		{panel.orientRow, EditMode.HasOption(element, "orientation"), 28},
 		{panel.scaleRow, EditMode.HasOption(element, "scale"), 44},
@@ -527,6 +570,7 @@ function EditMode.RefreshPanel()
 	local element = panel and panel.element
 	if element == nil then return end
 	panel.title:SetText(MapUtils:Trans(element.title))
+	panel.shownCheck:SetChecked(EditMode.IsShown(element))
 	panel.alignRow.button:SetText(MapUtils:Trans(EditMode.alignKeys[EditMode.Get(element, "ALIGN", "AUTO")] or "LID_ALIGNAUTO"))
 	panel.orientRow.button:SetText(MapUtils:Trans(EditMode.orientKeys[EditMode.GetOrientation(element)] or "LID_VERTICAL"))
 	local scale = EditMode.GetScale(element)
@@ -606,6 +650,10 @@ end
 
 function MapUtils:GetMapEditOrientation(element)
 	return EditMode.GetOrientation(element)
+end
+
+function MapUtils:IsMapEditElementVisible(element)
+	return EditMode.active or EditMode.IsShown(element)
 end
 
 function MapUtils:RegisterMapEditElement(element)
