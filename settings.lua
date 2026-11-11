@@ -18,7 +18,7 @@ local guildCheckboxes = {}
 local optionCheckboxes = {}
 
 MapUtils:RegisterSharedSettings({
-	keys = {"GUILDMEMBERPINS", "GUILDMEMBERLEVEL", "GUILDMEMBERNAME", "GUILDMEMBERSHARE"},
+	keys = {"GUILDMEMBERPINS", "GUILDMEMBERLEVEL", "GUILDMEMBERNAME", "GUILDMEMBERSHARE", "GUILDMEMBERZONES"},
 	getDB = function()
 		MAUTTAB = MAUTTAB or {}
 
@@ -27,7 +27,7 @@ MapUtils:RegisterSharedSettings({
 	get = function(key)
 		local value = MAUTTAB[key]
 		if value == nil and GHTABPC then value = GHTABPC[key] end
-		if value == nil then value = key == "GUILDMEMBERPINS" or key == "GUILDMEMBERSHARE" end
+		if value == nil then value = key == "GUILDMEMBERPINS" or key == "GUILDMEMBERSHARE" or key == "GUILDMEMBERZONES" end
 		MAUTTAB[key] = value
 
 		return value
@@ -303,14 +303,14 @@ function MapUtils:InitSetting()
 	if MapUtils.RefreshCommChannel then AddTooltip(AddCheckbox("COMMCHANNEL", true, function() MapUtils:RefreshCommChannel() end, nil, "2026-10-28"), "LID_COMMCHANNEL", "LID_COMMCHANNELDESC") end
 	AddCategory("WORLDMAP", nil, nil, ADDED_0927)
 	if MapUtils.RefreshGuildMembers then
-		for _, key in ipairs({"GUILDMEMBERPINS", "GUILDMEMBERLEVEL", "GUILDMEMBERNAME", "GUILDMEMBERSHARE"}) do
-			local default = key == "GUILDMEMBERPINS" or key == "GUILDMEMBERSHARE"
+		for _, key in ipairs({"GUILDMEMBERPINS", "GUILDMEMBERLEVEL", "GUILDMEMBERNAME", "GUILDMEMBERSHARE", "GUILDMEMBERZONES"}) do
+			local default = key == "GUILDMEMBERPINS" or key == "GUILDMEMBERSHARE" or key == "GUILDMEMBERZONES"
 			local control = AddCheckbox(key, default, function()
 				MapUtils:SetSharedSetting(key, MapUtils:GetConfig(key, default))
 				MapUtils:RefreshGuildMembers()
-			end, nil, default and "2026-10-29" or "2026-11-06")
+			end, nil, key == "GUILDMEMBERZONES" and "2026-11-11" or (default and "2026-10-29" or "2026-11-06"))
 			guildCheckboxes[key] = control
-			if not default then Requires(control, "GUILDMEMBERPINS") end
+			if key ~= "GUILDMEMBERPINS" and key ~= "GUILDMEMBERSHARE" then Requires(control, "GUILDMEMBERPINS") end
 			AddTooltip(control, "LID_" .. key, "LID_" .. key .. "DESC")
 		end
 	end

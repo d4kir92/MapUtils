@@ -6,7 +6,8 @@ local MapMenu = {
 	circleSize = 14,
 	navSize = 20,
 	navGap = 8,
-	filterShift = 20,
+	buttonShift = 5,
+	filterShift = 25,
 	cogAtlas = "QuestLog-icon-setting",
 	cogTexture = "Interface\\Buttons\\UI-OptionsButton",
 	offColor = {
@@ -93,7 +94,14 @@ function MapMenu.AddModernEntry(root, entry)
 		element = root:CreateButton(entry.text, entry.func)
 	end
 
-	if entry.disabled and element ~= nil and element.SetEnabled ~= nil then element:SetEnabled(false) end
+	if element ~= nil then
+		if entry.disabled and element.SetEnabled ~= nil then element:SetEnabled(false) end
+		if entry.children ~= nil then
+			for _, child in ipairs(entry.children) do
+				MapMenu.AddModernEntry(element, child)
+			end
+		end
+	end
 end
 
 function MapMenu.Show(owner)
@@ -113,8 +121,8 @@ function MapUtils:ShowEntryMenu(owner, entries)
 
 	if UIDropDownMenu_Initialize == nil or ToggleDropDownMenu == nil then return end
 	if MapMenu.dropdown == nil then MapMenu.dropdown = CreateFrame("Frame", AddonName .. "MapMenu", UIParent, "UIDropDownMenuTemplate") end
-	UIDropDownMenu_Initialize(MapMenu.dropdown, function()
-		for _, entry in ipairs(entries) do
+	UIDropDownMenu_Initialize(MapMenu.dropdown, function(_, level, children)
+		for _, entry in ipairs(children or entries) do
 			local info = UIDropDownMenu_CreateInfo()
 			info.notCheckable = entry.checked == nil
 			if entry.checked ~= nil then
@@ -129,9 +137,11 @@ function MapUtils:ShowEntryMenu(owner, entries)
 				info.text = entry.text
 				info.func = entry.func
 				info.disabled = entry.disabled
+				info.hasArrow = entry.children ~= nil
+				info.menuList = entry.children
 			end
 
-			UIDropDownMenu_AddButton(info)
+			UIDropDownMenu_AddButton(info, level)
 		end
 	end, "MENU")
 
@@ -145,7 +155,7 @@ function MapUtils:LayoutMapMenuButton()
 	button:ClearAllPoints()
 	if nav ~= nil then
 		button:SetSize(MapMenu.navSize, MapMenu.navSize)
-		button:SetPoint("LEFT", nav, "RIGHT", MapMenu.navGap, -3)
+		button:SetPoint("LEFT", nav, "RIGHT", MapMenu.navGap + MapMenu.buttonShift, -3)
 		for index = 1, nav:GetNumPoints() do
 			local point, relativeFrame, relativePoint, x, y = nav:GetPoint(index)
 			if point == "BOTTOMRIGHT" or point == "TOPRIGHT" or point == "RIGHT" then

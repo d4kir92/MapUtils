@@ -189,11 +189,23 @@ function MapUtils:GetPinToggleEntries()
 	local entries = {}
 	for _, category in ipairs(Toggles.categories) do
 		if category.available == nil or category.available() then
-			tinsert(entries, {
+			local entry = {
 				["text"] = Toggles.GetIconMarkup(category) .. MapUtils:Trans(category.label),
 				["checked"] = function() return Toggles.IsOn(category) end,
 				["func"] = function() Toggles.Set(category, not Toggles.IsOn(category)) end,
-			})
+			}
+			if category.guild then
+				entry.children = {
+					{
+						["text"] = MapUtils:Trans("LID_GUILDMEMBERZONES"),
+						["checked"] = function() return MapUtils:GetConfig("GUILDMEMBERZONES", true) == true end,
+						["func"] = function()
+							MapUtils:SetGuildOption("GUILDMEMBERZONES", not MapUtils:GetConfig("GUILDMEMBERZONES", true))
+						end,
+					},
+				}
+			end
+			tinsert(entries, entry)
 		end
 	end
 

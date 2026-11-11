@@ -9,6 +9,9 @@ local Guild = MapUtils:CreateGuildMap({
 
 		return 0, 1
 	end,
+	getZoneSpace = function(mapID)
+		if MapUtils.IsZoneDetailMap ~= nil and MapUtils.GetZoneDetailSpace ~= nil and MapUtils:IsZoneDetailMap(mapID) then return MapUtils:GetZoneDetailSpace(mapID) end
+	end,
 	setPinScale = function(pin, scale) if MapUtils.SetCanvasPinScale ~= nil then MapUtils:SetCanvasPinScale(pin, scale) end end,
 	attach = function(guild)
 		if MapUtils.CanvasPinLists ~= nil then tinsert(MapUtils.CanvasPinLists, guild.pins) end
