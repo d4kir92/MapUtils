@@ -12,6 +12,7 @@ local ADDED_1017 = "2026-10-17"
 local ADDED_1019 = "2026-10-19"
 local ADDED_1022 = "2026-10-22"
 local ADDED_1104 = "2026-11-04"
+local ADDED_1111 = "2026-11-11"
 local SHARED_KEYS = {"DUNGEONWORLDMAPPINS", "MEETINGSTONEWORLDMAPPINS", "DUNGEONMINIMAPPINS", "MEETINGSTONEMINIMAPPINS", "INSTANCEPINS_BOSS", "INSTANCEPINS_ITEM", "INSTANCEPINS_ENTRANCE", "INSTANCEPINS_LEVEL"}
 local maset = nil
 local sharedCheckboxes = {}
@@ -58,6 +59,7 @@ end
 
 function MapUtils:OnSharedOptionChanged(key, value)
 	if sharedCheckboxes[key] ~= nil then sharedCheckboxes[key]:SetChecked(value) end
+	if maset ~= nil then maset:UpdateDependencies() end
 	MapUtils:RefreshPins()
 	if MapUtils.RefreshInstanceMap ~= nil then MapUtils:RefreshInstanceMap() end
 end
@@ -531,6 +533,16 @@ function MapUtils:InitSetting()
 	AddCategory("DUNGEONS", 2)
 	AddSharedCheckbox("DUNGEONWORLDMAPPINS", "LID_WORLDMAPPINS")
 	AddSharedCheckbox("DUNGEONMINIMAPPINS", "LID_MINIMAPPINS")
+	local continentDungeons = AddCheckbox(
+		"DUNGEONCONTINENTPINS",
+		false,
+		function()
+			MapUtils.OneMapPinCache = {}
+			MapUtils:RefreshPins()
+		end, nil, ADDED_1111
+	)
+	Requires(continentDungeons, "DUNGEONWORLDMAPPINS")
+	AddTooltip(continentDungeons, "LID_DUNGEONCONTINENTPINS", "LID_DUNGEONCONTINENTPINSDESC")
 	AddExploreCheckbox("DUNGEON")
 	AddCategory("MEETINGSTONES", 2, nil, ADDED_0928)
 	AddSharedCheckbox("MEETINGSTONEWORLDMAPPINS", "LID_WORLDMAPPINS", ADDED_0928)

@@ -2716,10 +2716,60 @@ end
 MapUtils.BuildPinList = BuildList
 MapUtils.GetEntryWorldPos = GetEntryWorldPos
 MapUtils.OneMapPinCache = {}
+function MapUtils:DungeonContinentPinsEnabled()
+	return MapUtils:GetConfig("DUNGEONCONTINENTPINS", false) == true
+end
+
+-- Projects the dungeon entrances of every zone onto its continent map.
+function MapUtils:GetContinentDungeonPins(mapID)
+	if mapID == nil or C_Map.GetMapChildrenInfo == nil or C_Map.GetMapRectOnMap == nil then return nil end
+	local info = C_Map.GetMapInfo(mapID)
+	if info == nil or info.mapType ~= Enum.UIMapType.Continent then return nil end
+	local children = C_Map.GetMapChildrenInfo(mapID, nil, true)
+	if children == nil then return nil end
+	local items = {}
+	local function IsSeen(entry, x, y)
+		for _, item in ipairs(items) do
+			if item.entry.name == entry.name and math.abs(item.x - x) < 0.01 and math.abs(item.y - y) < 0.01 then return true end
+		end
+
+		return false
+	end
+
+	for _, child in ipairs(children) do
+		local childID = child.mapID
+		local list = childID ~= nil and childID ~= mapID and BuildList(childID, false, true, false, false, false, false, false)
+		if list and #list > 0 then
+			local ok, left, right, top, bottom = pcall(C_Map.GetMapRectOnMap, childID, mapID)
+			if ok and left and right and top and bottom and right > left and bottom > top then
+				for _, entry in ipairs(list) do
+					if entry.kind == "dungeon" and entry.entrance ~= "path" then
+						local x, y = left + entry.x * (right - left), top + entry.y * (bottom - top)
+						if not IsSeen(entry, x, y) then
+							tinsert(
+								items,
+								{
+									["entry"] = entry,
+									["mapID"] = childID,
+									["x"] = x,
+									["y"] = y
+								}
+							)
+						end
+					end
+				end
+			end
+		end
+	end
+
+	return items
+end
+
 function MapUtils:GetOneMapForeignPins(mapID, piersOn, dungeonsOn, convergencesOn, libraryBooksOn)
 	if not (piersOn or dungeonsOn or convergencesOn or libraryBooksOn) or MapUtils.IsOneMap == nil or not MapUtils:IsOneMap() or MapUtils.IsZoneDetailMap == nil or not MapUtils:IsZoneDetailMap(mapID) then return nil end
 	local space = MapUtils:GetZoneDetailSpace()
-	if mapID == space then dungeonsOn = false end
+	local onSpace = mapID == space
+	if onSpace and not MapUtils:DungeonContinentPinsEnabled() then dungeonsOn = false end
 	local hostInfo = C_Map.GetMapInfo(mapID)
 	if hostInfo == nil or hostInfo.mapType ~= Enum.UIMapType.Zone then convergencesOn = false end
 	if not piersOn and not dungeonsOn and not convergencesOn and not libraryBooksOn then return nil end
@@ -2756,7 +2806,7 @@ function MapUtils:GetOneMapForeignPins(mapID, piersOn, dungeonsOn, convergencesO
 			local list = left ~= nil and right > left and bottom > top and BuildList(sourceID, piersOn, dungeonsOn, false, false, false, false, convergencesOn, nil, libraryBooksOn)
 			if list then
 				for _, entry in ipairs(list) do
-					if entry.kind == nil or entry.kind == "dungeon" and dungeonsOn or entry.kind == "convergence" and convergencesOn or entry.kind == "librarybook" and libraryBooksOn then
+					if entry.kind == nil or entry.kind == "dungeon" and dungeonsOn and not (onSpace and entry.entrance == "path") or entry.kind == "convergence" and convergencesOn or entry.kind == "librarybook" and libraryBooksOn then
 						local u, v = left + entry.x * (right - left), top + entry.y * (bottom - top)
 						if entry.kind ~= "dungeon" and entry.kind ~= "librarybook" or not IsSeen(entry, u, v) then
 							Remember(entry, u, v)
@@ -2966,6 +3016,12 @@ local function UpdateWorldPins()
 	local ownCount = #list
 	if foreign ~= nil then
 		for _, item in ipairs(foreign) do
+			tinsert(list, item)
+		end
+	end
+
+	if foreign == nil and dungeonsOn and MapUtils:DungeonContinentPinsEnabled() then
+		for _, item in ipairs(MapUtils:GetContinentDungeonPins(mapID) or {}) do
 			tinsert(list, item)
 		end
 	end
