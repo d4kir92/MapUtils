@@ -223,7 +223,7 @@ local function AddDropdown(key, default, choices, func, label, added)
 		["choices"] = choices,
 		["func"] = function(value)
 			MapUtils:SV(MAUTTAB, key, value)
-			if func then func() end
+			if func then func(value) end
 		end
 	})
 end
@@ -275,6 +275,8 @@ local function HandleSlash(args)
 	local sub = strlower(strtrim(args or ""))
 	if sub:match("^debug%s+help$") then
 		MapUtils:PrintDebugHelp()
+	elseif sub == "debug masks" then
+		MapUtils:ToggleDebugMaskWindow()
 	elseif sub == "debug" then
 		MapUtils:ToggleDebug()
 	elseif sub == "pos" then
@@ -413,6 +415,13 @@ function MapUtils:InitSetting()
 	showCityFade(MapUtils:GetConfig("CITYMAPSTYLE", "MIXED"))
 	AddCategory("NAVIGATION", 2, nil, ADDED_0928)
 	AddTooltip(AddCheckbox("ALWAYSSHOWWAYPOINT", false, nil, nil, ADDED_0928), "LID_ALWAYSSHOWWAYPOINT", "LID_ALWAYSSHOWWAYPOINTDESC")
+	if (C_Navigation and C_Navigation.GetDistance) or WorldMapPin_GetDistance then
+		AddDropdown("WAYPOINTDISTANCE", "METERS", {
+			{["value"] = "METERS", ["label"] = MapUtils:Trans("LID_DISTANCEMETERS")},
+			{["value"] = "YARDS", ["label"] = MapUtils:Trans("LID_DISTANCEYARDS")}
+		})
+	end
+
 	AddCategory("MAPFADE", 2, nil, ADDED_0927)
 	AddCheckbox("WORLDMAPFADE", true, function() MapUtils:RefreshWorldMapFrame() end, nil, ADDED_0927)
 	Requires(AddSlider("WORLDMAPFADEOPACITY", 50, 0, 100, 5, nil, nil, ADDED_0927), "WORLDMAPFADE")
@@ -447,6 +456,10 @@ function MapUtils:InitSetting()
 	Requires(AddSlider("BATTLEFIELDMAPFADEOPACITY", 50, 0, 100, 5, function() MapUtils:RefreshBattlefieldMap() end, "LID_WORLDMAPFADEOPACITY", ADDED_0927), "BATTLEFIELDMAPFADE")
 	AddCategory("MAPICONS")
 	AddCategory("PIERS", 2)
+	AddDropdown("PIERICONSTYLE", "NEW", {
+		{value = "NEW", label = MapUtils:Trans("LID_PIERICONNEW")},
+		{value = "PORTALS", label = MapUtils:Trans("LID_PIERICONPORTALS")},
+	}, function() MapUtils:RefreshPins() end)
 	AddCheckbox("WORLDMAPPINS", true, function() MapUtils:RefreshPins() end)
 	AddCheckbox("MINIMAPPINS", true, function() MapUtils:RefreshPins() end)
 	if MapUtils.TRANSPORTROUTES ~= nil then

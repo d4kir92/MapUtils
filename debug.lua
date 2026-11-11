@@ -48,10 +48,14 @@ local function Update()
 	end
 
 	local mapID = WorldMapFrame:GetMapID()
-	display.text:SetText(format("uiMapID: %s\n%.3f, %.3f", tostring(mapID), x * 100, y * 100))
+	local hovered = mapID and C_Map.GetMapInfoAtPosition(mapID, x, y)
+	local maskMapID = hovered and hovered.mapID or mapID
+	local cx, cy = GetCursorPosition()
+	local masks = MapUtils:GetMapMaskFilenamesAtCursor(maskMapID, cx, cy)
+	local filenames = #masks > 0 and table.concat(masks, "\n") or "-"
+	display.text:SetText(format("uiMapID: %s\n%.3f, %.3f\nMasks (%s)\n%s", tostring(mapID), x * 100, y * 100, tostring(maskMapID), filenames))
 	display:SetSize(display.text:GetStringWidth(), display.text:GetStringHeight())
 	local scale = UIParent:GetEffectiveScale()
-	local cx, cy = GetCursorPosition()
 	display:ClearAllPoints()
 	display:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", cx / scale + OFFSET_X, cy / scale + OFFSET_Y)
 	display:Show()
@@ -871,9 +875,122 @@ function MapUtils:ToggleDebug()
 		MapUtils:INFO("Debug mode off")
 	end
 end
+function MapUtils:ToggleDebugMaskWindow()
+	if WorldMapFrame == nil then return end
+	local window = PinEdit.maskWindow
+	if window and window:IsVisible() then
+		window:Hide()
+		return
+	end
+
+	WorldMapFrame:Show()
+	if window == nil then
+		window = PinEdit.CreateWindow("MapUtilsDebugMasks", 340, 416)
+		PinEdit.maskWindow = window
+		window.TitleText:SetText("MapUtils Debug – Masken")
+		window:SetPoint("CENTER", WorldMapFrame, "CENTER")
+
+		local function AddCheckbox(parent, text, onClick)
+			local checkbox = CreateFrame("CheckButton", nil, parent, "UICheckButtonTemplate")
+			checkbox:SetSize(22, 22)
+			checkbox:SetScript("OnClick", onClick)
+			local caption = checkbox:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+			caption:SetPoint("LEFT", checkbox, "RIGHT", 4, 0)
+			caption:SetText(text)
+			return checkbox
+		end
+
+		local zones = self:GetDebugMapMaskZones()
+		local zoneIDs, rows = {}, {}
+		for _, info in ipairs(zones) do tinsert(zoneIDs, info.mapID) end
+
+		local allZones = AddCheckbox(window, "Alle Zonen", function(button)
+			self:SetDebugMapMaskGroupsHidden(zoneIDs, not button:GetChecked())
+			for _, row in ipairs(rows) do row.checkbox:SetChecked(button:GetChecked()) end
+		end)
+		allZones:SetPoint("TOPLEFT", 10, -30)
+		allZones:SetChecked(#zoneIDs > 0)
+		allZones:SetEnabled(#zoneIDs > 0)
+
+		local function RefreshAllZones()
+			for _, mapID in ipairs(zoneIDs) do
+				if self:IsDebugMapMaskGroupHidden(mapID) then
+					allZones:SetChecked(false)
+					return
+				end
+			end
+
+			allZones:SetChecked(#zoneIDs > 0)
+		end
+
+		for index, entry in ipairs({{947, "Azeroth"}, {1414, "Kalimdor"}, {1415, "Östliche Königreiche"}, {1945, "Scherbenwelt"}}) do
+			local group = entry[1]
+			local checkbox = AddCheckbox(window, entry[2], function(button)
+				self:SetDebugMapMaskGroupsHidden({group}, not button:GetChecked())
+			end)
+			checkbox:SetPoint("TOPLEFT", 10 + (index - 1) % 2 * 174, -56 - math.floor((index - 1) / 2) * 24)
+			checkbox:SetChecked(not self:IsDebugMapMaskGroupHidden(group))
+		end
+
+		local search = CreateFrame("EditBox", nil, window, "InputBoxTemplate")
+		search:SetPoint("TOPLEFT", 65, -108)
+		search:SetPoint("RIGHT", -14, 0)
+		search:SetHeight(22)
+		search:SetAutoFocus(false)
+		search:SetScript("OnEnterPressed", search.ClearFocus)
+		search:SetScript("OnEscapePressed", search.ClearFocus)
+		local label = window:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+		label:SetPoint("RIGHT", search, "LEFT", -8, 0)
+		label:SetText("Suche")
+
+		local scroll = CreateFrame("ScrollFrame", nil, window, "UIPanelScrollFrameTemplate")
+		scroll:SetPoint("TOPLEFT", 10, -137)
+		scroll:SetPoint("BOTTOMRIGHT", -28, 12)
+		local content = CreateFrame("FRAME", nil, scroll)
+		content:SetSize(300, 1)
+		scroll:SetScrollChild(content)
+
+		for _, info in ipairs(zones) do
+			local mapID = info.mapID
+			local text = format("%s (%d)", info.name, mapID)
+			local checkbox = AddCheckbox(content, text, function(button)
+				self:SetDebugMapMaskGroupsHidden({mapID}, not button:GetChecked())
+				RefreshAllZones()
+			end)
+			checkbox:SetChecked(not self:IsDebugMapMaskGroupHidden(mapID))
+			tinsert(rows, {checkbox = checkbox, searchText = strlower(text)})
+		end
+
+		local function Filter()
+			local query = strlower(strtrim(search:GetText()))
+			local count = 0
+			for _, row in ipairs(rows) do
+				local checkbox = row.checkbox
+				if row.searchText:find(query, 1, true) then
+					checkbox:ClearAllPoints()
+					checkbox:SetPoint("TOPLEFT", 0, -count * 24)
+					checkbox:Show()
+					count = count + 1
+				else
+					checkbox:Hide()
+				end
+			end
+
+			content:SetHeight(math.max(1, count * 24))
+			scroll:SetVerticalScroll(0)
+		end
+
+		search:SetScript("OnTextChanged", Filter)
+		Filter()
+	end
+
+	window:Show()
+end
+
 function MapUtils:PrintDebugHelp()
 	self:INFO("MapUtils Debug-Hilfe ([Text] ist optional):")
 	self:INFO("/maputils debug help - Diese Hilfe anzeigen")
+	self:INFO("/maputils debug masks - Fenster zum Ein- und Ausblenden von Zonenmasken öffnen")
 	self:INFO("/maputils debug - Debug-Anzeige ein/aus: Karten-ID, Mauskoordinaten und Pin-Editor")
 	self:INFO("Im Debug-Modus: Linksklick auf ein Weltkarten- oder Instanz-Symbol öffnet den Pin-Editor; X/Y eingeben + Enter oder mit den Pfeilen um 0.1 / 0.01 / 0.001 verschieben, Reset stellt den Originalwert wieder her")
 	self:INFO("Pin-Editor: 'Delete' blendet das Symbol aus (im Debug-Modus schwach sichtbar, 'Restore' holt es zurück); bei Zonenübergängen 'To' = Ziel-uiMapID + Enter, 'Up'/'Down' wechselt das Höhlen-Symbol")

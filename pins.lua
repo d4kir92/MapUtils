@@ -1562,6 +1562,7 @@ local function GetEntryIcon(entry)
 	if entry.kind == "meetingstone" then return MEETING_STONE_ICON end
 	if entry.kind == "spirithealer" then return "Interface\\AddOns\\MapUtils\\media\\" .. (MapUtils:GetConfig("SPIRITHEALERSTYLE", "NORMAL") == "CHIBI" and "spirithealer_chibi" or "spirithealer") end
 	if entry.kind == "crossing" then return GetCrossingIcon(entry.up) end
+	if entry.kind == nil and MapUtils:GetConfig("PIERICONSTYLE", "NEW") == "PORTALS" then return GetIcon(entry.faction) end
 	if entry.kind == nil and (MAUTTAB == nil or MAUTTAB["icon"] == nil or MAUTTAB["icon"] == "") then
 		local key = entry.transport or "ship"
 		local icon = entry.iconStyle ~= nil and TRANSPORT_ICONS[key .. "_" .. entry.iconStyle] or TRANSPORT_ICONS[key]
@@ -3614,6 +3615,33 @@ end
 
 MapUtils:AddSlash("mappins", HandleSlash)
 MapUtils:AddSlash("mapdocks", HandleSlash)
+function MapUtils:HookWaypointDistance()
+	local frame = SuperTrackedFrame or WorldSpacePin
+	local text = frame and (frame.DistanceText or frame.text)
+	local getDistance = C_Navigation and C_Navigation.GetDistance or WorldMapPin_GetDistance
+	if text == nil or getDistance == nil then return false end
+
+	local updating = false
+	local function UpdateDistance()
+		if updating or MapUtils:GetConfig("WAYPOINTDISTANCE", "METERS") == "YARDS" then return end
+		local original = text:GetText()
+		if issecretvalue and issecretvalue(original) then return end
+		if original == nil or original == "" then return end
+		local yards = getDistance()
+		if issecretvalue and issecretvalue(yards) then return end
+		if type(yards) ~= "number" or yards < 0 then return end
+
+		updating = true
+		text:SetText(format("%.0f m", yards * 0.9144))
+		updating = false
+	end
+
+	hooksecurefunc(text, "SetText", UpdateDistance)
+	hooksecurefunc(text, "SetFormattedText", UpdateDistance)
+	UpdateDistance()
+	return true
+end
+
 local superTrackedFixed = false
 local function FixSuperTrackedFrame()
 	local frame = SuperTrackedFrame
@@ -3649,6 +3677,7 @@ MapUtils:RegisterEvent(superTrackedLoader, "ADDON_LOADED")
 superTrackedLoader:SetScript(
 	"OnEvent",
 	function(self)
-		if FixSuperTrackedFrame() then self:UnregisterAllEvents() end
+		if not self.distanceHooked then self.distanceHooked = MapUtils:HookWaypointDistance() end
+		if FixSuperTrackedFrame() and self.distanceHooked then self:UnregisterAllEvents() end
 	end
 )
