@@ -55,11 +55,43 @@ local container = nil
 local zones = {}
 local cities = {}
 local hiddenMaskGroups = {}
+local maskFiles = {}
 
 local function IsMapMaskGroupHidden(group)
 	return hiddenMaskGroups[group] == true
 end
 local mapMasks = setmetatable({}, {__mode = "k"})
+
+local function IsMapMaskHidden(mask)
+	return IsMapMaskGroupHidden(mask.mapMaskGroup) or maskFiles[mask.mapMaskFile] == true
+end
+
+local function SyncMapMask(texture, masks, mask)
+	local attached = not IsMapMaskHidden(mask)
+	if attached == masks[mask] then return end
+	if attached then
+		texture:AddMaskTexture(mask)
+	else
+		texture:RemoveMaskTexture(mask)
+	end
+
+	masks[mask] = attached
+end
+
+local function SetMapMaskTexture(mask, file, wrap)
+	local wasHidden = IsMapMaskHidden(mask)
+	mask.mapMaskFile = file
+	if maskFiles[file] == nil then
+		maskFiles[file] = false
+		MapUtils.debugMaskFileRevision = (MapUtils.debugMaskFileRevision or 0) + 1
+	end
+
+	mask:SetTexture(file, wrap, wrap)
+	if wasHidden == IsMapMaskHidden(mask) then return end
+	for texture, masks in pairs(mapMasks) do
+		if masks[mask] ~= nil then SyncMapMask(texture, masks, mask) end
+	end
+end
 
 local function AddMapMask(texture, mask)
 	local masks = mapMasks[texture]
@@ -68,42 +100,40 @@ local function AddMapMask(texture, mask)
 		mapMasks[texture] = masks
 	end
 
-	if masks[mask] then return end
-	masks[mask] = true
-	if not IsMapMaskGroupHidden(mask.mapMaskGroup) then texture:AddMaskTexture(mask) end
+	if masks[mask] == nil then masks[mask] = false end
+	SyncMapMask(texture, masks, mask)
 end
 
 local function RemoveMapMask(texture, mask)
 	local masks = mapMasks[texture]
-	if masks == nil or not masks[mask] then return end
+	if masks == nil then return end
+	if masks[mask] then texture:RemoveMaskTexture(mask) end
 	masks[mask] = nil
-	if not IsMapMaskGroupHidden(mask.mapMaskGroup) then texture:RemoveMaskTexture(mask) end
 end
 
 function MapUtils:IsDebugMapMaskGroupHidden(group)
-	return hiddenMaskGroups[group] == true
+	return IsMapMaskGroupHidden(group)
 end
 
 function MapUtils:SetDebugMapMaskGroupsHidden(groups, hidden)
 	local changed = {}
 	for _, group in ipairs(groups) do
-		local value = hidden and true or nil
-		if hiddenMaskGroups[group] ~= value then
-			hiddenMaskGroups[group] = value
-			changed[group] = true
-		end
+		hiddenMaskGroups[group] = hidden and true or nil
+		changed[group] = true
 	end
 
-	if next(changed) == nil then return end
 	for texture, masks in pairs(mapMasks) do
 		for mask in pairs(masks) do
-			if changed[mask.mapMaskGroup] then
-				if hidden then
-					texture:RemoveMaskTexture(mask)
-				else
-					texture:AddMaskTexture(mask)
-				end
-			end
+			if changed[mask.mapMaskGroup] then SyncMapMask(texture, masks, mask) end
+		end
+	end
+end
+
+function MapUtils:SetDebugMapMaskFileHidden(file, hidden)
+	maskFiles[file] = hidden
+	for texture, masks in pairs(mapMasks) do
+		for mask in pairs(masks) do
+			if mask.mapMaskFile == file then SyncMapMask(texture, masks, mask) end
 		end
 	end
 end
@@ -121,7 +151,7 @@ local function NewArt(mapID)
 	local frame = CreateFrame("FRAME", nil, container)
 	local edge = frame:CreateMaskTexture()
 	edge.mapMaskGroup = mapID
-	edge:SetTexture(EDGE_PATH, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+	SetMapMaskTexture(edge, EDGE_PATH, "CLAMPTOBLACKADDITIVE")
 	edge:SetAllPoints(frame)
 
 	return {
@@ -159,7 +189,7 @@ local function GetCity(mapID)
 		city.mask = city.frame:CreateMaskTexture()
 		city.mask.mapMaskGroup = mapID
 		city.maskPath = CITY_MAPS[mapID] and MASK_PATH .. "city_" .. mapID or ROUND_PATH
-		city.mask:SetTexture(city.maskPath, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+		SetMapMaskTexture(city.mask, city.maskPath, "CLAMPTOBLACKADDITIVE")
 		city.mask:SetAllPoints(city.frame)
 		city.masked = true
 		cities[mapID] = city
@@ -365,7 +395,7 @@ local function ApplyMask(zone, highlight, left, top, width, height)
 	SetHighlightMasked(zone, true)
 	zone.hmask.mapMaskGroup = zone.edge.mapMaskGroup
 	zone.highlightPath = MASK_PATH .. highlight.file
-	zone.hmask:SetTexture(zone.highlightPath, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+	SetMapMaskTexture(zone.hmask, zone.highlightPath, "CLAMPTOBLACKADDITIVE")
 	zone.hmask:SetSize(highlight.width * width, highlight.height * height)
 	zone.hmask:ClearAllPoints()
 	zone.hmask:SetPoint("TOPLEFT", zone.frame, "TOPLEFT", (highlight.x - left) * width, -(highlight.y - top) * height)
@@ -414,7 +444,7 @@ local function DrawZone(continentID, continentRect, mapID, mode, width, height)
 		zone.mask.mapMaskGroup = mapID
 		SetMasked(zone, true)
 		zone.maskPath = MASK_PATH .. artMask
-		zone.mask:SetTexture(zone.maskPath, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+		SetMapMaskTexture(zone.mask, zone.maskPath, "CLAMPTOBLACKADDITIVE")
 		zone.mask:ClearAllPoints()
 		zone.mask:SetAllPoints(zone.frame)
 	else
@@ -449,7 +479,7 @@ local function DrawZone(continentID, continentRect, mapID, mode, width, height)
 			if under.mask == nil then under.mask = under.frame:CreateMaskTexture() end
 			under.mask.mapMaskGroup = WORLD
 			under.maskPath = geometry[1]
-			under.mask:SetTexture(under.maskPath, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+			SetMapMaskTexture(under.mask, under.maskPath, "CLAMPTOBLACKADDITIVE")
 			under.mask:SetSize(geometry[2], geometry[3])
 			under.mask:ClearAllPoints()
 			under.mask:SetPoint("TOPLEFT", container, "TOPLEFT", geometry[4], geometry[5])
@@ -491,6 +521,38 @@ local function GetContinent(mapID)
 	end
 
 	return nil
+end
+
+function MapUtils:GetDebugMapMaskFiles()
+	local files = {}
+	local function Add(file)
+		if file == nil or files[file] then return end
+		local name = type(file) == "number" and tostring(file) or file:match("[^\\]+$") .. ".blp"
+		files[file] = {file = file, name = name, hidden = maskFiles[file] == true}
+	end
+
+	Add(EDGE_PATH)
+	Add(ROUND_PATH)
+	for file in pairs(maskFiles) do Add(file) end
+	for mapID in pairs(CITY_MAPS) do Add(MASK_PATH .. "city_" .. mapID) end
+	local flavor = self.GetRevealFlavor and self:GetRevealFlavor()
+	for fileID in pairs(self.ZONEMASKS or {}) do
+		local name = GetMaskName(fileID)
+		if name then Add(MASK_PATH .. name) end
+	end
+
+	for _, name in pairs(self.ZONEMASKFILES and self.ZONEMASKFILES[flavor] or {}) do
+		if name then Add(MASK_PATH .. name) end
+	end
+
+	for _, name in pairs(self.ZONEARTMASKS and self.ZONEARTMASKS[flavor] or {}) do
+		Add(MASK_PATH .. name)
+	end
+
+	local list = {}
+	for _, entry in pairs(files) do tinsert(list, entry) end
+	table.sort(list, function(a, b) return a.name < b.name end)
+	return list
 end
 
 function MapUtils:GetDebugMapMaskZones()
@@ -543,7 +605,7 @@ function MapUtils:GetMapMaskFilenamesAtCursor(mapID, cursorX, cursorY)
 	end
 
 	local function AddMask(path, region, scale)
-		if IsMapMaskGroupHidden(region.mapMaskGroup) then return end
+		if IsMapMaskHidden(region) then return end
 		local name = path:match("[^\\]+$") .. ".blp"
 		if not seen[name] and ContainsCursor(region, scale) then
 			seen[name] = true
@@ -574,7 +636,7 @@ function MapUtils:GetMapMaskFilenamesAtCursor(mapID, cursorX, cursorY)
 
 	if #files == 0 and not IsMapMaskGroupHidden(mapID) then
 		local file = self:GetMapMaskFilename(mapID)
-		if file then tinsert(files, file) end
+		if file and not maskFiles[MASK_PATH .. file:sub(1, -5)] then tinsert(files, file) end
 	end
 
 	table.sort(files)
@@ -886,7 +948,7 @@ local function DrawContinent(continentID, refWidth, refHeight)
 	if highlight then
 		if entry.mask == nil then entry.mask = container:CreateMaskTexture() end
 		entry.mask.mapMaskGroup = WORLD
-		entry.mask:SetTexture(MASK_PATH .. highlight.file, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+		SetMapMaskTexture(entry.mask, MASK_PATH .. highlight.file, "CLAMPTOBLACKADDITIVE")
 		entry.mask:SetSize(highlight.width * refWidth, highlight.height * refHeight)
 		entry.mask:ClearAllPoints()
 		entry.mask:SetPoint("TOPLEFT", container, "TOPLEFT", highlight.x * refWidth, -highlight.y * refHeight)
@@ -895,7 +957,7 @@ local function DrawContinent(continentID, refWidth, refHeight)
 
 	if entry.edge == nil then
 		entry.edge = container:CreateMaskTexture()
-		entry.edge:SetTexture(EDGE_PATH, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+		SetMapMaskTexture(entry.edge, EDGE_PATH, "CLAMPTOBLACKADDITIVE")
 	end
 
 	entry.edge.mapMaskGroup = continentID
@@ -1279,7 +1341,7 @@ function MinimapLayer.GetMask(continentID)
 	end
 
 	mask.mapMaskGroup = WORLD
-	mask:SetTexture(geometry[1], "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+	SetMapMaskTexture(mask, geometry[1], "CLAMPTOBLACKADDITIVE")
 	mask:SetSize(geometry[2], geometry[3])
 	mask:ClearAllPoints()
 	mask:SetPoint("TOPLEFT", container, "TOPLEFT", geometry[4], geometry[5])
@@ -1364,7 +1426,7 @@ function MinimapLayer.CollectExploration(continentID, mapID, usedMasks)
 					end
 
 					mask.mapMaskGroup = mapID
-					mask:SetTexture(fileID, "CLAMP", "CLAMP")
+					SetMapMaskTexture(mask, fileID, "CLAMP")
 					mask:ClearAllPoints()
 					mask:SetPoint("TOPLEFT", container, "TOPLEFT", x * container.refWidth, -y * container.refHeight)
 					mask:SetSize(fileWidth * sx * container.refWidth, fileHeight * sy * container.refHeight)
@@ -1484,7 +1546,7 @@ function MinimapLayer.GetWaterMask(source, tileX, tileY, transform)
 	if mask == nil then
 		mask = MinimapLayer.frame:CreateMaskTexture()
 		mask.mapMaskGroup = source.continentID
-		mask:SetTexture(MinimapLayer.lodPath .. name, "CLAMP", "CLAMP")
+		SetMapMaskTexture(mask, MinimapLayer.lodPath .. name, "CLAMP")
 		local size = lod.group * MinimapLayer.tile
 		local northX, westY = (32 - row * lod.group) * MinimapLayer.tile, (32 - col * lod.group) * MinimapLayer.tile
 		local u1, v1 = MinimapLayer.ToWorld(transform, northX, westY)

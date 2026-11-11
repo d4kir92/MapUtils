@@ -961,7 +961,25 @@ function MapUtils:ToggleDebugMaskWindow()
 			tinsert(rows, {checkbox = checkbox, searchText = strlower(text)})
 		end
 
-		local function Filter()
+		local fileRows = {}
+		local revision
+		local function Filter(resetScroll)
+			if revision ~= (self.debugMaskFileRevision or 0) then
+				revision = self.debugMaskFileRevision or 0
+				for _, info in ipairs(self:GetDebugMapMaskFiles()) do
+					local file = info.file
+					if not fileRows[file] then
+						local checkbox = AddCheckbox(content, info.name, function(button)
+							self:SetDebugMapMaskFileHidden(file, not button:GetChecked())
+						end)
+						checkbox:SetChecked(not info.hidden)
+						local row = {checkbox = checkbox, searchText = strlower(info.name)}
+						fileRows[file] = row
+						tinsert(rows, row)
+					end
+				end
+			end
+
 			local query = strlower(strtrim(search:GetText()))
 			local count = 0
 			for _, row in ipairs(rows) do
@@ -977,11 +995,15 @@ function MapUtils:ToggleDebugMaskWindow()
 			end
 
 			content:SetHeight(math.max(1, count * 24))
-			scroll:SetVerticalScroll(0)
+			if resetScroll then scroll:SetVerticalScroll(0) end
 		end
 
-		search:SetScript("OnTextChanged", Filter)
-		Filter()
+		search:SetScript("OnTextChanged", function() Filter(true) end)
+		window:HookScript("OnShow", function() Filter(false) end)
+		window:SetScript("OnUpdate", function()
+			if revision ~= (self.debugMaskFileRevision or 0) then Filter(false) end
+		end)
+		Filter(true)
 	end
 
 	window:Show()
@@ -990,7 +1012,7 @@ end
 function MapUtils:PrintDebugHelp()
 	self:INFO("MapUtils Debug-Hilfe ([Text] ist optional):")
 	self:INFO("/maputils debug help - Diese Hilfe anzeigen")
-	self:INFO("/maputils debug masks - Fenster zum Ein- und Ausblenden von Zonenmasken öffnen")
+	self:INFO("/maputils debug masks - Fenster zum Ein- und Ausblenden von Kartengruppen und einzelnen Maskendateien öffnen")
 	self:INFO("/maputils debug - Debug-Anzeige ein/aus: Karten-ID, Mauskoordinaten und Pin-Editor")
 	self:INFO("Im Debug-Modus: Linksklick auf ein Weltkarten- oder Instanz-Symbol öffnet den Pin-Editor; X/Y eingeben + Enter oder mit den Pfeilen um 0.1 / 0.01 / 0.001 verschieben, Reset stellt den Originalwert wieder her")
 	self:INFO("Pin-Editor: 'Delete' blendet das Symbol aus (im Debug-Modus schwach sichtbar, 'Restore' holt es zurück); bei Zonenübergängen 'To' = Ziel-uiMapID + Enter, 'Up'/'Down' wechselt das Höhlen-Symbol")
