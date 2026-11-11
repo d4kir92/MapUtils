@@ -446,6 +446,11 @@ local function Remove()
 
 	ShowObjects()
 	RestoreSizes()
+	for frame in pairs(saved) do
+		if CanChange(frame) then frame:ClearAllPoints() end
+	end
+
+	if MapUtils.MapMenuButton ~= nil then MapUtils.MapMenuButton:ClearAllPoints() end
 	for frame, entry in pairs(saved) do
 		if Restore(frame, entry) then saved[frame] = nil end
 	end
