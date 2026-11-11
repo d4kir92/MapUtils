@@ -5,7 +5,8 @@ local MapMenu = {
 	circle = "Interface\\CharacterFrame\\TempPortraitAlphaMask",
 	circleSize = 14,
 	navSize = 20,
-	navInset = 6,
+	navGap = 8,
+	filterShift = 20,
 	cogAtlas = "QuestLog-icon-setting",
 	cogTexture = "Interface\\Buttons\\UI-OptionsButton",
 	offColor = {
@@ -144,7 +145,22 @@ function MapUtils:LayoutMapMenuButton()
 	button:ClearAllPoints()
 	if nav ~= nil then
 		button:SetSize(MapMenu.navSize, MapMenu.navSize)
-		button:SetPoint("RIGHT", nav, "RIGHT", -MapMenu.navInset, 0)
+		button:SetPoint("LEFT", nav, "RIGHT", MapMenu.navGap, -3)
+		for index = 1, nav:GetNumPoints() do
+			local point, relativeFrame, relativePoint, x, y = nav:GetPoint(index)
+			if point == "BOTTOMRIGHT" or point == "TOPRIGHT" or point == "RIGHT" then
+				MapMenu.navRightOffset = MapMenu.navRightOffset or x
+				nav:SetPoint(point, relativeFrame, relativePoint, MapMenu.navRightOffset - MapMenu.navSize - MapMenu.navGap, y)
+				break
+			end
+		end
+		local filter = map.WorldMapTrackingOptionsButton
+		if filter ~= nil and filter:GetNumPoints() == 1 then
+			local point, relativeFrame, relativePoint, x, y = filter:GetPoint(1)
+			MapMenu.filterOffset = MapMenu.filterOffset or x
+			filter:SetPoint(point, relativeFrame, relativePoint, MapMenu.filterOffset + MapMenu.filterShift, y)
+		end
+
 		button:SetFrameLevel(nav:GetFrameLevel() + 5)
 
 		return
