@@ -376,6 +376,15 @@ local function Layout()
 		navRight, navPoint, navOffset = filterButton, "LEFT", -4
 	end
 
+	local menuButton = MapUtils.MapMenuButton
+	if menuButton ~= nil then
+		menuButton:SetSize(BUTTON_SIZE, BUTTON_SIZE)
+		menuButton:ClearAllPoints()
+		menuButton:SetPoint("RIGHT", navRight, navPoint, navRight == filterButton and 0 or navOffset, navRight == bar and CONTENT_RAISE or 0)
+		menuButton:SetFrameLevel(level)
+		navRight, navPoint, navOffset = menuButton, "LEFT", -4
+	end
+
 	if Place(map.NavBar, level, {"LEFT", bar, "LEFT", 2 - GAP["left"], NAV_RAISE}, {"RIGHT", navRight, navPoint, navOffset, NAV_RAISE}) then
 		map.NavBar:SetHeight(NAV_HEIGHT)
 		ShrinkNavBar()
@@ -440,6 +449,8 @@ local function Remove()
 	for frame, entry in pairs(saved) do
 		if Restore(frame, entry) then saved[frame] = nil end
 	end
+
+	if MapUtils.LayoutMapMenuButton ~= nil then MapUtils:LayoutMapMenuButton() end
 end
 
 function MapUtils:RefreshSimpleMapFrame()

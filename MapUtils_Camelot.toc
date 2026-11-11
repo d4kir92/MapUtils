@@ -71,6 +71,7 @@ data\classic\instancepins.lua
 data\forever\instancepins.lua
 instancemap.lua
 mapframe.lua
+mapmenu.lua
 simpleframe.lua
 coords.lua
 battlefieldmap.lua

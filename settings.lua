@@ -66,6 +66,17 @@ function MapUtils:SetSharedOption(key, value)
 	MapUtils:OnSharedOptionChanged(key, value)
 end
 
+function MapUtils:SetGuildOption(key, value)
+	MAUTTAB = MAUTTAB or {}
+	MapUtils:SV(MAUTTAB, key, value)
+	MapUtils:SetSharedSetting(key, value)
+	if guildCheckboxes[key] then
+		guildCheckboxes[key]:SetChecked(value)
+		if maset ~= nil then maset:UpdateDependencies() end
+	end
+	if MapUtils.RefreshGuildMembers then MapUtils:RefreshGuildMembers() end
+end
+
 MapUtils:RegisterSharedSettings(
 	{
 		["keys"] = SHARED_KEYS,

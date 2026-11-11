@@ -100,7 +100,7 @@ end
 
 local function UpdateTopClamp()
 	local gap = 0
-	if IsMaximized() and not MapUtils:IsWorldMapFullscreen() and MoveEnabled() and MapUtils.GetSimpleMapTopGap then
+	if not MapUtils:IsWorldMapFullscreen() and MoveEnabled() and MapUtils.GetSimpleMapTopGap then
 		gap = MapUtils:GetSimpleMapTopGap()
 	end
 	if gap > 0 then
@@ -205,17 +205,17 @@ local function Apply()
 			SetPos(ClampPos(pos.x, pos.y, topGap))
 		end
 	else
-		UpdateTopClamp()
 		local scale = 1
 		if ScaleEnabled() then scale = ClampScale(MAUTTAB["WORLDMAPSCALEVALUE"]) end
 		local foreignLeft, foreignTop
 		if foreignMove then foreignLeft, foreignTop = GetPos() end
 		SetScale(scale)
+		local topGap = UpdateTopClamp()
 		local pos = MAUTTAB["WORLDMAPPOS"]
 		if foreignMove then
 			if foreignLeft ~= nil then SetPos(foreignLeft, foreignTop) end
 		elseif MoveEnabled() and type(pos) == "table" and pos.x ~= nil and pos.y ~= nil then
-			SetPos(ClampPos(pos.x, pos.y))
+			SetPos(ClampPos(pos.x, pos.y, topGap))
 		elseif blizzardPoint ~= nil then
 			local point, relativeTo, relativePoint, x, y = unpack(blizzardPoint)
 			frame:ClearAllPoints()
@@ -1357,6 +1357,54 @@ function SmoothZoom.InstallSpokenPlacesDragGuard()
 
 		return areaAt(self, ...)
 	end
+end
+
+function MapUtils:GetUnitMapPosition(unit)
+	if C_Map == nil or C_Map.GetBestMapForUnit == nil or C_Map.GetPlayerMapPosition == nil then return nil end
+	local mapID = C_Map.GetBestMapForUnit(unit)
+	if mapID == nil or MapUtils:IsSecret(mapID) then return nil end
+	local pos = C_Map.GetPlayerMapPosition(mapID, unit)
+	if pos == nil then return nil end
+	local x, y = pos:GetXY()
+	if x == nil or y == nil or MapUtils:IsSecret(x) or MapUtils:IsSecret(y) or (x == 0 and y == 0) then return nil end
+
+	return mapID, x, y
+end
+
+function MapUtils:CenterWorldMapOnUnit(unit)
+	local container = WheelZoom.container
+	if frame == nil or container == nil or IsLocked() then return false end
+	local mapID, x, y = MapUtils:GetUnitMapPosition(unit)
+	if mapID == nil then return false end
+	SmoothZoom.anim = nil
+	WheelZoom.pending = nil
+	if frame:GetMapID() ~= mapID then
+		MapLevelZoom.lastSwitch = GetTime()
+		WheelZoom.own = true
+		frame:SetMapID(mapID)
+		WheelZoom.own = false
+		if frame:GetMapID() ~= mapID then return false end
+	end
+
+	local scale = container:GetCanvasScale()
+	if MapUtils:IsOneMap() and container.zoomLevels ~= nil and SmoothZoom.IsSpace(mapID) then
+		SmoothZoom.pickMapID = mapID
+		SmoothZoom.SetView(container, scale, x, y, scale, x, y)
+		SmoothZoom.ShowLoadedArt()
+		if MapUtils.UpdateWorldPinsNow ~= nil then MapUtils.UpdateWorldPinsNow() end
+
+		return true
+	end
+
+	if container.InstantPanAndZoom == nil then return false end
+	local minScale = container.GetScaleForMinZoom and container:GetScaleForMinZoom()
+	local maxScale = container.GetScaleForMaxZoom and container:GetScaleForMaxZoom()
+	if minScale ~= nil and maxScale ~= nil and scale <= minScale + SCALE_EPSILON then scale = maxScale end
+	WheelZoom.own = true
+	container:InstantPanAndZoom(scale, x, y)
+	WheelZoom.own = false
+
+	return true
 end
 
 function MapLevelZoom.Install()
