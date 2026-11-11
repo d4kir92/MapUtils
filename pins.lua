@@ -2046,26 +2046,17 @@ end
 local areaLabel = nil
 local function GetAreaLabel()
 	if areaLabel ~= nil then return areaLabel end
-	if WorldMapFrame.dataProviders == nil then return nil end
-	local parent = nil
-	for provider in pairs(WorldMapFrame.dataProviders) do
-		if provider.Label ~= nil then
-			parent = provider.Label
-			break
-		end
+	if WorldMapFrame == nil or MapUtils.SetMapInfoOverride == nil then return nil end
+	areaLabel = CreateFrame("FRAME", nil, WorldMapFrame)
+	areaLabel:SetSize(1, 1)
+	areaLabel.Push = function(self)
+		local lines = {}
+		if self.description ~= nil and self.description ~= "" then tinsert(lines, self.description) end
+		if self.hint ~= nil and self.hint ~= "" then tinsert(lines, self.hint) end
+		MapUtils:SetMapInfoOverride(self.name, table.concat(lines, "\n"))
 	end
 
-	if parent == nil then return nil end
-	areaLabel = CreateFrame("FRAME", nil, parent)
-	areaLabel:SetAllPoints(parent)
-	areaLabel.name = areaLabel:CreateFontString(nil, "OVERLAY", "WorldMapTextFont")
-	areaLabel.name:SetPoint("TOP", areaLabel, "TOP", 0, -20)
-	areaLabel.description = areaLabel:CreateFontString(nil, "OVERLAY", "SubZoneTextFont")
-	areaLabel.description:SetPoint("TOP", areaLabel.name, "BOTTOM", 0, -10)
-	areaLabel.hint = areaLabel:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-	areaLabel.hint:SetPoint("TOP", areaLabel.description, "BOTTOM", 0, -8)
-	if AREA_NAME_FONT_COLOR ~= nil then areaLabel.name:SetVertexColor(AREA_NAME_FONT_COLOR:GetRGB()) end
-	if AREA_DESCRIPTION_FONT_COLOR ~= nil then areaLabel.description:SetVertexColor(AREA_DESCRIPTION_FONT_COLOR:GetRGB()) end
+	areaLabel:SetScript("OnHide", function() MapUtils:SetMapInfoOverride(nil) end)
 	areaLabel:SetScript(
 		"OnUpdate",
 		function(self)
@@ -2148,7 +2139,6 @@ local function GetClickHints(pin)
 	local hints = {}
 	if not pin.clickable then return hints end
 	local entry = pin.entry
-	if entry.kind == "dungeon" then return hints end
 	tinsert(
 		hints,
 		{
@@ -2157,7 +2147,17 @@ local function GetClickHints(pin)
 		}
 	)
 
-	if entry.kind ~= "flight" and GetDestinationMapID(entry) ~= nil then
+	if entry.kind == "dungeon" then
+		if (entry.instanceMap or entry.instance) ~= nil and MapUtils.ShowInstanceMap ~= nil then
+			tinsert(
+				hints,
+				{
+					MapUtils:Trans("LID_RIGHTCLICK"),
+					MapUtils:Trans("LID_OPENDUNGEONMAP")
+				}
+			)
+		end
+	elseif entry.kind ~= "flight" and GetDestinationMapID(entry) ~= nil then
 		tinsert(
 			hints,
 			{
@@ -2200,20 +2200,22 @@ local function ShowAreaLabel(pin)
 		label.refreshed = GetTime()
 		label.refresh = function(self)
 			local _, text = GetPierLabel(pin.entry, pin.mapID)
-			self.description:SetText(text)
+			self.description = text
+			self:Push()
 		end
 	end
 
-	label.name:SetText(name)
-	label.description:SetText(description)
+	label.name = name
+	label.description = description
 	local hintLines = {}
 	for _, hint in ipairs(GetClickHints(pin)) do
 		tinsert(hintLines, format("|cffffd100%s|r  %s", hint[1], hint[2]))
 	end
 
-	label.hint:SetText(table.concat(hintLines, "\n"))
+	label.hint = table.concat(hintLines, "\n")
 	label.owner = pin
 	label:Show()
+	label:Push()
 
 	return true
 end

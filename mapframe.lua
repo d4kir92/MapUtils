@@ -277,6 +277,7 @@ local function OnSizing()
 	SetScale(ClampScale(scale, maxScale))
 	SetPos(sizing.left, sizing.top)
 	applying = false
+	MapUtils:ShowScaleGripTooltip(grip)
 end
 
 local function StopSizing()
@@ -314,11 +315,40 @@ local function StartSizing(_, button)
 	grip:SetScript("OnUpdate", OnSizing)
 end
 
+function MapUtils:ShowScaleGripTooltip(target)
+	if target.getScale == nil then return end
+	GameTooltip:SetOwner(target, "ANCHOR_RIGHT")
+	GameTooltip:SetText(MapUtils:Trans("LID_WIDGETSCALE", nil, math.floor(target.getScale() * 100 + 0.5)))
+	GameTooltip:AddLine(format("|cffffd100%s|r  %s", MapUtils:Trans("LID_LEFTCLICK"), MapUtils:Trans("LID_DRAGTOSCALE")), 1, 1, 1)
+	GameTooltip:AddLine(format("|cffffd100%s|r  %s", MapUtils:Trans("LID_RIGHTCLICK"), MapUtils:Trans("LID_RESETSCALE", nil, 100)), 1, 1, 1)
+	GameTooltip:Show()
+end
+
+function MapUtils:SetupScaleGrip(target, getScale, reset)
+	target.getScale = getScale
+	target:SetScript("OnEnter", function(owner) MapUtils:ShowScaleGripTooltip(owner) end)
+	target:SetScript("OnLeave", function(owner) if owner:GetScript("OnUpdate") == nil and GameTooltip:IsOwned(owner) then GameTooltip:Hide() end end)
+	target:HookScript("OnMouseUp", function(owner, button)
+		if button == "RightButton" then reset() end
+		if owner:IsMouseOver() then
+			MapUtils:ShowScaleGripTooltip(owner)
+		elseif GameTooltip:IsOwned(owner) then
+			GameTooltip:Hide()
+		end
+	end)
+end
+
 local function CreateGrip()
 	grip = MapUtils:CreateSizeGrip(frame, GRIP_SIZE)
 	grip:SetScript("OnMouseDown", StartSizing)
 	grip:SetScript("OnMouseUp", StopSizing)
 	grip:SetScript("OnHide", StopSizing)
+	MapUtils:SetupScaleGrip(grip, function() return frame:GetScale() end, function()
+		if IsLocked() or CheckForeign() then return end
+		MapUtils:SV(MAUTTAB, "WORLDMAPSCALEVALUE", 1)
+		Apply()
+	end)
+
 	grip:Hide()
 end
 

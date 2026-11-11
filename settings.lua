@@ -15,6 +15,7 @@ local maset = nil
 local sharedCheckboxes = {}
 local cvarCheckboxes = {}
 local guildCheckboxes = {}
+local optionCheckboxes = {}
 
 MapUtils:RegisterSharedSettings({
 	keys = {"GUILDMEMBERPINS", "GUILDMEMBERLEVEL", "GUILDMEMBERNAME", "GUILDMEMBERSHARE"},
@@ -64,6 +65,16 @@ function MapUtils:SetSharedOption(key, value)
 	MapUtils:SV(MAUTTAB, key, value)
 	MapUtils:SetSharedSetting(key, value)
 	MapUtils:OnSharedOptionChanged(key, value)
+end
+
+function MapUtils:SetMapOption(key, value, func)
+	MAUTTAB = MAUTTAB or {}
+	MapUtils:SV(MAUTTAB, key, value)
+	if optionCheckboxes[key] then
+		optionCheckboxes[key]:SetChecked(value)
+		if maset ~= nil then maset:UpdateDependencies() end
+	end
+	if func then func() end
 end
 
 function MapUtils:SetGuildOption(key, value)
@@ -121,7 +132,7 @@ local function Requires(control, key)
 end
 
 local function AddCheckbox(key, default, func, label, added)
-	return maset:AddCheckbox({
+	optionCheckboxes[key] = maset:AddCheckbox({
 		["label"] = label or ("LID_" .. key),
 		["search"] = key,
 		["added"] = added,
@@ -132,6 +143,8 @@ local function AddCheckbox(key, default, func, label, added)
 			maset:UpdateDependencies()
 		end
 	})
+
+	return optionCheckboxes[key]
 end
 
 local function AddSharedCheckbox(key, label, added)

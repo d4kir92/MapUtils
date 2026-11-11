@@ -83,6 +83,7 @@ local function OnSizing()
 	local w = sizing.width + x - sizing.x
 	local h = sizing.height + sizing.y - y
 	SetScale(ClampScale(sizing.scale * max(w / sizing.width, h / sizing.height)))
+	MapUtils:ShowScaleGripTooltip(grip)
 end
 
 local function StopSizing()
@@ -120,6 +121,13 @@ local function Init()
 	grip:SetScript("OnMouseDown", StartSizing)
 	grip:SetScript("OnMouseUp", StopSizing)
 	grip:SetScript("OnHide", StopSizing)
+	MapUtils:SetupScaleGrip(grip, function() return frame:GetScale() end, function()
+		if CheckForeign() then return end
+		MAUTTAB = MAUTTAB or {}
+		MapUtils:SV(MAUTTAB, "BATTLEFIELDMAPSCALEVALUE", 1)
+		Apply()
+	end)
+
 	frame:HookScript("OnShow", Apply)
 	fader = MapUtils:CreateMoveFader(
 		frame,

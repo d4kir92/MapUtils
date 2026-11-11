@@ -67,6 +67,8 @@ zonelevels.lua
 data\classic\instancepins.lua
 instancemap.lua
 mapframe.lua
+editmode.lua
+widgets.lua
 mapmenu.lua
 simpleframe.lua
 coords.lua

@@ -63,7 +63,13 @@ function MapMenu.GetEntries()
 	local entries = {
 		{
 			["text"] = MapUtils:Trans("LID_EDITMODE"),
-			["func"] = function() end,
+			["checked"] = function() return MapUtils.IsMapEditMode ~= nil and MapUtils:IsMapEditMode() end,
+			["func"] = function() if MapUtils.SetMapEditMode ~= nil then MapUtils:SetMapEditMode(not MapUtils:IsMapEditMode()) end end,
+		},
+		{
+			["text"] = MapUtils:Trans("LID_EDITMODEGRID"),
+			["checked"] = function() return MapUtils.IsMapEditGrid ~= nil and MapUtils:IsMapEditGrid() end,
+			["func"] = function() if MapUtils.SetMapEditGrid ~= nil then MapUtils:SetMapEditGrid(not MapUtils:IsMapEditGrid()) end end,
 		},
 		{
 			["text"] = MapUtils:Trans("LID_OPENSETTINGS"),
@@ -77,17 +83,34 @@ function MapMenu.GetEntries()
 	return entries
 end
 
+function MapMenu.AddModernEntry(root, entry)
+	if entry.divider then
+		root:CreateDivider()
+
+		return
+	end
+
+	local element = nil
+	if entry.checked ~= nil and entry.radio then
+		element = root:CreateRadio(entry.text, entry.checked, entry.func)
+	elseif entry.checked ~= nil then
+		element = root:CreateCheckbox(entry.text, entry.checked, entry.func)
+	else
+		element = root:CreateButton(entry.text, entry.func)
+	end
+
+	if entry.disabled and element ~= nil and element.SetEnabled ~= nil then element:SetEnabled(false) end
+end
+
 function MapMenu.Show(owner)
-	local entries = MapMenu.GetEntries()
+	MapUtils:ShowEntryMenu(owner, MapMenu.GetEntries())
+end
+
+function MapUtils:ShowEntryMenu(owner, entries)
 	if MenuUtil ~= nil and MenuUtil.CreateContextMenu ~= nil then
 		MenuUtil.CreateContextMenu(owner, function(_, root)
 			for _, entry in ipairs(entries) do
-				if entry.divider then
-					root:CreateDivider()
-				else
-					local element = root:CreateButton(entry.text, entry.func)
-					if entry.disabled and element.SetEnabled ~= nil then element:SetEnabled(false) end
-				end
+				MapMenu.AddModernEntry(root, entry)
 			end
 		end)
 
@@ -99,7 +122,12 @@ function MapMenu.Show(owner)
 	UIDropDownMenu_Initialize(MapMenu.dropdown, function()
 		for _, entry in ipairs(entries) do
 			local info = UIDropDownMenu_CreateInfo()
-			info.notCheckable = true
+			info.notCheckable = entry.checked == nil
+			if entry.checked ~= nil then
+				info.checked = entry.checked()
+				info.isNotRadio = not entry.radio
+			end
+
 			if entry.divider then
 				info.text = ""
 				info.disabled = true

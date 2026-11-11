@@ -139,68 +139,197 @@ local function GetRangeText(levels)
 	return format("%d-%d", levels[1], levels[2])
 end
 
-local function ApplyZoneLevel(label, text, mapID, levelsOn, recOn, fishingOn)
-	if WorldMapFrame.GetNormalizedCursorPosition == nil or C_Map.GetMapInfoAtPosition == nil then return end
+local ZoneInfo = {
+	inset = 14,
+	lineSpacing = 2,
+	levelOffset = 1000,
+	justify = "LEFT",
+}
+
+function ZoneInfo.CreateText(frame, font)
+	local text = frame:CreateFontString(nil, "OVERLAY", font)
+	local path, size = text:GetFont()
+	if path ~= nil and size ~= nil then text:SetFont(path, size, "OUTLINE") end
+	text:SetJustifyH(ZoneInfo.justify)
+	text:SetSpacing(ZoneInfo.lineSpacing)
+	text:SetShadowOffset(1, -1)
+	text:SetShadowColor(0, 0, 0, 1)
+
+	return text
+end
+
+function ZoneInfo.Create()
+	if ZoneInfo.frame ~= nil then return ZoneInfo.frame end
+	local container = WorldMapFrame and WorldMapFrame.ScrollContainer
+	if container == nil then return nil end
+	local frame = CreateFrame("Frame", nil, WorldMapFrame)
+	frame:SetPoint("BOTTOMLEFT", container, "BOTTOMLEFT", ZoneInfo.inset, ZoneInfo.inset)
+	frame:SetSize(1, 1)
+	frame:SetFrameLevel(container:GetFrameLevel() + ZoneInfo.levelOffset)
+	frame:EnableMouse(false)
+	frame.title = ZoneInfo.CreateText(frame, "GameFontNormalLarge")
+	frame.text = ZoneInfo.CreateText(frame, "GameFontHighlight")
+	frame:Hide()
+	ZoneInfo.frame = frame
+	ZoneInfo.element = {
+		key = "TOOLTIPWIDGET",
+		title = "LID_TOOLTIPWIDGET",
+		frame = frame,
+		defaultPoint = {"BOTTOMLEFT", ZoneInfo.inset, ZoneInfo.inset},
+		defaultAlign = "LEFT",
+		OnLayout = ZoneInfo.Refresh,
+		OnEditMode = ZoneInfo.Refresh,
+	}
+
+	if MapUtils.RegisterMapEditElement ~= nil then MapUtils:RegisterMapEditElement(ZoneInfo.element) end
+
+	return frame
+end
+
+function ZoneInfo.GetZoneID(mapID)
+	local container = WorldMapFrame.ScrollContainer
+	if container == nil or not container:IsMouseOver() or WorldMapFrame.GetNormalizedCursorPosition == nil or C_Map.GetMapInfoAtPosition == nil then return mapID end
 	local x, y = WorldMapFrame:GetNormalizedCursorPosition()
-	if mapID == nil or x == nil or y == nil then return end
+	if x == nil or y == nil then return mapID end
 	local info = C_Map.GetMapInfoAtPosition(mapID, x, y)
-	if info == nil or info.mapID == mapID or info.name == nil or text:sub(1, #info.name) ~= info.name then return end
-	local levels = zoneLevels[info.mapID]
-	if levelsOn and levels ~= nil and text == info.name then label.Name:SetText(format("%s%s (%s)|r", text, MapUtils:GetLevelColorCode(levels[1], levels[2]), GetRangeText(levels))) end
-	if label.Description == nil then return end
-	local rec = zoneRecLevels[info.mapID]
-	local recText = nil
-	if recOn and rec ~= nil then recText = MapUtils:Trans("LID_RECOMMENDEDSTARTLEVEL", nil, rec) end
-	local fishing = zoneFishing[info.mapID]
-	local fishingText = nil
-	if fishingOn and fishing ~= nil then fishingText = MapUtils:Trans("LID_FISHINGLEVEL", nil, fishing) end
-	if recText == nil and fishingText == nil then return end
-	local description = label.Description:GetText()
-	if description == nil or description == "" then
-		if recText ~= nil and fishingText ~= nil then
-			label.Description:SetText(recText .. "\n" .. fishingText)
-		else
-			label.Description:SetText(recText or fishingText)
-		end
-	elseif recText ~= nil and description:find(recText, 1, true) == nil then
-		label.Description:SetText(recText .. "\n" .. description)
-	end
+	if info == nil or info.mapID == nil then return mapID end
+
+	return info.mapID
 end
 
-local applied = {}
-local function GetDescriptionText(label)
-	if label.Description == nil then return nil end
+function ZoneInfo.GetTitle(zoneID, levelsOn)
+	if zoneID == nil or C_Map.GetMapInfo == nil then return nil end
+	local info = C_Map.GetMapInfo(zoneID)
+	local name = info and info.name
+	if name == nil or name == "" then return nil end
+	local levels = zoneID and zoneLevels[zoneID]
+	if levelsOn and levels ~= nil then name = format("%s %s(%s)|r", name, MapUtils:GetLevelColorCode(levels[1], levels[2]), GetRangeText(levels)) end
 
-	return label.Description:GetText()
+	return name
 end
 
-local function AppendZoneLevel(label)
+function ZoneInfo.GetLines(zoneID, recOn, fishingOn)
+	local lines = {}
+	local rec = zoneRecLevels[zoneID]
+	if recOn and rec ~= nil then tinsert(lines, MapUtils:Trans("LID_RECOMMENDEDSTARTLEVEL", nil, rec)) end
+	local fishing = zoneFishing[zoneID]
+	if fishingOn and fishing ~= nil then tinsert(lines, MapUtils:Trans("LID_FISHINGLEVEL", nil, fishing)) end
+
+	return lines
+end
+
+function ZoneInfo.GetZoneContent()
+	local mapID = WorldMapFrame:GetMapID()
 	local levelsOn = MapUtils:GetConfig("ZONELEVELS", true) == true
 	local recOn = MapUtils:GetConfig("ZONERECLEVELS", true) == true
 	local fishingOn = MapUtils:GetConfig("FISHINGLEVELS", true) == true
-	if not levelsOn and not recOn and not fishingOn then return end
-	local text = label.Name:GetText()
-	if text == nil or text == "" then return end
-	local mapID = WorldMapFrame:GetMapID()
-	local options = (levelsOn and 1 or 0) + (recOn and 2 or 0) + (fishingOn and 4 or 0)
-	if applied.label == label and applied.name == text and applied.description == GetDescriptionText(label) and applied.mapID == mapID and applied.options == options then return end
-	ApplyZoneLevel(label, text, mapID, levelsOn, recOn, fishingOn)
-	applied.label = label
-	applied.name = label.Name:GetText()
-	applied.description = GetDescriptionText(label)
-	applied.mapID = mapID
-	applied.options = options
+	local zoneID = mapID and ZoneInfo.GetZoneID(mapID)
+	local title = ZoneInfo.GetTitle(zoneID, levelsOn)
+	local lines = zoneID and ZoneInfo.GetLines(zoneID, recOn, fishingOn) or {}
+
+	return title, table.concat(lines, "\n")
 end
 
-local hooked = false
-local function HookAreaLabel()
-	if hooked then return true end
+function ZoneInfo.Colorize(text, color)
+	if color == nil or color.WrapTextInColorCode == nil then return text end
+
+	return color:WrapTextInColorCode(text)
+end
+
+function ZoneInfo.GetLabelContent()
+	local label = ZoneInfo.label
+	if label == nil or MAP_AREA_LABEL_TYPE == nil or label.labelInfoByType == nil or label.GetHighestPriorityLabelInfo == nil then return nil end
+	local info = label:GetHighestPriorityLabelInfo()
+	if info == nil or info.name == nil or info.name == "" or info == label.labelInfoByType[MAP_AREA_LABEL_TYPE.AREA_NAME] then return nil end
+	local description = info.description
+	if type(description) == "function" then description = description() end
+	if type(description) ~= "string" or description == "" then return ZoneInfo.Colorize(info.name, info.nameColor), "" end
+
+	return ZoneInfo.Colorize(info.name, info.nameColor), ZoneInfo.Colorize(description, info.descriptionColor)
+end
+
+function MapUtils:SetMapInfoOverride(title, body)
+	if title == nil or title == "" then
+		ZoneInfo.override = nil
+	else
+		ZoneInfo.override = {title, body or ""}
+	end
+
+	ZoneInfo.Update()
+end
+
+function ZoneInfo.GetSample()
+	local levels = {10, 20}
+	local title = format("%s %s(%s)|r", MapUtils:Trans("LID_ZONENAMESAMPLE"), MapUtils:GetLevelColorCode(levels[1], levels[2]), GetRangeText(levels))
+	local lines = {MapUtils:Trans("LID_RECOMMENDEDSTARTLEVEL", nil, levels[1]), MapUtils:Trans("LID_FISHINGLEVEL", nil, "75")}
+
+	return title, table.concat(lines, "\n")
+end
+
+function ZoneInfo.Refresh()
+	ZoneInfo.key = nil
+	ZoneInfo.Update()
+end
+
+function ZoneInfo.Update()
+	local frame = ZoneInfo.Create()
+	if frame == nil then return end
+	local title, body = nil, nil
+	if ZoneInfo.override ~= nil then
+		title, body = ZoneInfo.override[1], ZoneInfo.override[2]
+	else
+		title, body = ZoneInfo.GetLabelContent()
+	end
+
+	if title == nil then title, body = ZoneInfo.GetZoneContent() end
+	body = body or ""
+	if MapUtils.IsMapEditMode ~= nil and MapUtils:IsMapEditMode() then title, body = ZoneInfo.GetSample() end
+	local align = MapUtils.GetMapEditAlign ~= nil and MapUtils:GetMapEditAlign(ZoneInfo.element) or "LEFT"
+	local key = format("%s|%s|%s", tostring(title), body, align)
+	if ZoneInfo.key == key then return end
+	ZoneInfo.key = key
+	if title == nil and body == "" then
+		frame:Hide()
+
+		return
+	end
+
+	local side = align == "CENTER" and "" or align
+	frame.text:SetText(body)
+	frame.text:SetJustifyH(align)
+	frame.text:ClearAllPoints()
+	frame.text:SetPoint("BOTTOM" .. side, frame, "BOTTOM" .. side, 0, 0)
+	frame.title:SetText(title or "")
+	frame.title:SetJustifyH(align)
+	frame.title:ClearAllPoints()
+	if body == "" then
+		frame.title:SetPoint("BOTTOM" .. side, frame, "BOTTOM" .. side, 0, 0)
+	else
+		frame.title:SetPoint("BOTTOM" .. side, frame.text, "TOP" .. side, 0, ZoneInfo.lineSpacing)
+	end
+
+	local textWidth = body == "" and 0 or frame.text:GetStringWidth()
+	local textHeight = body == "" and 0 or frame.text:GetStringHeight() + ZoneInfo.lineSpacing
+	frame:SetSize(math.max(frame.title:GetStringWidth(), textWidth, 1), math.max(frame.title:GetStringHeight() + textHeight, 1))
+	frame:Show()
+end
+
+function ZoneInfo.HideBlizzardText(label)
+	if label.Name ~= nil then label.Name:SetAlpha(0) end
+	if label.Description ~= nil then label.Description:SetAlpha(0) end
+	if label.Texture ~= nil then label.Texture:SetAlpha(0) end
+end
+
+function ZoneInfo.HookLabel()
+	if ZoneInfo.hooked then return true end
 	if WorldMapFrame == nil or WorldMapFrame.dataProviders == nil then return false end
 	for provider in pairs(WorldMapFrame.dataProviders) do
 		local label = provider.Label
-		if label ~= nil and label.Name ~= nil and label.EvaluateLabels ~= nil then
-			hooksecurefunc(label, "EvaluateLabels", AppendZoneLevel)
-			hooked = true
+		if label ~= nil and label.EvaluateLabels ~= nil then
+			ZoneInfo.label = label
+			ZoneInfo.HideBlizzardText(label)
+			hooksecurefunc(label, "EvaluateLabels", ZoneInfo.Update)
+			ZoneInfo.hooked = true
 
 			return true
 		end
@@ -209,4 +338,13 @@ local function HookAreaLabel()
 	return false
 end
 
-if WorldMapFrame ~= nil and not HookAreaLabel() then WorldMapFrame:HookScript("OnShow", HookAreaLabel) end
+if WorldMapFrame ~= nil then
+	if WorldMapFrame.OnMapChanged ~= nil then hooksecurefunc(WorldMapFrame, "OnMapChanged", ZoneInfo.Update) end
+	WorldMapFrame:HookScript("OnShow", function()
+		ZoneInfo.HookLabel()
+		ZoneInfo.Update()
+	end)
+
+	if WorldMapFrame.ScrollContainer ~= nil then WorldMapFrame.ScrollContainer:HookScript("OnLeave", ZoneInfo.Update) end
+	ZoneInfo.HookLabel()
+end
