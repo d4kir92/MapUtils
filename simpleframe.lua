@@ -19,6 +19,7 @@ local map = WorldMapFrame
 local saved = {}
 local hidden = {}
 local sizes = {}
+local hitInsets = {}
 local active = false
 local bar, back, questCount
 local originalScrollTop
@@ -402,6 +403,16 @@ local function Layout()
 		ShrinkNavBar()
 	end
 
+	local topGap = MapUtils:GetSimpleMapTopGap()
+	if MapUtils:IsSecret(topGap) then topGap = 0 end
+	for _, frame in ipairs({map, map.BorderFrame}) do
+		if CanChange(frame) then
+			if hitInsets[frame] == nil then hitInsets[frame] = {frame:GetHitRectInsets()} end
+			local l, r, t, b = unpack(hitInsets[frame])
+			frame:SetHitRectInsets(l, r, max(t, topGap), b)
+		end
+	end
+
 	if questShown and CanChange(QuestScrollFrame) then
 		local parent = QuestScrollFrame:GetParent()
 		local top, bottom = -50, 0
@@ -458,6 +469,12 @@ local function Remove()
 
 	ShowObjects()
 	RestoreSizes()
+	for frame, insets in pairs(hitInsets) do
+		if CanChange(frame) then
+			frame:SetHitRectInsets(unpack(insets))
+			hitInsets[frame] = nil
+		end
+	end
 	for frame in pairs(saved) do
 		if CanChange(frame) then frame:ClearAllPoints() end
 	end
