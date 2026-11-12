@@ -1833,15 +1833,6 @@ local function GetCrossings(mapID)
 	return list
 end
 
-local function GetCrossingLabel(entry)
-	local lines = {MapUtils:Trans("LID_ZONECROSSING")}
-	for _, tip in ipairs(entry.tips) do
-		tinsert(lines, format("|cffffd100%s|r", tip))
-	end
-
-	return entry.name, table.concat(lines, "\n")
-end
-
 local function GetFlightDescription()
 	return MapUtils:Trans("LID_FLIGHTPOINT")
 end
@@ -2018,62 +2009,10 @@ function MapUtils:GetLevelColorCode(minLevel, maxLevel)
 	return MapUtils:GetColorCode(color.r, color.g, color.b)
 end
 
-local function GetDungeonLabel(entry)
-	local name, minLevel, maxLevel, recLevel = GetDungeonInfo(entry)
-	name = name or entry.name
-	if minLevel ~= nil and minLevel > 0 then
-		if maxLevel == nil or maxLevel < minLevel then maxLevel = minLevel end
-		local range = tostring(minLevel)
-		if maxLevel > minLevel then range = format("%d-%d", minLevel, maxLevel) end
-		name = format("%s%s (%s)|r", name, MapUtils:GetLevelColorCode(minLevel, maxLevel), range)
-	end
-
-	local lines = {GetEntranceText(entry)}
-	for _, instance in ipairs(entry.contains or {}) do
-		tinsert(lines, format("|cffffd100%s|r", instance))
-	end
-
-	if recLevel ~= nil then tinsert(lines, MapUtils:Trans("LID_RECOMMENDEDLEVEL", nil, recLevel)) end
-
-	return name, table.concat(lines, "\n")
-end
-
 local function IsPinMouseOver(pin)
 	local extend = pin.hitExtend or 0
 
 	return pin:IsMouseOver(extend, -extend, -extend, extend)
-end
-
-local areaLabel = nil
-local function GetAreaLabel()
-	if areaLabel ~= nil then return areaLabel end
-	if WorldMapFrame == nil or MapUtils.SetMapInfoOverride == nil then return nil end
-	areaLabel = CreateFrame("FRAME", nil, WorldMapFrame)
-	areaLabel:SetSize(1, 1)
-	areaLabel.Push = function(self)
-		local lines = {}
-		if self.description ~= nil and self.description ~= "" then tinsert(lines, self.description) end
-		if self.hint ~= nil and self.hint ~= "" then tinsert(lines, self.hint) end
-		MapUtils:SetMapInfoOverride(self.name, table.concat(lines, "\n"))
-	end
-
-	areaLabel:SetScript("OnHide", function() MapUtils:SetMapInfoOverride(nil) end)
-	areaLabel:SetScript(
-		"OnUpdate",
-		function(self)
-			local owner = self.owner
-			if owner == nil or not owner:IsVisible() or not IsPinMouseOver(owner) then
-				self:Hide()
-			elseif self.refresh ~= nil and GetTime() - (self.refreshed or 0) >= 1 then
-				self.refreshed = GetTime()
-				self.refresh(self)
-			end
-		end
-	)
-
-	areaLabel:Hide()
-
-	return areaLabel
 end
 
 local function GetRouteHeader(entry)
@@ -2171,47 +2110,6 @@ local function GetClickHints(pin)
 	return hints
 end
 
-local function ShowAreaLabel(pin)
-	local label = GetAreaLabel()
-	if label == nil then return false end
-	local name, description = nil, nil
-	if pin.entry.kind == "dungeon" then
-		name, description = GetDungeonLabel(pin.entry)
-	elseif pin.entry.kind == "meetingstone" then
-		name = GetDungeonInfo(pin.entry) or pin.entry.name
-		description = MapUtils:Trans("LID_MEETINGSTONE")
-	elseif pin.entry.kind == "spirithealer" then
-		name = pin.entry.name or MapUtils:Trans("LID_SPIRITHEALER")
-		description = ""
-	elseif pin.entry.kind == "convergence" then
-		name = pin.entry.name
-		description = pin.entry.captured and MapUtils:Trans("LID_CONVERGENCECAPTURED") or ""
-	elseif pin.entry.kind == "crossing" then
-		name, description = GetCrossingLabel(pin.entry)
-	elseif pin.entry.kind == "flight" then
-		local status, r, g, b = GetFlightStatus(pin.entry)
-		name = pin.entry.name
-		description = format("%s\n|cff%02x%02x%02x%s|r", GetFlightDescription(), math.floor(r * 255), math.floor(g * 255), math.floor(b * 255), status)
-	else
-		name, description = GetPierLabel(pin.entry, pin.mapID)
-	end
-
-	label.refresh = nil
-	label.name = name
-	label.description = description
-	local hintLines = {}
-	for _, hint in ipairs(GetClickHints(pin)) do
-		tinsert(hintLines, format("|cffffd100%s|r  %s", hint[1], hint[2]))
-	end
-
-	label.hint = table.concat(hintLines, "\n")
-	label.owner = pin
-	label:Show()
-	label:Push()
-
-	return true
-end
-
 function MapUtils:ShowPinHighlight(pin)
 	local sources = pin.row ~= nil and {pin.portrait:IsShown() and pin.portrait or pin.icon} or (pin.splitIcon and {pin.textureLeft, pin.textureRight} or {pin.texture})
 	pin.hoverTextures = pin.hoverTextures or {}
@@ -2251,7 +2149,6 @@ local function OnPinEnter(pin)
 	MapUtils:ShowPinHighlight(pin)
 	local entry = pin.entry
 	if entry == nil then return end
-	if pin.worldMap and entry.kind ~= nil and ShowAreaLabel(pin) then return end
 	GameTooltip:SetOwner(pin, "ANCHOR_RIGHT")
 	pin.tooltipToken = (pin.tooltipToken or 0) + 1
 	if entry.kind == nil then
@@ -2491,7 +2388,6 @@ local function OnPinLeave(pin)
 		UpdatePinStyle(pin)
 	end
 
-	if areaLabel ~= nil and areaLabel.owner == pin then areaLabel:Hide() end
 	if GameTooltip:GetOwner() == pin then GameTooltip:Hide() end
 end
 

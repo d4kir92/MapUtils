@@ -159,7 +159,7 @@ MapUtils:AddTrans("ruRU", "LID_TINTNONE", "Нет (исходные цвета)"
 MapUtils:AddTrans("ruRU", "LID_TINTPURPLE", "Фиолетовый")
 MapUtils:AddTrans("ruRU", "LID_TINTRED", "Красный")
 MapUtils:AddTrans("ruRU", "LID_TOGGLEWIDGET", "Значки карты")
-MapUtils:AddTrans("ruRU", "LID_TOOLTIPWIDGET", "Виджет подсказки")
+MapUtils:AddTrans("ruRU", "LID_TOOLTIPWIDGET", "Информация о зоне")
 MapUtils:AddTrans("ruRU", "LID_TOWNPOIS", "Показывать значки городков и деревень")
 MapUtils:AddTrans("ruRU", "LID_TOWNS", "Города и деревни")
 MapUtils:AddTrans("ruRU", "LID_TRAMTO", "Трамвай в")

@@ -248,16 +248,6 @@ function ZoneInfo.GetLabelContent()
 	return ZoneInfo.Colorize(info.name, info.nameColor), ZoneInfo.Colorize(description, info.descriptionColor)
 end
 
-function MapUtils:SetMapInfoOverride(title, body)
-	if title == nil or title == "" then
-		ZoneInfo.override = nil
-	else
-		ZoneInfo.override = {title, body or ""}
-	end
-
-	ZoneInfo.Update()
-end
-
 function ZoneInfo.GetSample()
 	local levels = {10, 20}
 	local title = format("%s %s(%s)|r", MapUtils:Trans("LID_ZONENAMESAMPLE"), MapUtils:GetLevelColorCode(levels[1], levels[2]), GetRangeText(levels))
@@ -274,13 +264,7 @@ end
 function ZoneInfo.Update()
 	local frame = ZoneInfo.Create()
 	if frame == nil then return end
-	local title, body = nil, nil
-	if ZoneInfo.override ~= nil then
-		title, body = ZoneInfo.override[1], ZoneInfo.override[2]
-	else
-		title, body = ZoneInfo.GetLabelContent()
-	end
-
+	local title, body = ZoneInfo.GetLabelContent()
 	if title == nil then title, body = ZoneInfo.GetZoneContent() end
 	body = body or ""
 	if MapUtils.IsMapEditElementVisible ~= nil and not MapUtils:IsMapEditElementVisible(ZoneInfo.element) then
