@@ -1953,7 +1953,9 @@ local function Install()
 	end
 
 	local function OnChildSizeChanged(_, width, height)
-		if width == MinimapLayer.childWidth and height == MinimapLayer.childHeight then return end
+		local lastWidth, lastHeight = MinimapLayer.childWidth, MinimapLayer.childHeight
+		if width == nil or height == nil then return end
+		if lastWidth ~= nil and lastHeight ~= nil and math.abs(width - lastWidth) <= lastWidth * 0.01 and math.abs(height - lastHeight) <= lastHeight * 0.01 then return end
 		MinimapLayer.childWidth, MinimapLayer.childHeight = width, height
 		Refresh()
 	end
