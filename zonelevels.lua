@@ -144,6 +144,7 @@ local ZoneInfo = {
 	lineSpacing = 2,
 	levelOffset = 1000,
 	justify = "LEFT",
+	levelCache = {},
 }
 
 function ZoneInfo.CreateText(frame, font)
@@ -197,12 +198,24 @@ function ZoneInfo.GetZoneID(mapID)
 	return info.mapID
 end
 
+function ZoneInfo.GetBlizzardLevels(zoneID)
+	if C_Map.GetMapLevels == nil then return nil end
+	local cached = ZoneInfo.levelCache[zoneID]
+	if cached == nil then
+		local ok, minLevel, maxLevel = pcall(C_Map.GetMapLevels, zoneID)
+		cached = ok and type(minLevel) == "number" and type(maxLevel) == "number" and minLevel > 0 and maxLevel > 0 and {minLevel, maxLevel} or false
+		ZoneInfo.levelCache[zoneID] = cached
+	end
+
+	return cached or nil
+end
+
 function ZoneInfo.GetTitle(zoneID, levelsOn)
 	if zoneID == nil or C_Map.GetMapInfo == nil then return nil end
 	local info = C_Map.GetMapInfo(zoneID)
 	local name = info and info.name
 	if name == nil or name == "" then return nil end
-	local levels = zoneID and zoneLevels[zoneID]
+	local levels = zoneID and (zoneLevels[zoneID] or ZoneInfo.GetBlizzardLevels(zoneID))
 	if levelsOn and levels ~= nil then name = format("%s %s(%s)|r", name, MapUtils:GetLevelColorCode(levels[1], levels[2]), GetRangeText(levels)) end
 
 	return name
