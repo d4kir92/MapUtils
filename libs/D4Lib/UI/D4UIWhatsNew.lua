@@ -22,19 +22,25 @@ function D4:CreateUIWhatsNew(tab)
     local db = tab.db
     db.seen = db.seen or {}
     local notice = {}
-    local win, heading, refreshLanguageButton
+    local win, heading, hideButton, settingsCheckbox, refreshLanguageButton
     local rows = {}
 
     function notice:RefreshLanguage()
         if not win then return end
         heading:SetText(UI:Text("LID_WHATSNEW"))
-        for _, row in ipairs(rows) do
+        hideButton:SetText(UI:Text("LID_HIDEWHATSNEW"))
+        for _, row in pairs(rows) do
             if not row.element.hidden then
-                local setting = row.setting
-                row.label:SetText(UI:Text(setting.settingLabel))
-                row.text:SetText(UI:Text(setting.whatsNew))
-                row.element.height = row.label:GetStringHeight() + 6
-                if setting.whatsNew then row.element.height = row.element.height + row.text:GetStringHeight() + 4 end
+                if row.control then
+                    row.control:UpdateLabel()
+                else
+                    local setting = row.setting
+                    row.label:SetText(UI:Text(setting.settingLabel))
+                    row.text:SetText(UI:Text(setting.whatsNew))
+                    row.element.height = row.label:GetStringHeight() + 6
+                    if setting.whatsNew then row.element.height = row.element.height + row.text:GetStringHeight() + 4 end
+                    row.element.frame:SetHeight(row.element.height)
+                end
             end
         end
 
@@ -42,7 +48,12 @@ function D4:CreateUIWhatsNew(tab)
         win:Layout()
     end
 
-    local function AddRow()
+    local function AddRow(setting)
+        if setting.whatsNewControl then
+            local control = setting.whatsNewControl(win)
+            return {control = control, element = control.uiElement}
+        end
+
         local holder = CreateFrame("Frame", nil, win.content)
         local label = holder:CreateFontString(nil, "OVERLAY", "GameFontNormal")
         label:SetPoint("TOPLEFT", holder, "TOPLEFT", 4, -3)
@@ -71,20 +82,33 @@ function D4:CreateUIWhatsNew(tab)
             local header = win:AddHeader()
             heading = header:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
             heading:SetPoint("LEFT", header, "LEFT", 8, 0)
+
+            local footer = win:AddFooter()
+            hideButton = D4:CreateButton(win:GetName() .. "Hide", footer)
+            hideButton:SetSize(300, UI.ROW)
+            hideButton:SetPoint("CENTER", footer, "CENTER")
+            hideButton:SetScript("OnClick", function()
+                db.enabled = false
+                if settingsCheckbox then settingsCheckbox:SetChecked(false) end
+                win:Hide()
+            end)
         end
 
+        for _, row in pairs(rows) do
+            row.element.hidden = true
+            row.element.noticeOrder = math.huge
+        end
         for index, entry in ipairs(entries) do
-            local row = rows[index] or AddRow()
-            rows[index] = row
+            local row = rows[entry.id] or AddRow(entry.setting)
+            rows[entry.id] = row
             row.setting = entry.setting
             row.element.hidden = false
+            row.element.noticeOrder = index
         end
-        for index = #entries + 1, #rows do
-            rows[index].element.hidden = true
-        end
+        table.sort(win.elements, function(left, right) return left.noticeOrder < right.noticeOrder end)
 
-        notice:RefreshLanguage()
         win:Show()
+        notice:RefreshLanguage()
         win:Raise()
         for _, entry in ipairs(entries) do
             db.seen[entry.id] = true
@@ -96,7 +120,7 @@ function D4:CreateUIWhatsNew(tab)
     end
 
     function notice:AddSettingsCheckbox(settings, added)
-        return settings:AddCheckbox({
+        settingsCheckbox = settings:AddCheckbox({
             label = "LID_SHOWWHATSNEW",
             added = added,
             whatsNew = false,
@@ -110,6 +134,7 @@ function D4:CreateUIWhatsNew(tab)
                 end
             end
         })
+        return settingsCheckbox
     end
 
     return notice
