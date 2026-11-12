@@ -1952,9 +1952,15 @@ local function Install()
 		SyncBlizzardArt()
 	end
 
+	local function OnChildSizeChanged(_, width, height)
+		if width == MinimapLayer.childWidth and height == MinimapLayer.childHeight then return end
+		MinimapLayer.childWidth, MinimapLayer.childHeight = width, height
+		Refresh()
+	end
+
 	hooksecurefunc(WorldMapFrame, "OnMapChanged", MapUtils.Profile("zonedetail Refresh", Refresh))
 	WorldMapFrame:HookScript("OnShow", MapUtils.Profile("zonedetail Refresh", Refresh))
-	child:HookScript("OnSizeChanged", MapUtils.Profile("zonedetail Refresh", Refresh))
+	child:HookScript("OnSizeChanged", MapUtils.Profile("zonedetail size changed", OnChildSizeChanged))
 	WorldMapFrame.ScrollContainer:HookScript(
 		"OnUpdate",
 		MapUtils.Profile("zonedetail OnUpdate", function()

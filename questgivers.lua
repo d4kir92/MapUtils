@@ -320,13 +320,30 @@ function QG.GetTurnIns(giver)
 	return quests
 end
 
+function QG.GetAvailableCache()
+	local key = format("%d:%d:%d:%s:%s", player.level or 0, player.green or 0, player.side or 0, tostring(QG.showStarts), tostring(QG.showEnds))
+	for index = 1, #CATEGORY_KEYS do
+		key = key .. (enabledCategories[index] and "1" or "0")
+	end
+
+	local now = GetTime()
+	if QG.available == nil or QG.stale or QG.availableKey ~= key or now - (QG.availableTime or 0) > 30 then
+		QG.available = {}
+		QG.availableKey = key
+		QG.availableTime = now
+		QG.stale = false
+	end
+
+	return QG.available
+end
+
 function QG.Collect(mapID)
 	wipe(spots)
 	if not QG.IsShownOnMap(mapID) then return end
 	QG.ReadPlayer()
 	QG.ReadLog()
 	QG.ReadSkills()
-	local available = {}
+	local available = QG.GetAvailableCache()
 	for _, source in ipairs(QG.GetSources(mapID)) do
 		local sourceID, left, right, top, bottom, outside = source[1], source[2], source[3], source[4], source[5], source[6]
 		for _, giver in ipairs(GIVERS[sourceID]) do
@@ -844,6 +861,7 @@ end
 if MapUtils.CanvasPinUpdaters ~= nil then tinsert(MapUtils.CanvasPinUpdaters, QG.Update) end
 function MapUtils:RefreshQuestGivers()
 	dirty = true
+	QG.stale = true
 	lastCollect = 0
 	QG.HidePins()
 end
@@ -859,6 +877,7 @@ updater:SetScript(
 	function(_, event)
 		if event ~= "MODIFIER_STATE_CHANGED" then
 			dirty = true
+			QG.stale = true
 
 			return
 		end

@@ -28,6 +28,7 @@ function MapUtils:SetCanvasPinScale(pin, scale)
 	pin.canvasScale = scale
 	pin.canvasMapID = WorldMapFrame and WorldMapFrame:GetMapID()
 	if pin:GetScale() ~= 1 then pin:SetScale(1) end
+	pin.rescaleFactor = 1
 end
 
 function MapUtils:RescaleCanvasPins()
@@ -37,15 +38,18 @@ function MapUtils:RescaleCanvasPins()
 	local mapID = WorldMapFrame:GetMapID()
 	for _, list in ipairs(MapUtils.CanvasPinLists) do
 		for _, pin in ipairs(list) do
-			if pin.canvasScale ~= nil and pin:IsShown() and pin.canvasMapID ~= mapID then
-				pin:Hide()
-			elseif pin.canvasScale ~= nil and pin:IsShown() then
-				local old = pin:GetScale()
-				local factor = pin.canvasScale / scale
-				if math.abs(old - factor) > 0.0001 then
-					local point, relative, relativePoint, x, y = pin:GetPoint(1)
-					pin:SetScale(factor)
-					if point ~= nil and x ~= nil and y ~= nil then pin:SetPoint(point, relative, relativePoint, x * old / factor, y * old / factor) end
+			if pin.canvasScale ~= nil and pin:IsShown() then
+				if pin.canvasMapID ~= mapID then
+					pin:Hide()
+				else
+					local old = pin.rescaleFactor or pin:GetScale()
+					local factor = pin.canvasScale / scale
+					if math.abs(old - factor) > 0.0001 then
+						local point, relative, relativePoint, x, y = pin:GetPoint(1)
+						pin:SetScale(factor)
+						pin.rescaleFactor = factor
+						if point ~= nil and x ~= nil and y ~= nil then pin:SetPoint(point, relative, relativePoint, x * old / factor, y * old / factor) end
+					end
 				end
 			end
 		end
