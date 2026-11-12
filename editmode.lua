@@ -429,7 +429,7 @@ function EditMode.CreateMover(element)
 	element.mover = mover
 end
 
-function EditMode.CreateSlider(panel)
+function EditMode.CreateSlider(panel, parent)
 	local template = "OptionsSliderTemplate"
 	if DoesTemplateExist ~= nil and DoesTemplateExist("MinimalSliderTemplate") then
 		template = "MinimalSliderTemplate"
@@ -437,7 +437,7 @@ function EditMode.CreateSlider(panel)
 		template = "UISliderTemplate"
 	end
 
-	local slider = CreateFrame("Slider", nil, panel, template)
+	local slider = CreateFrame("Slider", nil, parent, template)
 	slider:SetOrientation("HORIZONTAL")
 	slider:SetSize(226, 16)
 	slider:SetMinMaxValues(EditMode.scaleMin, EditMode.scaleMax)
@@ -521,7 +521,7 @@ function EditMode.CreatePanel()
 	panel.scaleRow:SetSize(226, 40)
 	panel.scaleLabel = panel.scaleRow:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
 	panel.scaleLabel:SetPoint("TOPLEFT", panel.scaleRow, "TOPLEFT", 0, 0)
-	panel.slider = EditMode.CreateSlider(panel.scaleRow)
+	panel.slider = EditMode.CreateSlider(panel, panel.scaleRow)
 	panel.slider:SetPoint("TOPLEFT", panel.scaleRow, "TOPLEFT", 0, -18)
 	panel.reset = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
 	panel.reset:SetSize(226, 22)

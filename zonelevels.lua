@@ -302,8 +302,9 @@ function ZoneInfo.Update()
 	end
 
 	local side = align == "CENTER" and "" or align
-	frame.text:SetText(body)
 	frame.text:SetJustifyH(align)
+	frame.text:SetText("")
+	frame.text:SetText(body)
 	frame.text:ClearAllPoints()
 	frame.text:SetPoint("BOTTOM" .. side, frame, "BOTTOM" .. side, 0, 0)
 	frame.title:SetText(title or "")

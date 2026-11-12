@@ -130,6 +130,11 @@ local Party = {
 	buttons = {},
 }
 
+local Player = {
+	size = 24,
+	icon = "Interface\\Minimap\\MinimapArrow",
+}
+
 function Widgets.CreateFrame()
 	local container = map.ScrollContainer
 	local frame = CreateFrame("Frame", nil, map)
@@ -469,11 +474,54 @@ function Party.Create()
 	end)
 end
 
+function Player.ShowTooltip(button)
+	GameTooltip:SetOwner(button, "ANCHOR_TOP")
+	GameTooltip:SetText(MapUtils:Trans("LID_CENTERONPLAYER"))
+	GameTooltip:Show()
+end
+
+function Player.Layout()
+	local frame = Player.frame
+	if frame == nil then return end
+	frame:SetSize(Player.size, Player.size)
+	frame:SetShown(MapUtils:IsMapEditElementVisible(Player.element))
+end
+
+function Player.Create()
+	local frame = Widgets.CreateFrame()
+	Player.frame = frame
+	local button = CreateFrame("Button", nil, frame)
+	button:SetAllPoints(frame)
+	button.icon = button:CreateTexture(nil, "ARTWORK")
+	button.icon:SetAllPoints(button)
+	button.icon:SetTexture(Player.icon)
+	button:SetHighlightTexture(Player.icon, "ADD")
+	button:SetScript("OnClick", function() MapUtils:CenterWorldMapOnUnit("player") end)
+	button:SetScript("OnEnter", Player.ShowTooltip)
+	button:SetScript("OnLeave", function() GameTooltip:Hide() end)
+	Player.button = button
+	Player.element = {
+		key = "PLAYERWIDGET",
+		title = "LID_PLAYERWIDGET",
+		frame = frame,
+		defaultPoint = {"BOTTOM", 0, Widgets.inset},
+		defaultAlign = "CENTER",
+		options = {
+			scale = true
+		},
+		OnLayout = Player.Layout,
+		OnEditMode = Player.Layout,
+	}
+
+	MapUtils:RegisterMapEditElement(Player.element)
+end
+
 function Widgets.Init()
 	if Widgets.ready or MapUtils.RegisterMapEditElement == nil or MapUtils.GetConfig == nil then return end
 	Widgets.ready = true
 	Toggles.Create()
 	Party.Create()
+	Player.Create()
 	map:HookScript("OnShow", function()
 		Toggles.Refresh()
 		Party.Update(true)

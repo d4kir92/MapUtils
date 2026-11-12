@@ -389,23 +389,67 @@ local function CreateFullscreenButton()
 	arrow.MapUtilsFullscreenButton = button
 	button:SetSize(arrow:GetSize())
 	button:SetPoint("RIGHT", arrow, "LEFT", -2, 0)
-	local face = button:CreateTexture(nil, "ARTWORK")
 	local atlas = C_Texture and C_Texture.GetAtlasInfo and C_Texture.GetAtlasInfo("RedButton-MiniCondense")
+	local pressedAtlas = C_Texture and C_Texture.GetAtlasInfo and C_Texture.GetAtlasInfo("RedButton-MiniCondense-Pressed")
+	local hasNativeDash = atlas and (atlas.file or atlas.filename)
+	local face, art, pressed
 	local function LayoutFace(self, width, height)
-		face:SetSize(width * 0.56, height * 0.46)
-		face:SetPoint("CENTER", self, "CENTER", 0, -height * 0.05)
+		if art then
+			art.top:SetHeight(height * 0.49)
+			art.middle:SetHeight(height * 0.29)
+			art.bottom:SetHeight(height * 0.22)
+		else
+			face:SetSize(width * 0.56, height * 0.46)
+			face:SetPoint("CENTER", self, "CENTER", 0, -height * 0.05)
+		end
 	end
-	if atlas and (atlas.file or atlas.filename) then
-		button:GetNormalTexture():SetAtlas("RedButton-MiniCondense")
-		button:GetPushedTexture():SetAtlas("RedButton-MiniCondense-Pressed")
-		local left, right = atlas.leftTexCoord, atlas.rightTexCoord
-		local top, bottom = atlas.topTexCoord, atlas.bottomTexCoord
-		face:SetTexture(atlas.file or atlas.filename)
-		face:SetTexCoord(left + (right - left) * 0.22, right - (right - left) * 0.22,
-			top + (bottom - top) * 0.27, top + (bottom - top) * 0.49)
+
+	local function PaintArt()
+		local info = pressed and pressedAtlas and (pressedAtlas.file or pressedAtlas.filename) and pressedAtlas or atlas
+		local file = info.file or info.filename
+		local left, right, top, bottom = info.leftTexCoord, info.rightTexCoord, info.topTexCoord, info.bottomTexCoord
+		local function V(share) return top + (bottom - top) * share end
+		for _, piece in ipairs({art.full, art.top, art.middle, art.bottom}) do
+			piece:SetTexture(file)
+		end
+
+		art.full:SetTexCoord(left, right, top, bottom)
+		art.top:SetTexCoord(left, right, top, V(0.49))
+		art.middle:SetTexCoord(left, right, V(0.27), V(0.49))
+		art.bottom:SetTexCoord(left, right, V(0.78), bottom)
+	end
+
+	if hasNativeDash then
+		for _, texture in ipairs({button:GetNormalTexture(), button:GetPushedTexture()}) do
+			texture:SetTexture(nil)
+		end
+
+		art = {}
+		for _, key in ipairs({"full", "top", "middle", "bottom"}) do
+			art[key] = button:CreateTexture(nil, "ARTWORK")
+		end
+
+		art.full:SetAllPoints(button)
+		art.top:SetPoint("TOPLEFT", button, "TOPLEFT", 0, 0)
+		art.top:SetPoint("TOPRIGHT", button, "TOPRIGHT", 0, 0)
+		art.middle:SetPoint("TOPLEFT", art.top, "BOTTOMLEFT", 0, 0)
+		art.middle:SetPoint("TOPRIGHT", art.top, "BOTTOMRIGHT", 0, 0)
+		art.bottom:SetPoint("BOTTOMLEFT", button, "BOTTOMLEFT", 0, 0)
+		art.bottom:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", 0, 0)
+		PaintArt()
+		button:HookScript("OnMouseDown", function()
+			pressed = true
+			PaintArt()
+		end)
+		button:HookScript("OnMouseUp", function()
+			pressed = false
+			PaintArt()
+		end)
 	else
+		face = button:CreateTexture(nil, "ARTWORK")
 		face:SetColorTexture(0.4, 0.06, 0.02)
 	end
+
 	button:SetScript("OnSizeChanged", LayoutFace)
 	LayoutFace(button, button:GetSize())
 
@@ -425,7 +469,6 @@ local function CreateFullscreenButton()
 		tinsert(corners, vertical)
 	end
 
-	local hasNativeDash = atlas and (atlas.file or atlas.filename)
 	local dash
 	if not hasNativeDash then
 		dash = button:CreateTexture(nil, "OVERLAY", nil, 7)
@@ -443,7 +486,12 @@ local function CreateFullscreenButton()
 
 	local function RefreshArtwork()
 		local fullscreen = MapUtils:IsWorldMapFullscreen()
-		face:SetShown(not fullscreen or not hasNativeDash)
+		if art then
+			art.full:SetShown(fullscreen)
+			art.top:SetShown(not fullscreen)
+			art.middle:SetShown(not fullscreen)
+			art.bottom:SetShown(not fullscreen)
+		end
 		for _, piece in ipairs(corners) do piece:SetShown(not fullscreen) end
 		if dash then dash:SetShown(fullscreen) end
 		if GameTooltip:IsOwned(button) then ShowTooltip() end
@@ -742,6 +790,7 @@ local SmoothZoom = {
 	speed = 12,
 	snapLog = 0.002,
 	settleEpsilon = 0.0005,
+	centerDuration = 0.35,
 }
 
 function MapUtils:IsOneMap()
@@ -1135,6 +1184,16 @@ function SmoothZoom.OnUpdate(container, elapsed)
 	SmoothZoom.SyncWheelMode(container)
 	SmoothZoom.SyncCanPan(container)
 	SmoothZoom.WidenExtents(container)
+	if SmoothZoom.center ~= nil then
+		if panning or SmoothZoom.anim ~= nil then
+			SmoothZoom.center = nil
+		else
+			SmoothZoom.StepCenter(container, elapsed)
+
+			return
+		end
+	end
+
 	if SmoothZoom.anim ~= nil then
 		SmoothZoom.Step(container, elapsed)
 
@@ -1419,24 +1478,58 @@ function MapUtils:CenterWorldMapOnUnit(unit)
 	end
 
 	local scale = container:GetCanvasScale()
+	local center = {
+		["mapID"] = mapID,
+		["fromScale"] = scale,
+		["toScale"] = scale,
+		["fromX"] = container:GetNormalizedHorizontalScroll(),
+		["fromY"] = container:GetNormalizedVerticalScroll(),
+		["toX"] = x,
+		["toY"] = y,
+		["time"] = 0,
+	}
+
 	if MapUtils:IsOneMap() and container.zoomLevels ~= nil and SmoothZoom.IsSpace(mapID) then
 		SmoothZoom.pickMapID = mapID
+		center.oneMap = true
+	else
+		if container.InstantPanAndZoom == nil then return false end
+		local minScale = container.GetScaleForMinZoom and container:GetScaleForMinZoom()
+		local maxScale = container.GetScaleForMaxZoom and container:GetScaleForMaxZoom()
+		if minScale ~= nil and maxScale ~= nil and scale <= minScale + SCALE_EPSILON then center.toScale = maxScale end
+	end
+
+	SmoothZoom.center = center
+	if not MapLevelZoom.installed then SmoothZoom.StepCenter(container, SmoothZoom.centerDuration) end
+
+	return true
+end
+
+function SmoothZoom.StepCenter(container, elapsed)
+	local center = SmoothZoom.center
+	if center == nil then return end
+	if center.mapID ~= container.mapID or not container:IsVisible() then
+		SmoothZoom.center = nil
+
+		return
+	end
+
+	center.time = center.time + (elapsed or 0)
+	local t = math.min(center.time / SmoothZoom.centerDuration, 1)
+	local share = 1 - (1 - t) ^ 3
+	local scale = math.exp(math.log(center.fromScale) + (math.log(center.toScale) - math.log(center.fromScale)) * share)
+	local x = center.fromX + (center.toX - center.fromX) * share
+	local y = center.fromY + (center.toY - center.fromY) * share
+	if t >= 1 then SmoothZoom.center = nil end
+	if center.oneMap then
 		SmoothZoom.SetView(container, scale, x, y, scale, x, y)
 		SmoothZoom.ShowLoadedArt()
 		if MapUtils.UpdateWorldPinsNow ~= nil then MapUtils.UpdateWorldPinsNow() end
-
-		return true
+	else
+		WheelZoom.own = true
+		container:InstantPanAndZoom(scale, x, y)
+		WheelZoom.own = false
 	end
-
-	if container.InstantPanAndZoom == nil then return false end
-	local minScale = container.GetScaleForMinZoom and container:GetScaleForMinZoom()
-	local maxScale = container.GetScaleForMaxZoom and container:GetScaleForMaxZoom()
-	if minScale ~= nil and maxScale ~= nil and scale <= minScale + SCALE_EPSILON then scale = maxScale end
-	WheelZoom.own = true
-	container:InstantPanAndZoom(scale, x, y)
-	WheelZoom.own = false
-
-	return true
 end
 
 function MapLevelZoom.Install()
