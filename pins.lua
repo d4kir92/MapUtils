@@ -2197,15 +2197,6 @@ local function ShowAreaLabel(pin)
 	end
 
 	label.refresh = nil
-	if pin.entry.kind == nil then
-		label.refreshed = GetTime()
-		label.refresh = function(self)
-			local _, text = GetPierLabel(pin.entry, pin.mapID)
-			self.description = text
-			self:Push()
-		end
-	end
-
 	label.name = name
 	label.description = description
 	local hintLines = {}
@@ -2260,8 +2251,13 @@ local function OnPinEnter(pin)
 	MapUtils:ShowPinHighlight(pin)
 	local entry = pin.entry
 	if entry == nil then return end
-	if pin.worldMap and ShowAreaLabel(pin) then return end
+	if pin.worldMap and entry.kind ~= nil and ShowAreaLabel(pin) then return end
 	GameTooltip:SetOwner(pin, "ANCHOR_RIGHT")
+	pin.tooltipToken = (pin.tooltipToken or 0) + 1
+	if entry.kind == nil then
+		local token = pin.tooltipToken
+		C_Timer.After(1, function() if pin.tooltipToken == token and pin.entry == entry and GameTooltip:IsOwned(pin) and pin:IsVisible() then OnPinEnter(pin) end end)
+	end
 	if entry.kind == "dungeon" then
 		local name, minLevel, maxLevel, recLevel = GetDungeonInfo(entry)
 		GameTooltip:AddLine(name or entry.name, 1, 1, 1)
