@@ -29,6 +29,8 @@ local Transport = {
 	queryGap = 600,
 	staleAge = 2 * 86400,
 	maxAge = 30 * 86400,
+	selfPriority = 6 * 3600,
+	futureTolerance = 5,
 	announceGap = 600,
 	perMessage = 10,
 	maxPerSender = 60,
@@ -750,7 +752,7 @@ end
 
 function Transport.Encode(id)
 	local known = Transport.GetKnown(id)
-	if known == nil then return nil end
+	if known == nil or known.s ~= "self" then return nil end
 
 	return format("%d,%d,%d", id, math.floor(known.p * 1000 + 0.5), math.floor(known.t))
 end
@@ -840,9 +842,9 @@ function Transport.OnQuery(body, chatType)
 		local known = id ~= nil and Transport.GetKnown(id) or nil
 		count = count + 1
 		if count > 32 then break end
-		if known ~= nil then
+		if known ~= nil and known.s == "self" then
 			pending.ids[id] = true
-			if known.s == "self" and Transport.Now() - known.t < 3600 then fresh = true end
+			if Transport.Now() - known.t < 3600 then fresh = true end
 		end
 	end
 
@@ -889,10 +891,11 @@ function Transport.OnData(body, sender)
 		local route = id ~= nil and Transport.GetRoutes()[id] or nil
 		if route ~= nil and phase ~= nil and observed ~= nil then
 			phase = phase / 1000
-			if phase >= 0 and phase < route.rtt and observed <= now + 120 and now - observed < Transport.maxAge then
+			if phase >= 0 and phase < route.rtt and observed <= now + Transport.futureTolerance and now - observed < Transport.maxAge then
 				Transport.Suppress(id, observed)
 				local known = Transport.GetKnown(id)
-				if known == nil or observed > known.t + 1 then
+				local ownFresh = known ~= nil and known.s == "self" and observed - known.t < Transport.selfPriority
+				if not ownFresh and (known == nil or observed > known.t + 1) then
 					store[id] = {
 						p = phase,
 						t = observed,
