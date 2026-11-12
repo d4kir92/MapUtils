@@ -996,3 +996,4 @@ if GatherNodes.CanScan() or GatherNodes.UsesBlips() then
 	GatherNodes.eventFrame:RegisterEvent("GET_ITEM_INFO_RECEIVED")
 	GatherNodes.eventFrame:SetScript("OnEvent", MapUtils.Profile("gathernodes OnEvent", GatherNodes.OnEvent))
 end
+MapUtils.ProfileTable("GatherNodes", GatherNodes)

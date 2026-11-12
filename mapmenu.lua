@@ -253,3 +253,4 @@ function MapMenu.Create()
 end
 
 MapMenu.Create()
+MapUtils.ProfileTable("MapMenu", MapMenu)

@@ -3576,3 +3576,4 @@ superTrackedLoader:SetScript(
 		if FixSuperTrackedFrame() and self.distanceHooked then self:UnregisterAllEvents() end
 	end
 )
+MapUtils.ProfileTable("PinCache", PinCache)

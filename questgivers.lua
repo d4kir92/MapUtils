@@ -886,3 +886,4 @@ WorldMapFrame:HookScript(
 )
 
 WorldMapFrame:HookScript("OnHide", QG.HidePins)
+MapUtils.ProfileTable("QG", QG)

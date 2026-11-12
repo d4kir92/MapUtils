@@ -1986,3 +1986,4 @@ loader:SetScript(
 		Install()
 	end
 )
+MapUtils.ProfileTable("MinimapLayer", MinimapLayer)

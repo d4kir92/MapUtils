@@ -936,3 +936,4 @@ if MapUtils:IsForever() and C_ChatInfo ~= nil and C_ChatInfo.RegisterAddonMessag
 	Convergence.commFrame:RegisterEvent("CHAT_MSG_ADDON")
 	Convergence.commFrame:SetScript("OnEvent", function(_, _, prefix, message, _, sender) Convergence.OnAddonMessage(prefix, message, sender) end)
 end
+MapUtils.ProfileTable("Convergence", Convergence)

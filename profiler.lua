@@ -15,7 +15,9 @@ local Profiler = {
 	maxRows = 40,
 	rowHeight = 16,
 	refreshInterval = 0.5,
-	skip = {Profile = true, Profiler = true, ToggleProfiler = true},
+	skip = {Profile = true, ProfileTable = true, Profiler = true, ToggleProfiler = true},
+	skipLabels = {["SmoothZoom.CanPan"] = true},
+	tables = {},
 }
 
 MapUtils.Profiler = Profiler
@@ -78,7 +80,7 @@ end
 
 function Profiler.WrapTable(tab, prefix)
 	for key, value in pairs(tab) do
-		if type(key) == "string" and type(value) == "function" and not Profiler.skip[key] then
+		if type(key) == "string" and type(value) == "function" and not Profiler.skip[key] and not Profiler.skipLabels[prefix .. key] then
 			local wrapped = Profiler.Wrap(prefix .. key, "method", value)
 			tab[key] = wrapped
 			tinsert(Profiler.originals, {tab, key, value, wrapped})
@@ -93,10 +95,27 @@ function Profiler.WrapMethods()
 		if type(key) == "string" and not Profiler.skip[key] and Profiler.IsPlainTable(value) then tables[key] = value end
 	end
 
+	local seen = {}
+	for _, value in pairs(tables) do
+		seen[value] = true
+	end
+
+	for key, value in pairs(Profiler.tables) do
+		if not seen[value] then
+			seen[value] = true
+			tables[key] = value
+		end
+	end
+
 	Profiler.WrapTable(MapUtils, "MapUtils:")
 	for key, value in pairs(tables) do
 		Profiler.WrapTable(value, key .. ".")
 	end
+end
+
+function MapUtils.ProfileTable(name, tab)
+	if type(name) ~= "string" or type(tab) ~= "table" then return end
+	Profiler.tables[name] = tab
 end
 
 function Profiler.UnwrapMethods()

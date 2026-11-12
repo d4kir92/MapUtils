@@ -666,3 +666,4 @@ end
 map:HookScript("OnShow", EditMode.ApplyAll)
 map:HookScript("OnHide", function() if EditMode.active then MapUtils:SetMapEditMode(false) end end)
 if map.ScrollContainer ~= nil then map.ScrollContainer:HookScript("OnSizeChanged", EditMode.ApplyAll) end
+MapUtils.ProfileTable("EditMode", EditMode)
