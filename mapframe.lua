@@ -1511,6 +1511,8 @@ function MapUtils:CenterWorldMapOnUnit(unit)
 
 	if MapUtils:IsOneMap() and container.zoomLevels ~= nil and SmoothZoom.IsSpace(mapID) then
 		SmoothZoom.pickMapID = mapID
+		SmoothZoom.userMoved = false
+		SmoothZoom.dragMapID = nil
 		center.oneMap = true
 	else
 		if container.InstantPanAndZoom == nil then return false end
