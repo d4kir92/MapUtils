@@ -48,6 +48,7 @@ locale\zhCN.lua
 locale\zhTW.lua
 locale\names.lua
 
+profiler.lua
 flavor.lua
 data\classic\instances.lua
 data\tbc\instances.lua

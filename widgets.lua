@@ -463,15 +463,15 @@ function Party.Create()
 		pcall(events.RegisterEvent, events, event)
 	end
 
-	events:SetScript("OnEvent", function() if map:IsShown() then Party.Update() end end)
+	events:SetScript("OnEvent", MapUtils.Profile("widgets party events", function() if map:IsShown() then Party.Update() end end))
 	local elapsed = 0
-	events:SetScript("OnUpdate", function(_, delta)
+	events:SetScript("OnUpdate", MapUtils.Profile("widgets party OnUpdate", function(_, delta)
 		if not map:IsShown() then return end
 		elapsed = elapsed + delta
 		if elapsed < Party.interval then return end
 		elapsed = 0
 		Party.Update()
-	end)
+	end))
 end
 
 function Player.ShowTooltip(button)

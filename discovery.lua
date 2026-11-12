@@ -146,7 +146,7 @@ Discovery.frame:SetScript(
 	function(_, event)
 		if event == "PLAYER_LOGIN" then
 			Discovery.ready = true
-			if C_Timer ~= nil and C_Timer.NewTicker ~= nil then Discovery.ticker = C_Timer.NewTicker(Discovery.interval, Discovery.Scan) end
+			if C_Timer ~= nil and C_Timer.NewTicker ~= nil then Discovery.ticker = C_Timer.NewTicker(Discovery.interval, MapUtils.Profile("discovery Scan", Discovery.Scan)) end
 		end
 
 		Discovery.last = nil

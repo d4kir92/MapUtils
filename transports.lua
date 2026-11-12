@@ -142,7 +142,7 @@ function Transport.Init()
 
 	if next(Transport.decoded) == nil then return end
 	Transport.CalibrateClock()
-	C_Timer.NewTicker(Transport.triggerInterval, Transport.CheckTriggers)
+	C_Timer.NewTicker(Transport.triggerInterval, MapUtils.Profile("transports CheckTriggers", Transport.CheckTriggers))
 	if MapUtils.Comm ~= nil then MapUtils.Comm.Register("T", Transport.OnMessage) end
 	C_Timer.After(25 + math.random() * 25, function() Transport.Query(true) end)
 	Transport.CreateUpdaters()
@@ -632,7 +632,7 @@ end
 
 function Transport.CreateUpdaters()
 	if WorldMapFrame ~= nil then
-		Transport.CreateUpdater(WorldMapFrame, Transport.UpdateWorld)
+		Transport.CreateUpdater(WorldMapFrame, MapUtils.Profile("transports UpdateWorld", Transport.UpdateWorld))
 		WorldMapFrame:HookScript(
 			"OnShow",
 			function()
@@ -641,7 +641,7 @@ function Transport.CreateUpdaters()
 		)
 	end
 
-	if Minimap ~= nil then Transport.CreateUpdater(Minimap, Transport.UpdateMinimap) end
+	if Minimap ~= nil then Transport.CreateUpdater(Minimap, MapUtils.Profile("transports UpdateMinimap", Transport.UpdateMinimap)) end
 end
 
 function MapUtils:RefreshTransports()

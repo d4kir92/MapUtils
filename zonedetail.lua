@@ -1921,16 +1921,16 @@ local function Install()
 		SyncBlizzardArt()
 	end
 
-	hooksecurefunc(WorldMapFrame, "OnMapChanged", Refresh)
-	WorldMapFrame:HookScript("OnShow", Refresh)
-	child:HookScript("OnSizeChanged", Refresh)
+	hooksecurefunc(WorldMapFrame, "OnMapChanged", MapUtils.Profile("zonedetail Refresh", Refresh))
+	WorldMapFrame:HookScript("OnShow", MapUtils.Profile("zonedetail Refresh", Refresh))
+	child:HookScript("OnSizeChanged", MapUtils.Profile("zonedetail Refresh", Refresh))
 	WorldMapFrame.ScrollContainer:HookScript(
 		"OnUpdate",
-		function()
+		MapUtils.Profile("zonedetail OnUpdate", function()
 			MinimapLayer.Update()
 			MinimapLayer.UpdateCityDetail()
 			SyncBlizzardArt()
-		end
+		end)
 	)
 
 	return true

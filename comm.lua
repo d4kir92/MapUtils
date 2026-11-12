@@ -155,7 +155,7 @@ end
 function Comm.Enqueue(prefix, message, chatType, target)
 	if #Comm.queue >= Comm.maxQueue then return false end
 	tinsert(Comm.queue, {prefix, message, chatType, target})
-	if Comm.ticker == nil then Comm.ticker = C_Timer.NewTicker(0.2, Comm.Pump) end
+	if Comm.ticker == nil then Comm.ticker = C_Timer.NewTicker(0.2, MapUtils.Profile("comm Pump", Comm.Pump)) end
 
 	return true
 end

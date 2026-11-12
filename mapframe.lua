@@ -502,7 +502,7 @@ local function CreateFullscreenButton()
 		ShowTooltip()
 	end)
 	button:HookScript("OnShow", RefreshArtwork)
-	hooksecurefunc(frame, "SynchronizeDisplayState", RefreshArtwork)
+	hooksecurefunc(frame, "SynchronizeDisplayState", MapUtils.Profile("mapframe RefreshArtwork", RefreshArtwork))
 	button:SetScript("OnLeave", function() GameTooltip:Hide() end)
 	button:SetScript("OnClick", function()
 		if IsLocked() then return end
@@ -678,7 +678,7 @@ function WheelZoom.Install()
 	if container:GetScript("OnMouseWheel") ~= nop then return end
 	WheelZoom.installed = true
 	for _, method in ipairs(WheelZoom.zoomMethods) do
-		if type(container[method]) == "function" then hooksecurefunc(container, method, WheelZoom.MarkForeign) end
+		if type(container[method]) == "function" then hooksecurefunc(container, method, MapUtils.Profile("mapframe WheelZoom MarkForeign", WheelZoom.MarkForeign)) end
 	end
 
 	container:EnableMouseWheel(true)
@@ -1382,7 +1382,7 @@ function MapUtils:InstallCombatPins()
 	CombatPins.Sweep()
 	CombatPins.ScanPools()
 	frame:HookScript("OnShow", function() for _, pool in pairs(frame.pinPools or {}) do CombatPins.PointPool(pool) end end)
-	if frame.ScrollContainer ~= nil and frame.ScrollContainer.MarkCanvasDirty ~= nil then hooksecurefunc(frame.ScrollContainer, "MarkCanvasDirty", CombatPins.ScanPools) end
+	if frame.ScrollContainer ~= nil and frame.ScrollContainer.MarkCanvasDirty ~= nil then hooksecurefunc(frame.ScrollContainer, "MarkCanvasDirty", MapUtils.Profile("mapframe CombatPins ScanPools", CombatPins.ScanPools)) end
 	CombatPins.events = CreateFrame("Frame")
 	CombatPins.events:RegisterEvent("ADDON_LOADED")
 	CombatPins.events:RegisterEvent("PLAYER_REGEN_ENABLED")
@@ -1536,9 +1536,9 @@ function MapLevelZoom.Install()
 	local container = WheelZoom.container
 	if MapLevelZoom.installed or container == nil then return end
 	MapLevelZoom.installed = true
-	container:HookScript("OnUpdate", MapLevelZoom.OnUpdate)
+	container:HookScript("OnUpdate", MapUtils.Profile("mapframe MapLevelZoom OnUpdate", MapLevelZoom.OnUpdate))
 	container:HookScript("OnMouseWheel", MapLevelZoom.OnMouseWheel)
-	container:HookScript("OnUpdate", SmoothZoom.OnUpdate)
+	container:HookScript("OnUpdate", MapUtils.Profile("mapframe SmoothZoom OnUpdate", SmoothZoom.OnUpdate))
 	container:HookScript("OnMouseWheel", SmoothZoom.OnMouseWheel)
 	if frame ~= nil and frame.AddCanvasClickHandler ~= nil then frame:AddCanvasClickHandler(SmoothZoom.OnCanvasClick, 100) end
 end

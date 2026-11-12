@@ -477,8 +477,8 @@ if MapUtils:IsSimpleMapFrameAvailable() then
 		end
 	)
 
-	if map.OnFrameSizeChanged ~= nil then hooksecurefunc(map, "OnFrameSizeChanged", Layout) end
-	if map.SynchronizeDisplayState ~= nil then hooksecurefunc(map, "SynchronizeDisplayState", Layout) end
+	if map.OnFrameSizeChanged ~= nil then hooksecurefunc(map, "OnFrameSizeChanged", MapUtils.Profile("simpleframe Layout", Layout)) end
+	if map.SynchronizeDisplayState ~= nil then hooksecurefunc(map, "SynchronizeDisplayState", MapUtils.Profile("simpleframe Layout", Layout)) end
 	if map.OnMapChanged ~= nil then hooksecurefunc(map, "OnMapChanged", function() C_Timer.After(0, ShrinkNavBar) end) end
 	if NavBar_AddButton ~= nil then hooksecurefunc("NavBar_AddButton", function(nav) if nav == map.NavBar then ShrinkNavBar() end end) end
 	QuestMapFrame:HookScript("OnShow", Layout)

@@ -152,7 +152,7 @@ local function InitCoords()
 		updater.player:Hide()
 		updater.cursor:Hide()
 	end)
-	updater:SetScript("OnUpdate", function() MapUtils:RefreshCoords() end)
+	updater:SetScript("OnUpdate", MapUtils.Profile("coords OnUpdate", function() MapUtils:RefreshCoords() end))
 end
 
 local events = CreateFrame("Frame")

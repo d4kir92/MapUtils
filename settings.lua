@@ -279,6 +279,8 @@ local function HandleSlash(args)
 		MapUtils:ToggleDebugMaskWindow()
 	elseif sub == "debug" then
 		MapUtils:ToggleDebug()
+	elseif sub == "profile" then
+		MapUtils:ToggleProfiler()
 	elseif sub == "pos" then
 		MapUtils:PrintPlayerPosition()
 	elseif sub == "fade" then

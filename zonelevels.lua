@@ -320,7 +320,7 @@ function ZoneInfo.HookLabel()
 		if label ~= nil and label.EvaluateLabels ~= nil then
 			ZoneInfo.label = label
 			ZoneInfo.HideBlizzardText(label)
-			hooksecurefunc(label, "EvaluateLabels", ZoneInfo.Update)
+			hooksecurefunc(label, "EvaluateLabels", MapUtils.Profile("zonelevels Update", ZoneInfo.Update))
 			ZoneInfo.hooked = true
 
 			return true
@@ -331,7 +331,7 @@ function ZoneInfo.HookLabel()
 end
 
 if WorldMapFrame ~= nil then
-	if WorldMapFrame.OnMapChanged ~= nil then hooksecurefunc(WorldMapFrame, "OnMapChanged", ZoneInfo.Update) end
+	if WorldMapFrame.OnMapChanged ~= nil then hooksecurefunc(WorldMapFrame, "OnMapChanged", MapUtils.Profile("zonelevels Update", ZoneInfo.Update)) end
 	WorldMapFrame:HookScript("OnShow", function()
 		ZoneInfo.HookLabel()
 		ZoneInfo.Update()

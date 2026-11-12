@@ -249,7 +249,7 @@ local function HookMap(map)
 	for pin in map:EnumeratePinsByTemplate(PIN_TEMPLATE) do
 		if states[pin] == nil then
 			GetState(pin)
-			hooksecurefunc(pin, "RefreshOverlays", RefreshPin)
+			hooksecurefunc(pin, "RefreshOverlays", MapUtils.Profile("reveal RefreshPin", RefreshPin))
 			hooksecurefunc(pin, "RemoveAllData", ClearPin)
 			RefreshPin(pin)
 		end

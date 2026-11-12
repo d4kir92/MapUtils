@@ -978,7 +978,7 @@ if GatherNodes.UsesBlips() then
 	GatherNodes.blipFrame:RegisterEvent("PLAYER_LOGIN")
 	GatherNodes.blipFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
 	GatherNodes.blipFrame:RegisterEvent("MINIMAP_UPDATE_TRACKING")
-	GatherNodes.blipFrame:SetScript("OnEvent", GatherNodes.UpdateBlips)
+	GatherNodes.blipFrame:SetScript("OnEvent", MapUtils.Profile("gathernodes UpdateBlips", GatherNodes.UpdateBlips))
 end
 
 if GatherNodes.CanScan() or GatherNodes.UsesBlips() then
@@ -986,7 +986,7 @@ if GatherNodes.CanScan() or GatherNodes.UsesBlips() then
 	GatherNodes.overlay:SetAllPoints(Minimap)
 	GatherNodes.overlay:SetFrameLevel(Minimap:GetFrameLevel() + 5)
 	GatherNodes.overlay:EnableMouse(false)
-	GatherNodes.overlay:SetScript("OnUpdate", GatherNodes.OnUpdate)
+	GatherNodes.overlay:SetScript("OnUpdate", MapUtils.Profile("gathernodes OnUpdate", GatherNodes.OnUpdate))
 	GatherNodes.overlay:Hide()
 	GatherNodes.eventFrame = CreateFrame("Frame")
 	GatherNodes.eventFrame:RegisterEvent("PLAYER_LOGIN")
@@ -994,5 +994,5 @@ if GatherNodes.CanScan() or GatherNodes.UsesBlips() then
 	GatherNodes.eventFrame:RegisterEvent("UNIT_SPELLCAST_SENT")
 	GatherNodes.eventFrame:RegisterEvent("LOOT_OPENED")
 	GatherNodes.eventFrame:RegisterEvent("GET_ITEM_INFO_RECEIVED")
-	GatherNodes.eventFrame:SetScript("OnEvent", GatherNodes.OnEvent)
+	GatherNodes.eventFrame:SetScript("OnEvent", MapUtils.Profile("gathernodes OnEvent", GatherNodes.OnEvent))
 end

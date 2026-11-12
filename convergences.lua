@@ -922,12 +922,12 @@ end
 Convergence.loginFrame = CreateFrame("FRAME")
 Convergence.loginFrame:RegisterEvent("PLAYER_LOGIN")
 Convergence.loginFrame:SetScript("OnEvent", Convergence.MergeWowhead)
-if GameTooltip ~= nil and GameTooltip.SetMinimapMouseover ~= nil then hooksecurefunc(GameTooltip, "SetMinimapMouseover", Convergence.OnMinimapMouseover) end
+if GameTooltip ~= nil and GameTooltip.SetMinimapMouseover ~= nil then hooksecurefunc(GameTooltip, "SetMinimapMouseover", MapUtils.Profile("convergences minimap mouseover", Convergence.OnMinimapMouseover)) end
 if MapUtils:IsForever() and Minimap ~= nil and C_Timer ~= nil and C_Timer.NewTicker ~= nil then
 	Convergence.scanFrame = CreateFrame("FRAME")
 	Convergence.scanFrame:Hide()
-	Convergence.scanFrame:SetScript("OnUpdate", Convergence.OnScanUpdate)
-	C_Timer.NewTicker(Convergence.scanInterval, Convergence.MaybeScan)
+	Convergence.scanFrame:SetScript("OnUpdate", MapUtils.Profile("convergences OnScanUpdate", Convergence.OnScanUpdate))
+	C_Timer.NewTicker(Convergence.scanInterval, MapUtils.Profile("convergences MaybeScan", Convergence.MaybeScan))
 end
 
 if MapUtils:IsForever() and C_ChatInfo ~= nil and C_ChatInfo.RegisterAddonMessagePrefix ~= nil then

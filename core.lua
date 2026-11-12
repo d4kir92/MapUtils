@@ -130,6 +130,6 @@ end
 
 MapUtils.nativeInstanceMaps = ClientHasOwnMaps()
 if MapUtils.nativeInstanceMaps then
-	C_Map.GetMapArtLayers = GetMapArtLayers
-	C_Map.GetMapArtLayerTextures = GetMapArtLayerTextures
+	C_Map.GetMapArtLayers = MapUtils.Profile("core GetMapArtLayers", GetMapArtLayers)
+	C_Map.GetMapArtLayerTextures = MapUtils.Profile("core GetMapArtLayerTextures", GetMapArtLayerTextures)
 end

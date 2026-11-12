@@ -61,8 +61,8 @@ function MapUtils:UpdateCanvasPinsNow()
 	MapUtils:RescaleCanvasPins()
 end
 
-if WorldMapFrame ~= nil and WorldMapFrame.OnCanvasScaleChanged ~= nil then hooksecurefunc(WorldMapFrame, "OnCanvasScaleChanged", function() MapUtils:RescaleCanvasPins() end) end
-if WorldMapFrame ~= nil and WorldMapFrame.OnMapChanged ~= nil then hooksecurefunc(WorldMapFrame, "OnMapChanged", function() MapUtils:UpdateCanvasPinsNow() end) end
+if WorldMapFrame ~= nil and WorldMapFrame.OnCanvasScaleChanged ~= nil then hooksecurefunc(WorldMapFrame, "OnCanvasScaleChanged", MapUtils.Profile("questturnins canvas scale", function() MapUtils:RescaleCanvasPins() end)) end
+if WorldMapFrame ~= nil and WorldMapFrame.OnMapChanged ~= nil then hooksecurefunc(WorldMapFrame, "OnMapChanged", MapUtils.Profile("questturnins map changed", function() MapUtils:UpdateCanvasPinsNow() end)) end
 function MapUtils:GetOneMapQuestSources(mapID)
 	if mapID == nil or MapUtils.IsOneMap == nil or not MapUtils:IsOneMap() or MapUtils.IsZoneDetailMap == nil or MapUtils.GetZoneDetailSources == nil or not MapUtils:IsZoneDetailMap(mapID) then return nil end
 	local cache = MapUtils.OneMapQuestSources
@@ -336,12 +336,12 @@ updater:RegisterEvent("QUEST_LOG_UPDATE")
 updater:RegisterEvent("QUEST_POI_UPDATE")
 updater:RegisterEvent("CVAR_UPDATE")
 updater:SetScript("OnEvent", function() dirty = true end)
-updater:SetScript("OnUpdate", function(_, elapsed)
+updater:SetScript("OnUpdate", MapUtils.Profile("questturnins OnUpdate", function(_, elapsed)
 	elapsedTime = elapsedTime + elapsed
 	if elapsedTime < 0.1 then return end
 	elapsedTime = 0
 	UpdatePins()
-end)
+end))
 
 WorldMapFrame:HookScript("OnShow", function()
 	dirty = true

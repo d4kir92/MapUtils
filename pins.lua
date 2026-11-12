@@ -3007,7 +3007,7 @@ if worldCanvas ~= nil and CreateFramePool ~= nil then
 			pin.icon = nil
 		end
 	)
-	worldUpdater = CreateUpdater(WorldMapFrame, UpdateWorldPins)
+	worldUpdater = CreateUpdater(WorldMapFrame, MapUtils.Profile("pins UpdateWorldPins", UpdateWorldPins))
 	MapUtils.UpdateWorldPinsNow = UpdateWorldPins
 	MapUtils.CanvasPinUpdaters = MapUtils.CanvasPinUpdaters or {}
 	tinsert(MapUtils.CanvasPinUpdaters, UpdateWorldPins)
@@ -3022,14 +3022,14 @@ if worldCanvas ~= nil and CreateFramePool ~= nil then
 end
 
 if Minimap ~= nil then
-	minimapUpdater = CreateUpdater(Minimap, UpdateMinimapPins)
+	minimapUpdater = CreateUpdater(Minimap, MapUtils.Profile("pins UpdateMinimapPins", UpdateMinimapPins))
 	MapUtils.MinimapState.updater = minimapUpdater
 	MapUtils.MinimapState.zoneWatcher = CreateFrame("FRAME")
 	for _, event in ipairs({"PLAYER_ENTERING_WORLD", "ZONE_CHANGED", "ZONE_CHANGED_INDOORS", "ZONE_CHANGED_NEW_AREA"}) do
 		pcall(MapUtils.MinimapState.zoneWatcher.RegisterEvent, MapUtils.MinimapState.zoneWatcher, event)
 	end
 
-	MapUtils.MinimapState.zoneWatcher:SetScript("OnEvent", function() MapUtils:WakeMinimapPins() end)
+	MapUtils.MinimapState.zoneWatcher:SetScript("OnEvent", MapUtils.Profile("pins zone events", function() MapUtils:WakeMinimapPins() end))
 end
 
 local function UpdatePinStyles()
@@ -3528,8 +3528,8 @@ function MapUtils:HookWaypointDistance()
 		updating = false
 	end
 
-	hooksecurefunc(text, "SetText", UpdateDistance)
-	hooksecurefunc(text, "SetFormattedText", UpdateDistance)
+	hooksecurefunc(text, "SetText", MapUtils.Profile("pins waypoint distance", UpdateDistance))
+	hooksecurefunc(text, "SetFormattedText", MapUtils.Profile("pins waypoint distance", UpdateDistance))
 	UpdateDistance()
 	return true
 end

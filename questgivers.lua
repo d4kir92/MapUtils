@@ -869,12 +869,12 @@ updater:SetScript(
 )
 updater:SetScript(
 	"OnUpdate",
-	function(_, elapsed)
+	MapUtils.Profile("questgivers OnUpdate", function(_, elapsed)
 		elapsedTime = elapsedTime + elapsed
 		if elapsedTime < 0.1 then return end
 		elapsedTime = 0
 		QG.Update()
-	end
+	end)
 )
 
 WorldMapFrame:HookScript(
