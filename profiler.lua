@@ -528,12 +528,15 @@ function Profiler.CreateUI()
 		elapsed = elapsed + delta
 		if elapsed < Profiler.refreshInterval then return end
 		elapsed = 0
+		Profiler.SavePosition(window)
 		Profiler.Refresh()
 	end)
 	window:HookScript("OnShow", function()
 		Profiler.UpdateScroll()
 		Profiler.Refresh()
 	end)
+	window:HookScript("OnHide", Profiler.SavePosition)
+	Profiler.RestorePosition(window, "main")
 	Profiler.window = window
 
 	return window
@@ -852,6 +855,7 @@ function Profiler.CreateRenderUI()
 		elapsed = elapsed + delta
 		if elapsed < 0.5 then return end
 		elapsed = 0
+		Profiler.SavePosition(window)
 		Profiler.ApplyLayers()
 		Profiler.RefreshRender()
 	end)
@@ -859,6 +863,8 @@ function Profiler.CreateRenderUI()
 		wipe(render.fpsSamples)
 		Profiler.RefreshRender()
 	end)
+	window:HookScript("OnHide", Profiler.SavePosition)
+	Profiler.RestorePosition(window, "layers")
 	render.window = window
 
 	return window
@@ -906,6 +912,24 @@ function Profiler.RefreshRender()
 
 	window.content:SetHeight(64 + (#render.layers + 2) * render.rowHeight)
 	if window.UpdateScroll ~= nil then window:UpdateScroll() end
+end
+
+function Profiler.RestorePosition(window, key)
+	window.positionKey = key
+	local saved = type(MAUTTAB) == "table" and type(MAUTTAB["PROFILERPOS"]) == "table" and MAUTTAB["PROFILERPOS"][key]
+	if type(saved) ~= "table" or saved[1] == nil then return end
+	window:ClearAllPoints()
+	window:SetPoint(saved[1], UIParent, saved[2], saved[3], saved[4])
+end
+
+function Profiler.SavePosition(window)
+	if type(MAUTTAB) ~= "table" or window.positionKey == nil then return end
+	local point, _, relativePoint, x, y = window:GetPoint(1)
+	if point == nil then return end
+	MAUTTAB["PROFILERPOS"] = type(MAUTTAB["PROFILERPOS"]) == "table" and MAUTTAB["PROFILERPOS"] or {}
+	local saved = MAUTTAB["PROFILERPOS"][window.positionKey]
+	if saved and saved[1] == point and saved[2] == relativePoint and saved[3] == x and saved[4] == y then return end
+	MAUTTAB["PROFILERPOS"][window.positionKey] = {point, relativePoint, x, y}
 end
 
 function MapUtils:ToggleRenderProfiler()

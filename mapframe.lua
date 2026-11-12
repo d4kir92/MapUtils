@@ -914,7 +914,10 @@ function SmoothZoom.SetView(container, scale, x, y, targetScale, targetX, target
 	container:GetMap():OnCanvasScaleChanged()
 	container:MarkAreaTriggersDirty()
 	container:MarkViewRectDirty()
-	if MapUtils.UpdateZoneDetailView ~= nil then MapUtils:UpdateZoneDetailView() end
+	if SmoothZoom.viewMapID ~= container.mapID then
+		SmoothZoom.viewMapID = container.mapID
+		if MapUtils.UpdateZoneDetailView ~= nil then MapUtils:UpdateZoneDetailView() end
+	end
 end
 
 function SmoothZoom.Switch(container, target, keepCurrentView)

@@ -1074,8 +1074,6 @@ end
 function base.cull.InView(region, view)
 	local left, bottom, width, height = region:GetRect()
 	if left == nil or width == nil or width <= 0 then return true end
-	local scale = (region.GetEffectiveScale and region:GetEffectiveScale() or region:GetParent():GetEffectiveScale()) / view.scale
-	left, bottom, width, height = left * scale, bottom * scale, width * scale, height * scale
 
 	return left < view.right and left + width > view.left and bottom < view.top and bottom + height > view.bottom
 end
@@ -1100,12 +1098,12 @@ function base.cull.Run()
 			active = false
 		else
 			local margin = math.max(cull.margin, math.max(width, height) * cull.marginShare)
+			local ratio = scroll:GetEffectiveScale() / container:GetEffectiveScale()
 			view = {
-				left = left - margin,
-				right = left + width + margin,
-				bottom = bottom - margin,
-				top = bottom + height + margin,
-				scale = scroll:GetEffectiveScale()
+				left = (left - margin) * ratio,
+				right = (left + width + margin) * ratio,
+				bottom = (bottom - margin) * ratio,
+				top = (bottom + height + margin) * ratio
 			}
 		end
 	end
@@ -1338,13 +1336,13 @@ end
 function MapUtils:UpdateZoneDetailView()
 	if container == nil or MinimapLayer.frame == nil then return end
 	MinimapLayer.Update()
-	MinimapLayer.UpdateCityDetail()
+	MinimapLayer.UpdateCityDetail(true)
 	base.cull.Run()
 end
 
 function MapUtils:RefreshZoneDetail()
 	Update(true)
-	if container ~= nil then MinimapLayer.UpdateCityDetail() end
+	if container ~= nil then MinimapLayer.UpdateCityDetail(true) end
 	SyncBlizzardArt()
 end
 
@@ -1793,7 +1791,25 @@ function MinimapLayer.ShowCityDetail(mapID, detail, host, width, height, level)
 		detail.frame = frame
 	end
 
-	if frame.host ~= host or frame.width ~= width or frame.height ~= height then
+	local continentID = GetContinent(mapID)
+	local source = continentID and SPACE_OF[continentID] == container.space and MinimapLayer.GetSources(continentID)[1]
+	local transform = source and MinimapLayer.GetTransform(source)
+	local point, _, _, offsetX, offsetY = container:GetPoint(1)
+	if transform and point and container.refWidth then
+		local containerScale = container:GetScale()
+		local key = format("%s:%.6f:%.3f:%.3f:%s", tostring(container.space), containerScale, offsetX, offsetY, tostring(container.refWidth))
+		if frame.placement ~= key then
+			local u1, v1 = MinimapLayer.ToWorld(transform, detail[2], detail[3])
+			local u2, v2 = MinimapLayer.ToWorld(transform, detail[2] - 1024, detail[3] - 1024)
+			local left, top = math.min(u1, u2) * container.refWidth, math.min(v1, v2) * container.refHeight
+			frame:ClearAllPoints()
+			frame:SetPoint("TOPLEFT", child, "TOPLEFT", (offsetX + left) * containerScale, (offsetY - top) * containerScale)
+			frame:SetSize(math.abs(u2 - u1) * container.refWidth * containerScale, math.abs(v2 - v1) * container.refHeight * containerScale)
+			frame.placement = key
+			frame.host, frame.width, frame.height = host, width, height
+		end
+	elseif frame.placement ~= nil or frame.host ~= host or frame.width ~= width or frame.height ~= height then
+		frame.placement = nil
 		local firstInstance, first = C_Map.GetWorldPosFromMapPos(mapID, CreateVector2D(0, 0))
 		local lastInstance, last = C_Map.GetWorldPosFromMapPos(mapID, CreateVector2D(1, 1))
 		if first == nil or last == nil or firstInstance ~= 0 or lastInstance ~= 0 then return false end
@@ -1827,7 +1843,7 @@ function MinimapLayer.GetTerrainShare(tilePixels, start, finish)
 	return (tilePixels - start) / (finish - start)
 end
 
-function MinimapLayer.UpdateCityDetail()
+function MinimapLayer.UpdateCityDetail(force)
 	local host = WorldMapFrame:GetMapID()
 	local scroll = WorldMapFrame.ScrollContainer
 	local flavor = MapUtils:GetFlavor()
@@ -1836,6 +1852,9 @@ function MinimapLayer.UpdateCityDetail()
 	local world = container:IsShown() and container.built == MODE_FULL and not container.cityMode
 	local cityStart, cityEnd = MapUtils:GetTerrainFadeThresholds(true)
 	local terrainFrame = MinimapLayer.frame
+	local signature = format("%s:%.5f:%.1f:%.1f:%s:%s:%s:%.1f:%.1f:%.3f:%s", tostring(host), scroll:GetCanvasScale() or 0, width or 0, height or 0, tostring(world), tostring(container:IsShown()), tostring(GetEmbeddedCityStyle(host)), cityStart or 0, cityEnd or 0, terrainFrame and terrainFrame:GetAlpha() or 0, tostring(container.signature))
+	if not force and signature == MinimapLayer.citySignature then return end
+	MinimapLayer.citySignature = signature
 	local embeddedStyle = GetEmbeddedCityStyle(host)
 	for mapID, city in pairs(cities) do
 		local embedded = embeddedStyle ~= nil and CITY_MAPS[mapID] == true and container:IsShown()
@@ -2126,7 +2145,7 @@ local function Install()
 	container:Hide()
 	local function Refresh()
 		Update(false)
-		MinimapLayer.UpdateCityDetail()
+		MinimapLayer.UpdateCityDetail(true)
 		SyncBlizzardArt()
 	end
 
