@@ -281,10 +281,18 @@ local function HandleSlash(args)
 		MapUtils:ToggleDebug()
 	elseif sub == "profile" then
 		MapUtils:ToggleProfiler()
+	elseif sub == "count" and MapUtils.ToggleProfilerTextureCount ~= nil then
+		MapUtils:ToggleProfilerTextureCount()
+	elseif sub == "report" and MapUtils.ShowProfilerReport ~= nil then
+		MapUtils:ShowProfilerReport()
+	elseif sub == "bench" and MapUtils.RunRenderBenchmark ~= nil then
+		MapUtils:RunRenderBenchmark()
 	elseif sub == "pos" then
 		MapUtils:PrintPlayerPosition()
 	elseif sub == "fade" then
 		MapUtils:PrintFadeDebug()
+	elseif sub == "preload" and MapUtils.TogglePreloadVisible ~= nil then
+		MapUtils:TogglePreloadVisible()
 	elseif sub == "tiles" and MapUtils.PrintMinimapTileDebug ~= nil then
 		MapUtils:PrintMinimapTileDebug()
 	elseif sub == "map" then

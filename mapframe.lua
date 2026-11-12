@@ -940,9 +940,16 @@ function SmoothZoom.Switch(container, target, keepCurrentView)
 	MapLevelZoom.lastSwitch = GetTime()
 	WheelZoom.pending = nil
 	WheelZoom.own = true
+	MapUtils.zoneSwitching = true
 	frame:SetMapID(target)
+	MapUtils.zoneSwitching = false
 	WheelZoom.own = false
-	if container.mapID ~= target then return false end
+	if container.mapID ~= target then
+		if MapUtils.UpdateZoneDetailView ~= nil then MapUtils:UpdateZoneDetailView() end
+
+		return false
+	end
+
 	SmoothZoom.pickMapID = target
 	local targetWidth = container.Child:GetWidth()
 	if targetWidth == nil or targetWidth <= 0 then targetWidth = layer.layerWidth end

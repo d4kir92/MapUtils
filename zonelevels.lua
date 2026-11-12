@@ -145,6 +145,7 @@ local ZoneInfo = {
 	levelOffset = 1000,
 	justify = "LEFT",
 	levelCache = {},
+	state = {},
 }
 
 function ZoneInfo.CreateText(frame, font)
@@ -313,9 +314,29 @@ function ZoneInfo.Refresh()
 	ZoneInfo.Update()
 end
 
+function ZoneInfo.Changed(...)
+	local state = ZoneInfo.state
+	local changed = false
+	for i = 1, select("#", ...) do
+		local value = select(i, ...)
+		if state[i] ~= value then
+			state[i] = value
+			changed = true
+		end
+	end
+
+	return changed
+end
+
 function ZoneInfo.Update()
 	local frame = ZoneInfo.Create()
 	if frame == nil then return end
+	local label = ZoneInfo.label
+	local labelInfo = label and label.GetHighestPriorityLabelInfo and label:GetHighestPriorityLabelInfo()
+	local x, y = WorldMapFrame:GetNormalizedCursorPosition()
+	local container = WorldMapFrame.ScrollContainer
+	local changed = ZoneInfo.Changed(WorldMapFrame:GetMapID(), container ~= nil and container:IsMouseOver(), x, y, labelInfo or false, labelInfo and labelInfo.name or false, MapUtils.IsMapEditMode ~= nil and MapUtils:IsMapEditMode() or false, MapUtils:GetConfig("ZONELEVELS", true), MapUtils:GetConfig("ZONERECLEVELS", true), MapUtils:GetConfig("FISHINGLEVELS", true))
+	if not changed and ZoneInfo.key ~= nil then return end
 	local title, body = ZoneInfo.GetLabelContent()
 	if title == nil then title, body = ZoneInfo.GetZoneContent() end
 	body = body or ""

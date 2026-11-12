@@ -142,14 +142,147 @@ function Profiler.UnwrapMethods()
 	wipe(Profiler.originals)
 end
 
-function Profiler.OnUpdate()
+function Profiler.OnUpdate(_, delta)
 	if not Profiler.active then return end
 	Profiler.depth = 0
 	Profiler.frames = Profiler.frames + 1
 	Profiler.frameSum = Profiler.frameSum + Profiler.frameTotal
 	if Profiler.frameTotal > Profiler.framePeak then Profiler.framePeak = Profiler.frameTotal end
+	Profiler.TrackState(delta or 0, Profiler.frameTotal)
 	Profiler.PushHistory(Profiler.frameTotal)
 	Profiler.frameTotal = 0
+end
+
+Profiler.states = {}
+Profiler.hitches = {}
+Profiler.hitchThreshold = 0.025
+Profiler.hitchMax = 20
+Profiler.stateSampleInterval = 1
+Profiler.countTextures = true
+
+function MapUtils:ToggleProfilerTextureCount()
+	Profiler.countTextures = not Profiler.countTextures
+	MapUtils:INFO("Profiler texture counting " .. (Profiler.countTextures and "on" or "off"))
+end
+Profiler.mapTypeNames = {[0] = "cosmic", [1] = "world", [2] = "continent", [3] = "zone", [4] = "dungeon", [5] = "micro", [6] = "orphan"}
+
+function Profiler.GetStateKey()
+	if WorldMapFrame == nil or not WorldMapFrame:IsShown() then return "map closed", false end
+	local scroll = WorldMapFrame.ScrollContainer
+	local scale = scroll:GetCanvasScale() or 0
+	local x, y = scroll:GetCurrentScrollX() or 0, scroll:GetCurrentScrollY() or 0
+	local mapID = WorldMapFrame:GetMapID()
+	local last = Profiler.lastView
+	local action = "still"
+	if last and last.mapID ~= mapID then
+		action = "map switch"
+	elseif last and math.abs(scale - last.scale) > last.scale * 0.0005 then
+		action = scale > last.scale and "zoom in" or "zoom out"
+	elseif last and (math.abs(x - last.x) > 0.0001 or math.abs(y - last.y) > 0.0001) then
+		action = "pan"
+	end
+
+	Profiler.lastView = {mapID = mapID, scale = scale, x = x, y = y}
+	local info = mapID and C_Map.GetMapInfo(mapID)
+	local mapType = info and Profiler.mapTypeNames[info.mapType] or "?"
+	local minScale = scroll.GetScaleForMinZoom and scroll:GetScaleForMinZoom() or 0
+	local zoom = minScale > 0 and scale / minScale or 1
+	local level = zoom < 1.5 and "out" or zoom < 4 and "mid" or zoom < 12 and "in" or "max"
+
+	return format("%-10s %-9s zoom %-3s", action, mapType, level), true
+end
+
+function Profiler.TrackState(delta, lua)
+	local key, open = Profiler.GetStateKey()
+	local state = Profiler.states[key]
+	if state == nil then
+		state = {key = key, frames = 0, time = 0, lua = 0, worst = 0, slow = 0, textures = 0, masks = 0, samples = 0}
+		Profiler.states[key] = state
+	end
+
+	local afterCount = Profiler.countedLastFrame
+	Profiler.countedLastFrame = false
+	local memory = collectgarbage("count")
+	local grown = Profiler.lastMemory and memory - Profiler.lastMemory or 0
+	local collected = grown < 0
+	Profiler.lastMemory = memory
+	if grown > 0 then state.alloc = (state.alloc or 0) + grown end
+	if collected then state.gc = (state.gc or 0) + 1 end
+	state.frames = state.frames + 1
+	state.time = state.time + delta
+	state.lua = state.lua + lua
+	if delta > state.worst then state.worst = delta end
+	if delta > 1 / 60 then state.slow = state.slow + 1 end
+	local now = GetTime()
+	if delta >= Profiler.hitchThreshold then
+		local top = {}
+		for label, value in pairs(Profiler.frameSelf) do
+			tinsert(top, {label, value})
+		end
+
+		table.sort(top, Profiler.SortTop)
+		local parts = {}
+		for i = 1, math.min(4, #top) do
+			tinsert(parts, format("%s %.1f", top[i][1], top[i][2]))
+		end
+
+		tinsert(Profiler.hitches, {at = now - (Profiler.startedAt or now) + Profiler.elapsed, key = key, ms = delta * 1000, lua = lua, gc = (collected and format("gc %.0f KB", -grown) or format("+%.0f KB", grown)) .. (afterCount and " count" or ""), top = table.concat(parts, ", ")})
+		if #Profiler.hitches > Profiler.hitchMax then tremove(Profiler.hitches, 1) end
+	end
+
+	if open and Profiler.countTextures and (Profiler.lastStateSample == nil or now - Profiler.lastStateSample >= Profiler.stateSampleInterval) then
+		Profiler.lastStateSample = now
+		Profiler.countedLastFrame = true
+		local results = Profiler.MeasureLayers()
+		local textures, masks = 0, 0
+		for _, stats in pairs(results) do
+			textures, masks = textures + stats.textures, masks + stats.masks
+		end
+
+		state.textures = state.textures + textures
+		state.masks = state.masks + masks
+		state.samples = state.samples + 1
+	end
+end
+
+function Profiler.BuildReport()
+	local lines = {"MapUtils profiler report " .. date("%Y-%m-%d %H:%M:%S"), Profiler.BenchContext()}
+	local duration = Profiler.GetDuration()
+	tinsert(lines, format("%.1f s, %d frames, MapUtils Lua avg %.3f ms/frame, peak %.1f ms", duration, Profiler.frames, Profiler.frames > 0 and Profiler.frameSum / Profiler.frames or 0, Profiler.framePeak))
+	tinsert(lines, "")
+	tinsert(lines, "state      map       zoom    frames   fps   avg ms  worst ms  <60fps  lua ms  tex  masks  KB/frame  gc")
+	local list = {}
+	for _, state in pairs(Profiler.states) do
+		tinsert(list, state)
+	end
+
+	table.sort(list, function(a, b) return a.time > b.time end)
+	for _, state in ipairs(list) do
+		local avg = state.frames > 0 and state.time / state.frames * 1000 or 0
+		tinsert(lines, format("%s %7d %6.0f %8.2f %9.1f %6.0f%% %7.3f %5s %6s %9.1f %4d", state.key, state.frames, avg > 0 and 1000 / avg or 0, avg, state.worst * 1000, state.frames > 0 and state.slow / state.frames * 100 or 0, state.frames > 0 and state.lua / state.frames or 0, state.samples > 0 and format("%d", state.textures / state.samples) or "-", state.samples > 0 and format("%d", state.masks / state.samples) or "-", state.frames > 0 and (state.alloc or 0) / state.frames or 0, state.gc or 0))
+	end
+
+	tinsert(lines, "")
+	tinsert(lines, format("Hitches >= %d ms (last %d): time, state, frame ms, MapUtils lua ms, memory change (gc = Lua garbage collection ran), top self ms", Profiler.hitchThreshold * 1000, Profiler.hitchMax))
+	for _, hitch in ipairs(Profiler.hitches) do
+		tinsert(lines, format("  %6.1fs %s %6.1f %6.1f %-11s %s", hitch.at, hitch.key, hitch.ms, hitch.lua, hitch.gc or "", hitch.top ~= "" and hitch.top or "-"))
+	end
+
+	tinsert(lines, "")
+	tinsert(lines, "Top functions by self ms (calls / total / self / avg / peak):")
+	local sorted = Profiler.GetSorted()
+	for i = 1, math.min(15, #sorted) do
+		local stat = sorted[i]
+		tinsert(lines, format("  %-34s %7d %9.1f %9.1f %7.3f %7.2f", stat.label, stat.calls, stat.total, stat.self, stat.total / stat.calls, stat.peak))
+	end
+
+	return table.concat(lines, "\n"), lines
+end
+
+function MapUtils:ShowProfilerReport()
+	local text, lines = Profiler.BuildReport()
+	if type(MAUTTAB) == "table" then MAUTTAB["PROFILEREPORT"] = lines end
+	Profiler.ShowBenchText(text)
 end
 
 function Profiler.SortTop(a, b)
@@ -191,6 +324,9 @@ function Profiler.Reset()
 	Profiler.framePeak = 0
 	Profiler.frameTotal = 0
 	Profiler.elapsed = 0
+	wipe(Profiler.states)
+	wipe(Profiler.hitches)
+	Profiler.lastView = nil
 	if Profiler.active then Profiler.startedAt = GetTime() end
 	Profiler.Refresh()
 end
@@ -485,6 +621,10 @@ function Profiler.CreateUI()
 	window.reset:SetPoint("LEFT", window.toggle, "RIGHT", 6, 0)
 	window.layers = Profiler.CreateButton(content, "Layers", 90, function() MapUtils:ToggleRenderProfiler() end)
 	window.layers:SetPoint("LEFT", window.reset, "RIGHT", 6, 0)
+	window.bench = Profiler.CreateButton(content, "Benchmark", 100, function() MapUtils:RunRenderBenchmark() end)
+	window.bench:SetPoint("LEFT", window.layers, "RIGHT", 6, 0)
+	window.report = Profiler.CreateButton(content, "Report", 90, function() MapUtils:ShowProfilerReport() end)
+	window.report:SetPoint("LEFT", window.bench, "RIGHT", 6, 0)
 	window.summary = content:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
 	window.summary:SetPoint("TOPLEFT", content, "TOPLEFT", 0, -32)
 	window.summary:SetPoint("RIGHT", content, "RIGHT", 0, 0)
@@ -930,6 +1070,172 @@ function Profiler.SavePosition(window)
 	local saved = MAUTTAB["PROFILERPOS"][window.positionKey]
 	if saved and saved[1] == point and saved[2] == relativePoint and saved[3] == x and saved[4] == y then return end
 	MAUTTAB["PROFILERPOS"][window.positionKey] = {point, relativePoint, x, y}
+end
+
+Profiler.bench = {
+	settle = 0.75,
+	measure = 2.5,
+}
+
+function Profiler.BenchSetLayers(states)
+	for _, layer in ipairs(Profiler.render.layers) do
+		local enabled = states[layer]
+		if enabled == nil then enabled = true end
+		if layer.enabled ~= enabled then
+			layer.enabled = enabled
+			layer.touched = true
+		end
+	end
+
+	Profiler.ApplyLayers()
+end
+
+function Profiler.BenchContext()
+	local scroll = WorldMapFrame.ScrollContainer
+	local mapID = WorldMapFrame:GetMapID()
+	local info = mapID and C_Map.GetMapInfo(mapID)
+	local width, height = scroll:GetSize()
+
+	return format("map %s (%s), canvas scale %.3f, view %.0fx%.0f, one map %s, flavor %s, build %s", tostring(mapID), info and info.name or "?", scroll:GetCanvasScale() or 0, width or 0, height or 0, tostring(MapUtils.IsOneMap ~= nil and MapUtils:IsOneMap()), tostring(MapUtils.GetFlavor and MapUtils:GetFlavor()), tostring(GetBuildInfo()))
+end
+
+function Profiler.BenchFinish(bench, aborted)
+	bench.frame:SetScript("OnUpdate", nil)
+	Profiler.BenchSetLayers(bench.original)
+	Profiler.bench.running = nil
+	local lines = {"MapUtils benchmark " .. date("%Y-%m-%d %H:%M:%S"), bench.context}
+	if aborted then tinsert(lines, "ABORTED: " .. aborted) end
+	local base = bench.results[1]
+	for _, result in ipairs(bench.results) do
+		local delta = base and result ~= base and format("  (%+.2f ms vs all on)", result.ms - base.ms) or ""
+		tinsert(lines, format("%-22s %6.1f fps  %6.2f ms avg  %6.2f ms worst%s", result.name, result.ms > 0 and 1000 / result.ms or 0, result.ms, result.worst, delta))
+	end
+
+	tinsert(lines, "Layer counts with all on (frames / textures / masks / faint):")
+	for _, layer in ipairs(Profiler.render.layers) do
+		local stats = bench.counts[layer]
+		if stats then tinsert(lines, format("  %-20s %4d / %5d / %4d / %4d", layer.name, stats.frames, stats.textures, stats.masks, stats.faint)) end
+	end
+
+	local canvas = bench.canvas
+	tinsert(lines, format("  %-20s %4d / %5d / %4d / %4d", "whole canvas", canvas.frames, canvas.textures, canvas.masks, canvas.faint))
+	local text = table.concat(lines, "\n")
+	if type(MAUTTAB) == "table" then MAUTTAB["BENCH"] = lines end
+	Profiler.ShowBenchText(text)
+end
+
+function Profiler.ShowBenchText(text)
+	local window = Profiler.benchWindow
+	if window == nil then
+		window = MapUtils:CreateUIWindow({
+			name = "MapUtilsBenchmark", width = 620, height = 420,
+			title = "MapUtils Benchmark", resizable = false,
+		})
+		window:ClearAllPoints()
+		window:SetPoint("CENTER")
+		window:SetFrameStrata("DIALOG")
+		local content = window.content
+		content:SetWidth(math.max(window.contentWidth or 0, 560))
+		local hint = content:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+		hint:SetPoint("TOPLEFT", content, "TOPLEFT", 0, -4)
+		hint:SetText("Click the text, Ctrl+A, Ctrl+C - or send a screenshot")
+		window.edit = CreateFrame("EditBox", nil, content)
+		window.edit:SetMultiLine(true)
+		window.edit:SetAutoFocus(false)
+		window.edit:SetFontObject(ChatFontNormal)
+		window.edit:SetPoint("TOPLEFT", content, "TOPLEFT", 0, -22)
+		window.edit:SetWidth(560)
+		window.edit:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
+		window.edit:SetScript("OnEditFocusGained", function(self) self:HighlightText() end)
+		window:HookScript("OnHide", Profiler.SavePosition)
+		Profiler.RestorePosition(window, "bench")
+		Profiler.benchWindow = window
+	end
+
+	window.edit:SetText(text)
+	window.edit:SetCursorPosition(0)
+	local _, lineCount = text:gsub("\n", "")
+	window.content:SetHeight(40 + (lineCount + 2) * 15)
+	window.edit:SetHeight((lineCount + 2) * 15)
+	window:Show()
+	if window.UpdateScroll ~= nil then window:UpdateScroll() end
+end
+
+function MapUtils:RunRenderBenchmark()
+	if Profiler.bench.running then
+		MapUtils:INFO("Benchmark already running")
+
+		return
+	end
+
+	if not WorldMapFrame:IsShown() then
+		MapUtils:INFO("Open the world map first, set the view you want to measure, then run the benchmark again")
+
+		return
+	end
+
+	local bench = {
+		results = {},
+		original = {},
+		phases = {},
+		context = Profiler.BenchContext(),
+		frame = Profiler.bench.frame or CreateFrame("Frame"),
+	}
+
+	Profiler.bench.frame = bench.frame
+	Profiler.bench.running = bench
+	for _, layer in ipairs(Profiler.render.layers) do
+		bench.original[layer] = layer.enabled
+	end
+
+	Profiler.BenchSetLayers({})
+	bench.counts, bench.canvas = Profiler.MeasureLayers()
+	tinsert(bench.phases, {name = "all on", states = {}})
+	for _, layer in ipairs(Profiler.render.layers) do
+		local stats = bench.counts[layer]
+		if stats and stats.frames > 0 then tinsert(bench.phases, {name = layer.name .. " off", states = {[layer] = false}}) end
+	end
+
+	local allOff = {}
+	for _, layer in ipairs(Profiler.render.layers) do
+		allOff[layer] = false
+	end
+
+	tinsert(bench.phases, {name = "all off", states = allOff})
+	tinsert(bench.phases, {name = "all on (again)", states = {}})
+	local seconds = #bench.phases * (Profiler.bench.settle + Profiler.bench.measure)
+	MapUtils:INFO(format("Benchmark started: %d steps, about %d s. Do not move or zoom the map.", #bench.phases, math.ceil(seconds)))
+	local index, elapsed, sum, count, worst = 0, 0, 0, 0, 0
+	local function NextPhase()
+		index = index + 1
+		local phase = bench.phases[index]
+		if phase == nil then
+			Profiler.BenchFinish(bench)
+
+			return
+		end
+
+		Profiler.BenchSetLayers(phase.states)
+		elapsed, sum, count, worst = 0, 0, 0, 0
+	end
+
+	NextPhase()
+	bench.frame:SetScript("OnUpdate", function(_, delta)
+		if not WorldMapFrame:IsShown() then
+			Profiler.BenchFinish(bench, "world map closed")
+
+			return
+		end
+
+		elapsed = elapsed + delta
+		if elapsed < Profiler.bench.settle then return end
+		sum = sum + delta
+		count = count + 1
+		worst = math.max(worst, delta)
+		if elapsed < Profiler.bench.settle + Profiler.bench.measure then return end
+		tinsert(bench.results, {name = bench.phases[index].name, ms = count > 0 and sum / count * 1000 or 0, worst = worst * 1000})
+		NextPhase()
+	end)
 end
 
 function MapUtils:ToggleRenderProfiler()
