@@ -164,11 +164,28 @@ function D4:CreateGuildMap(options)
         return sender
     end
 
+    function Guild.GetOwnRosterName()
+        if Guild.ownRosterName ~= nil then return Guild.ownRosterName end
+        if not D4:IsForever() or UnitGUID == nil or GetNumGuildMembers == nil or GetGuildRosterInfo == nil then return nil end
+        local guid = UnitGUID("player")
+        if guid == nil or Guild.IsSecret(guid) then return nil end
+        for index = 1, GetNumGuildMembers() or 0 do
+            local memberName, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, memberGUID = GetGuildRosterInfo(index)
+            if memberGUID == guid and type(memberName) == "string" then
+                Guild.ownRosterName = strlower(strsplit("-", memberName))
+
+                return Guild.ownRosterName
+            end
+        end
+    end
+
     function Guild.IsSelfSender(sender)
         local name, realm = UnitFullName("player")
         if name == nil or sender == name then return true end
+        if realm ~= nil and realm ~= "" and sender == name .. "-" .. realm then return true end
+        local own = type(sender) == "string" and Guild.GetOwnRosterName()
 
-        return realm ~= nil and realm ~= "" and sender == name .. "-" .. realm
+        return own ~= nil and own == strlower(strsplit("-", sender))
     end
 
     function Guild.IsSelf(sender, name)
