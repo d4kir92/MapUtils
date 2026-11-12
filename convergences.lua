@@ -380,13 +380,6 @@ function Convergence.AddReceived(mapID, variant, x, y, rect, weight, sender)
 	return isNew
 end
 
-function Convergence.IsSelf(sender)
-	local name, realm = UnitFullName("player")
-	if name == nil or sender == name then return true end
-
-	return realm ~= nil and realm ~= "" and sender == name .. "-" .. realm
-end
-
 function Convergence.Send(message, chatType, target)
 	if C_ChatInfo == nil or C_ChatInfo.SendAddonMessage == nil then return false end
 	local ok, result = pcall(C_ChatInfo.SendAddonMessage, Convergence.prefix, message, chatType, target)
@@ -463,7 +456,7 @@ end
 
 function Convergence.OnAddonMessage(prefix, message, sender)
 	if prefix ~= Convergence.prefix or type(message) ~= "string" or type(sender) ~= "string" then return end
-	if Convergence.IsSecret(prefix, message, sender) or Convergence.IsSelf(sender) then return end
+	if Convergence.IsSecret(prefix, message, sender) or MapUtils.Comm.IsSelf(sender) then return end
 	if message == "Q" then
 		Convergence.Reply(sender)
 

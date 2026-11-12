@@ -180,9 +180,13 @@ function D4:CreateGuildMap(options)
     end
 
     function Guild.IsSelfSender(sender)
-        local name, realm = UnitFullName("player")
-        if name == nil or sender == name then return true end
-        if realm ~= nil and realm ~= "" and sender == name .. "-" .. realm then return true end
+        local key, ownName = D4:GetPlayerCharacterKey()
+        if key and (sender == key or sender == ownName) then return true end
+        if not key or D4:IsForever() then
+            local name, realm = UnitFullName("player")
+            if not D4:CanAccessValues(name, realm) or name == nil then return key == nil end
+            if sender == name or (realm ~= nil and realm ~= "" and sender == name .. "-" .. realm) then return true end
+        end
         local own = type(sender) == "string" and Guild.GetOwnRosterName()
 
         return own ~= nil and own == strlower(strsplit("-", sender))
