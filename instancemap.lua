@@ -106,6 +106,9 @@ local instanceMap = MapUtils:CreateInstanceMap(
 		["getEntranceText"] = function(row) return MapUtils:Trans(row[4] == "raid" and "LID_RAIDENTRANCE" or "LID_DUNGEONENTRANCE") end,
 		["isPinEnabled"] = function(kind) return MapUtils:IsDebug() or MapUtils:GetConfig("INSTANCEPINS_" .. strupper(kind), true) ~= false end,
 		["setPinEnabled"] = function(kind, enabled) MapUtils:SetSharedOption("INSTANCEPINS_" .. strupper(kind), enabled) end,
+		["getBossScale"] = function() return tonumber(MapUtils:GetConfig("INSTANCEPINS_BOSSSCALE", 1)) or 1 end,
+		["setBossScale"] = function(value) MapUtils:SetMapOption("INSTANCEPINS_BOSSSCALE", value) end,
+		["getBossScaleText"] = function(percent) return format(MapUtils:Trans("LID_BOSSPINSCALE"), percent) end,
 		["getToggleText"] = function(kind, enabled) return MapUtils:Trans("LID_" .. (enabled and "HIDE" or "SHOW") .. PIN_TOGGLE_KEYS[kind]) end,
 	}
 )

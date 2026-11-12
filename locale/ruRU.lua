@@ -10,6 +10,7 @@ MapUtils:AddTrans("ruRU", "LID_AREAPOIS", "Поселения и столицы"
 MapUtils:AddTrans("ruRU", "LID_BATTLEFIELDMAP", "Карта зоны (Shift+M)")
 MapUtils:AddTrans("ruRU", "LID_BATTLEFIELDMAPFADE", "Делать карту зоны прозрачной при движении (видна при наведении мыши)")
 MapUtils:AddTrans("ruRU", "LID_BATTLEFIELDMAPSCALE", "Масштабировать карту зоны (уголок справа внизу, 50% - 300%, только если не закреплена)")
+MapUtils:AddTrans("ruRU", "LID_BOSSPINSCALE", "Метки боссов: %d%%")
 MapUtils:AddTrans("ruRU", "LID_CAPITALPOIS", "Показывать значки столиц")
 MapUtils:AddTrans("ruRU", "LID_CAPITALS", "Столицы")
 MapUtils:AddTrans("ruRU", "LID_CENTERONPLAYER", "Отцентрировать карту на персонаже")
