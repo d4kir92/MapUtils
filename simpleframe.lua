@@ -186,6 +186,18 @@ local function ShrinkNavBar()
 		Shrink(child, factor, true)
 		ShrinkChildren(child, factor, false, 1)
 	end
+
+	local function HideTextures(frame)
+		for _, region in ipairs({frame:GetRegions()}) do
+			if region:IsObjectType("Texture") then HideObject(region) end
+		end
+
+		for _, child in ipairs({frame:GetChildren()}) do
+			if frame.MenuArrowButton ~= child then HideTextures(child) end
+		end
+	end
+
+	HideTextures(nav)
 end
 
 local function RestoreSizes()
