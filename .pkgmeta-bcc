@@ -32,6 +32,9 @@ ignore:
   - media/2998.blp
   - media/2999.blp
   - media/3065.blp
+  - media/900001.blp
+  - media/900002.blp
+  - media/900005.blp
   - media/minimaplod/lodmask_0e25141ec2.blp
   - media/minimaplod/lodmask_17b68c9db4.blp
   - media/minimaplod/lodmask_186448490c.blp

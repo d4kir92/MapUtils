@@ -90,6 +90,9 @@ ignore:
   - media/364.blp
   - media/365.blp
   - media/366.blp
+  - media/900001.blp
+  - media/900002.blp
+  - media/900005.blp
   - media/minimaplod/lodmask_0576698146.blp
   - media/minimaplod/lodmask_0ba163ebd8.blp
   - media/minimaplod/lodmask_0e25141ec2.blp
