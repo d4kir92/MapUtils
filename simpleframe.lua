@@ -190,7 +190,21 @@ local function ShrinkNavBar()
 
 	local function HideTextures(frame)
 		for _, region in ipairs({frame:GetRegions()}) do
-			if region:IsObjectType("Texture") then HideObject(region) end
+			if region:IsObjectType("Texture") then
+				HideObject(region)
+				region:SetAlpha(0)
+				if not region.mapUtilsNavHidden then
+					region.mapUtilsNavHidden = true
+					hooksecurefunc(
+						region,
+						"SetAlpha",
+						function(sel, alpha)
+							if not active or hidden[sel] == nil or alpha == 0 then return end
+							sel:SetAlpha(0)
+						end
+					)
+				end
+			end
 		end
 
 		for _, child in ipairs({frame:GetChildren()}) do
@@ -509,7 +523,11 @@ if MapUtils:IsSimpleMapFrameAvailable() then
 	if map.OnFrameSizeChanged ~= nil then hooksecurefunc(map, "OnFrameSizeChanged", MapUtils.Profile("simpleframe Layout", Layout)) end
 	if map.SynchronizeDisplayState ~= nil then hooksecurefunc(map, "SynchronizeDisplayState", MapUtils.Profile("simpleframe Layout", Layout)) end
 	if map.OnMapChanged ~= nil then hooksecurefunc(map, "OnMapChanged", function() C_Timer.After(0, ShrinkNavBar) end) end
-	if NavBar_AddButton ~= nil then hooksecurefunc("NavBar_AddButton", function(nav) if nav == map.NavBar then ShrinkNavBar() end end) end
+	if NavBar_AddButton ~= nil then hooksecurefunc("NavBar_AddButton", function(nav)
+		if nav ~= map.NavBar then return end
+		ShrinkNavBar()
+		C_Timer.After(0, ShrinkNavBar)
+	end) end
 	QuestMapFrame:HookScript("OnShow", Layout)
 	QuestMapFrame:HookScript("OnHide", Layout)
 	local events = CreateFrame("Frame")

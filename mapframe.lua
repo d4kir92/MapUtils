@@ -792,7 +792,7 @@ local SmoothZoom = {
 	speed = 12,
 	snapLog = 0.002,
 	settleEpsilon = 0.0005,
-	centerDuration = 0.8,
+	centerDuration = 1.4,
 }
 
 function MapUtils:IsOneMap()
@@ -1187,6 +1187,24 @@ function SmoothZoom.GlideOut(container)
 	SmoothZoom.userMoved = false
 
 	return SmoothZoom.Glide(container, container:GetScaleForMinZoom(), 0.5, 0.5)
+end
+
+function MapUtils:GlideToMap(mapID, x, y)
+	local container = WheelZoom.container
+	if frame == nil or container == nil or mapID == nil or IsLocked() then return false end
+	if not SmoothZoom.CanSwitch(container) or not SmoothZoom.IsSpace(mapID) then return false end
+	if container.mapID == mapID and x == nil then return false end
+	SmoothZoom.anim = nil
+	SmoothZoom.center = nil
+	MapLevelZoom.lastSwitch = GetTime()
+	WheelZoom.pending = nil
+	if container.mapID ~= mapID and not SmoothZoom.Switch(container, mapID, true) then return false end
+	SmoothZoom.userMoved = false
+	SmoothZoom.dragMapID = nil
+	local minScale = container:GetScaleForMinZoom()
+	if x == nil or y == nil then return SmoothZoom.Glide(container, minScale, 0.5, 0.5) end
+
+	return SmoothZoom.Glide(container, math.max(container:GetCanvasScale(), minScale), x, y)
 end
 
 function SmoothZoom.CheckPick(container, finishedDrag)

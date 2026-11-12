@@ -372,6 +372,15 @@ function Transport.AcquirePin(list, index, parent)
 		pin = CreateFrame("FRAME", nil, parent)
 		pin.texture = pin:CreateTexture(nil, "OVERLAY")
 		pin.texture:SetAllPoints(pin)
+		pin.outline = {}
+		for i = 1, 8 do
+			local texture = pin:CreateTexture(nil, "OVERLAY", nil, -1)
+			texture:SetVertexColor(0, 0, 0, 1)
+			if texture.SetSnapToPixelGrid ~= nil then texture:SetSnapToPixelGrid(false) end
+			if texture.SetTexelSnappingBias ~= nil then texture:SetTexelSnappingBias(0) end
+			pin.outline[i] = texture
+		end
+
 		pin:EnableMouse(true)
 		pin:SetScript("OnEnter", Transport.OnPinEnter)
 		pin:SetScript("OnLeave", Transport.OnPinLeave)
@@ -390,7 +399,20 @@ function Transport.ShowPin(pin, id, route, size, angle, zoning)
 		pin.icon = icon
 	end
 
-	pin.texture:SetRotation(route.kind == "tram" and 0 or angle)
+	local rotation = route.kind == "tram" and 0 or angle
+	pin.texture:SetRotation(rotation)
+	local _, physicalHeight = GetPhysicalScreenSize()
+	local effective = pin:GetEffectiveScale()
+	local step = (physicalHeight ~= nil and physicalHeight > 0 and effective > 0) and 768 / physicalHeight / effective or 1
+	for i, texture in ipairs(pin.outline) do
+		local outlineAngle = (i - 1) * math.pi / 4
+		texture:SetTexture(icon)
+		texture:SetRotation(rotation)
+		texture:ClearAllPoints()
+		texture:SetPoint("CENTER", pin, "CENTER", math.floor(math.cos(outlineAngle) + 0.5) * step, math.floor(math.sin(outlineAngle) + 0.5) * step)
+		texture:SetSize(size, size)
+	end
+
 	pin:SetAlpha(zoning and 0.45 or 1)
 	pin:ClearAllPoints()
 	pin:Show()

@@ -1630,18 +1630,101 @@ local function LayoutPinIcon(pin, size, x, y)
 	if not pin.splitIcon then
 		pin.texture:SetPoint("CENTER", pin, "CENTER", x, y)
 		pin.texture:SetSize(size, size)
-
-		return
+	else
+		pin.textureLeft:ClearAllPoints()
+		pin.textureLeft:SetPoint("RIGHT", pin, "CENTER", x, y)
+		pin.textureLeft:SetSize(size / 2, size)
+		pin.textureLeft:Show()
+		pin.textureRight:ClearAllPoints()
+		pin.textureRight:SetPoint("LEFT", pin, "CENTER", x, y)
+		pin.textureRight:SetSize(size / 2, size)
+		pin.textureRight:Show()
 	end
 
-	pin.textureLeft:ClearAllPoints()
-	pin.textureLeft:SetPoint("RIGHT", pin, "CENTER", x, y)
-	pin.textureLeft:SetSize(size / 2, size)
-	pin.textureLeft:Show()
-	pin.textureRight:ClearAllPoints()
-	pin.textureRight:SetPoint("LEFT", pin, "CENTER", x, y)
-	pin.textureRight:SetSize(size / 2, size)
-	pin.textureRight:Show()
+	local entry = pin.entry
+	local outlined = entry ~= nil and (entry.transport ~= nil or entry.kind == "spirithealer" or entry.kind == "flight")
+	if not outlined and pin.outline == nil then return end
+	local sources = pin.splitIcon and {pin.textureLeft, pin.textureRight} or {pin.texture}
+	pin.outline = pin.outline or {}
+	local used = 0
+	if outlined then
+		for _, source in ipairs(sources) do
+			local atlas = source.GetAtlas ~= nil and source:GetAtlas() or nil
+			for i = 1, 8 do
+				used = used + 1
+				local texture = pin.outline[used]
+				if texture == nil then
+					texture = pin:CreateTexture(nil, "OVERLAY", nil, -1)
+					if texture.SetSnapToPixelGrid ~= nil then texture:SetSnapToPixelGrid(false) end
+					if texture.SetTexelSnappingBias ~= nil then texture:SetTexelSnappingBias(0) end
+					pin.outline[used] = texture
+				end
+
+				if atlas ~= nil then
+					texture:SetAtlas(atlas)
+				else
+					texture:SetTexture(source:GetTexture())
+				end
+
+				texture:SetTexCoord(source:GetTexCoord())
+				texture:SetVertexColor(0, 0, 0, 1)
+				local angle = (i - 1) * math.pi / 4
+				texture.outlineSource = source
+				texture.outlineX, texture.outlineY = math.floor(math.cos(angle) + 0.5), math.floor(math.sin(angle) + 0.5)
+				texture:Show()
+			end
+		end
+	end
+
+	for i = used + 1, #pin.outline do
+		pin.outline[i]:Hide()
+	end
+
+	pin.outlineUsed = used
+	pin.outlineStep = nil
+	PinCache.PlaceOutline(pin)
+	if used > 0 then PinCache.WatchOutline(pin) end
+end
+
+function PinCache.PlaceOutline(pin)
+	local used = pin.outlineUsed or 0
+	if used == 0 then return end
+	local _, physicalHeight = GetPhysicalScreenSize()
+	local effective = pin:GetEffectiveScale()
+	local step = (physicalHeight ~= nil and physicalHeight > 0 and effective > 0) and 768 / physicalHeight / effective or (pin.pixel or 1)
+	if pin.outlineStep == step then return end
+	pin.outlineStep = step
+	for i = 1, used do
+		local texture = pin.outline[i]
+		local source = texture.outlineSource
+		local dx, dy = texture.outlineX * step, texture.outlineY * step
+		texture:ClearAllPoints()
+		texture:SetPoint("TOPLEFT", source, "TOPLEFT", dx, dy)
+		texture:SetPoint("BOTTOMRIGHT", source, "BOTTOMRIGHT", dx, dy)
+	end
+end
+
+function PinCache.WatchOutline(pin)
+	if PinCache.outlined == nil then
+		PinCache.outlined = setmetatable({}, {
+			__mode = "k"
+		})
+		PinCache.outlineWatcher = CreateFrame("Frame")
+		PinCache.outlineWatcher:SetScript(
+			"OnUpdate",
+			function()
+				for watched in pairs(PinCache.outlined) do
+					if (watched.outlineUsed or 0) == 0 then
+						PinCache.outlined[watched] = nil
+					elseif watched:IsVisible() then
+						PinCache.PlaceOutline(watched)
+					end
+				end
+			end
+		)
+	end
+
+	PinCache.outlined[pin] = true
 end
 
 local function ApplyEntryTint(pin, entry)
@@ -2414,7 +2497,13 @@ local function OnPinClick(pin, button)
 			ToggleWaypoint(pin.mapID, entry)
 		elseif button == "RightButton" and entry.kind ~= "dungeon" and entry.kind ~= "flight" and GetDestinationMapID(entry) ~= nil then
 			OnPinLeave(pin)
-			WorldMapFrame:SetMapID(GetDestinationMapID(entry))
+			local destMapID, destX, destY = GetDestinationMapID(entry), nil, nil
+			local route = type(entry.routes) == "table" and entry.routes[1] or nil
+			for _, other in ipairs(piers[destMapID] or {}) do
+				if route ~= nil and other.name == route.dest then destX, destY = other.x, other.y end
+			end
+
+			if MapUtils.GlideToMap == nil or not MapUtils:GlideToMap(destMapID, destX, destY) then WorldMapFrame:SetMapID(destMapID) end
 		elseif button == "RightButton" and entry.kind == "dungeon" and (entry.instanceMap or entry.instance) ~= nil and MapUtils.ShowInstanceMap ~= nil then
 			MapUtils:ShowInstanceMap(entry.instanceMap or entry.instance, entry.instanceMapLevel)
 		end
