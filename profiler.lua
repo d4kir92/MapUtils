@@ -483,6 +483,8 @@ function Profiler.CreateUI()
 	window.toggle:SetPoint("TOPLEFT", content, "TOPLEFT", 0, -4)
 	window.reset = Profiler.CreateButton(content, "Reset", 90, Profiler.Reset)
 	window.reset:SetPoint("LEFT", window.toggle, "RIGHT", 6, 0)
+	window.layers = Profiler.CreateButton(content, "Layers", 90, function() MapUtils:ToggleRenderProfiler() end)
+	window.layers:SetPoint("LEFT", window.reset, "RIGHT", 6, 0)
 	window.summary = content:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
 	window.summary:SetPoint("TOPLEFT", content, "TOPLEFT", 0, -32)
 	window.summary:SetPoint("RIGHT", content, "RIGHT", 0, 0)
@@ -611,6 +613,304 @@ function Profiler.Refresh()
 	end
 
 	Profiler.RefreshGraph()
+end
+
+Profiler.render = {
+	layers = {},
+	rowHeight = 18,
+	faintAlpha = 0.05,
+	fpsSamples = {},
+	columns = {
+		{title = "Layer", width = 190, justify = "LEFT"},
+		{title = "Frames", width = 56},
+		{title = "Textures", width = 64},
+		{title = "Masks", width = 56},
+		{title = "Faint", width = 50},
+		{title = "Text", width = 44},
+		{title = "", width = 70},
+	},
+}
+
+function MapUtils:RegisterRenderLayer(name, getter)
+	local render = Profiler.render
+	for _, layer in ipairs(render.layers) do
+		if layer.name == name then
+			layer.getter = getter
+
+			return
+		end
+	end
+
+	tinsert(render.layers, {name = name, getter = getter, enabled = true})
+end
+
+function Profiler.GetLayerFrames(layer)
+	local ok, result = pcall(layer.getter)
+	if not ok or result == nil then return {} end
+	if type(result) ~= "table" or result.GetObjectType ~= nil then return {result} end
+	local frames = {}
+	for _, frame in pairs(result) do
+		if type(frame) == "table" and frame.GetObjectType ~= nil then tinsert(frames, frame) end
+	end
+
+	return frames
+end
+
+function Profiler.GetAlpha(region)
+	if region.GetEffectiveAlpha ~= nil then return region:GetEffectiveAlpha() end
+
+	return region:GetAlpha()
+end
+
+function Profiler.CountRegion(region, stats)
+	if not region:IsVisible() then return end
+	local kind = region:GetObjectType()
+	if kind == "MaskTexture" then
+		stats.masks = stats.masks + 1
+	elseif kind == "Texture" or kind == "Line" then
+		stats.textures = stats.textures + 1
+		if Profiler.GetAlpha(region) < Profiler.render.faintAlpha then stats.faint = stats.faint + 1 end
+	elseif kind == "FontString" then
+		stats.text = stats.text + 1
+	end
+end
+
+function Profiler.CountFrame(frame, stats, skip)
+	if not frame:IsVisible() then return end
+	stats.frames = stats.frames + 1
+	for i = 1, select("#", frame:GetRegions()) do
+		Profiler.CountRegion(select(i, frame:GetRegions()), stats)
+	end
+
+	for i = 1, select("#", frame:GetChildren()) do
+		local child = select(i, frame:GetChildren())
+		if not skip[child] then Profiler.CountFrame(child, stats, skip) end
+	end
+end
+
+function Profiler.NewStats()
+	return {frames = 0, textures = 0, masks = 0, faint = 0, text = 0}
+end
+
+function Profiler.MeasureLayers()
+	local render = Profiler.render
+	local owner = {}
+	local framesOf = {}
+	for _, layer in ipairs(render.layers) do
+		framesOf[layer] = Profiler.GetLayerFrames(layer)
+		for _, frame in ipairs(framesOf[layer]) do
+			owner[frame] = layer
+		end
+	end
+
+	local results = {}
+	for _, layer in ipairs(render.layers) do
+		local stats = Profiler.NewStats()
+		for _, frame in ipairs(framesOf[layer]) do
+			local skip = {}
+			for other, otherLayer in pairs(owner) do
+				if other ~= frame and otherLayer ~= nil then skip[other] = true end
+			end
+
+			Profiler.CountFrame(frame, stats, skip)
+		end
+
+		results[layer] = stats
+	end
+
+	local canvas = Profiler.NewStats()
+	local child = WorldMapFrame and WorldMapFrame.ScrollContainer and WorldMapFrame.ScrollContainer.Child
+	if child then Profiler.CountFrame(child, canvas, {}) end
+
+	return results, canvas, owner
+end
+
+function Profiler.SetFrameHidden(frame, hidden)
+	if not frame.mapUtilsRenderHooked then
+		frame.mapUtilsRenderHooked = true
+		frame.mapUtilsWanted = frame:IsShown()
+		hooksecurefunc(frame, "Show", function(self)
+			if self.mapUtilsRenderGuard then return end
+			self.mapUtilsWanted = true
+			if self.mapUtilsRenderOff then
+				self.mapUtilsRenderGuard = true
+				self:Hide()
+				self.mapUtilsRenderGuard = false
+			end
+		end)
+		hooksecurefunc(frame, "Hide", function(self)
+			if self.mapUtilsRenderGuard then return end
+			self.mapUtilsWanted = false
+		end)
+		hooksecurefunc(frame, "SetShown", function(self, shown)
+			if self.mapUtilsRenderGuard then return end
+			self.mapUtilsWanted = shown and true or false
+			if shown and self.mapUtilsRenderOff then
+				self.mapUtilsRenderGuard = true
+				self:Hide()
+				self.mapUtilsRenderGuard = false
+			end
+		end)
+	end
+
+	if frame.mapUtilsRenderOff == hidden then return end
+	frame.mapUtilsRenderOff = hidden
+	frame.mapUtilsRenderGuard = true
+	if hidden then
+		frame.mapUtilsWanted = frame:IsShown()
+		frame:Hide()
+	elseif frame.mapUtilsWanted then
+		frame:Show()
+	end
+
+	frame.mapUtilsRenderGuard = false
+end
+
+function Profiler.ApplyLayers()
+	for _, layer in ipairs(Profiler.render.layers) do
+		if not layer.enabled or layer.touched then
+			for _, frame in ipairs(Profiler.GetLayerFrames(layer)) do
+				Profiler.SetFrameHidden(frame, not layer.enabled)
+			end
+
+			layer.touched = not layer.enabled
+		end
+	end
+end
+
+function Profiler.ToggleLayer(layer)
+	layer.enabled = not layer.enabled
+	layer.touched = true
+	Profiler.ApplyLayers()
+	wipe(Profiler.render.fpsSamples)
+	Profiler.RefreshRender()
+end
+
+function Profiler.CreateRenderRow(parent, index)
+	local render = Profiler.render
+	local row = CreateFrame("Frame", nil, parent)
+	row:SetHeight(render.rowHeight)
+	row:SetPoint("TOPLEFT", parent, "TOPLEFT", 0, -(64 + index * render.rowHeight))
+	row:SetPoint("RIGHT", parent, "RIGHT", 0, 0)
+	row.cells = {}
+	local x = 0
+	for i, column in ipairs(render.columns) do
+		if i < #render.columns then
+			local cell = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+			cell:SetPoint("LEFT", row, "LEFT", x + 2, 0)
+			cell:SetWidth(column.width - 4)
+			cell:SetJustifyH(column.justify or "RIGHT")
+			cell:SetWordWrap(false)
+			row.cells[i] = cell
+		else
+			row.button = Profiler.CreateButton(row, "On", column.width - 6, function()
+				if row.layer then Profiler.ToggleLayer(row.layer) end
+			end)
+			row.button:SetHeight(render.rowHeight)
+			row.button:SetPoint("LEFT", row, "LEFT", x + 4, 0)
+		end
+
+		x = x + column.width
+	end
+
+	return row
+end
+
+function Profiler.CreateRenderUI()
+	local render = Profiler.render
+	if render.window ~= nil then return render.window end
+	local window = MapUtils:CreateUIWindow({
+		name = "MapUtilsRenderProfiler", width = 600, height = 420,
+		title = "MapUtils Render Layers", resizable = false,
+	})
+	window:ClearAllPoints()
+	window:SetPoint("CENTER", 0, 0)
+	window:SetFrameStrata("DIALOG")
+	local content = window.content
+	content:SetWidth(math.max(window.contentWidth or 0, 530))
+	window.summary = content:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+	window.summary:SetPoint("TOPLEFT", content, "TOPLEFT", 0, -4)
+	window.summary:SetPoint("RIGHT", content, "RIGHT", 0, 0)
+	window.summary:SetJustifyH("LEFT")
+	window.summary:SetSpacing(2)
+	local x = 0
+	for _, column in ipairs(render.columns) do
+		local header = content:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+		header:SetPoint("TOPLEFT", content, "TOPLEFT", x + 2, -64)
+		header:SetWidth(column.width - 4)
+		header:SetJustifyH(column.justify or "RIGHT")
+		header:SetText(column.title)
+		x = x + column.width
+	end
+
+	window.rows = {}
+	local elapsed = 0
+	window:HookScript("OnUpdate", function(_, delta)
+		local samples = render.fpsSamples
+		tinsert(samples, GetFramerate())
+		if #samples > 120 then tremove(samples, 1) end
+		elapsed = elapsed + delta
+		if elapsed < 0.5 then return end
+		elapsed = 0
+		Profiler.ApplyLayers()
+		Profiler.RefreshRender()
+	end)
+	window:HookScript("OnShow", function()
+		wipe(render.fpsSamples)
+		Profiler.RefreshRender()
+	end)
+	render.window = window
+
+	return window
+end
+
+function Profiler.RefreshRender()
+	local render = Profiler.render
+	local window = render.window
+	if window == nil or not window:IsShown() then return end
+	local results, canvas = Profiler.MeasureLayers()
+	local fps = 0
+	for _, value in ipairs(render.fpsSamples) do
+		fps = fps + value
+	end
+
+	fps = #render.fpsSamples > 0 and fps / #render.fpsSamples or GetFramerate()
+	local own = Profiler.NewStats()
+	for _, stats in pairs(results) do
+		for key, value in pairs(stats) do
+			own[key] = own[key] + value
+		end
+	end
+
+	local mapShown = WorldMapFrame and WorldMapFrame:IsShown()
+	window.summary:SetText(format("FPS %.0f (%.1f ms)  |  map %s\nVisible on map canvas: %d frames, %d textures, %d masks (Blizzard + addons)\nMapUtils layers below: %d frames, %d textures, %d masks, %d faint (alpha < %d%%). Off hides the layer for testing.", fps, fps > 0 and 1000 / fps or 0, mapShown and "|cff40ff40open|r" or "|cffff6060closed|r", canvas.frames, canvas.textures, canvas.masks, own.frames, own.textures, own.masks, own.faint, render.faintAlpha * 100))
+	for i, layer in ipairs(render.layers) do
+		local row = window.rows[i]
+		if row == nil then
+			row = Profiler.CreateRenderRow(window.content, i)
+			window.rows[i] = row
+		end
+
+		local stats = results[layer] or Profiler.NewStats()
+		row.layer = layer
+		row.cells[1]:SetText(layer.name)
+		row.cells[1]:SetTextColor(layer.enabled and 1 or 0.5, layer.enabled and 1 or 0.5, layer.enabled and 1 or 0.5)
+		row.cells[2]:SetText(stats.frames)
+		row.cells[3]:SetText(stats.textures)
+		row.cells[4]:SetText(stats.masks)
+		row.cells[5]:SetText(stats.faint)
+		row.cells[6]:SetText(stats.text)
+		row.button:SetText(layer.enabled and "On" or "|cffff6060Off|r")
+		row:Show()
+	end
+
+	window.content:SetHeight(64 + (#render.layers + 2) * render.rowHeight)
+	if window.UpdateScroll ~= nil then window:UpdateScroll() end
+end
+
+function MapUtils:ToggleRenderProfiler()
+	local window = Profiler.CreateRenderUI()
+	window:SetShown(not window:IsShown())
 end
 
 function MapUtils:ToggleProfiler()

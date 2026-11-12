@@ -84,5 +84,6 @@ data\forever\zonemasks.lua
 zonedetail.lua
 data\forever\minimaptiles.lua
 data\forever\minimaplod.lua
+data\forever\minimapcoarse.lua
 debug.lua
 settings.lua

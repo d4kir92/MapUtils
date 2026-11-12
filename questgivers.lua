@@ -42,6 +42,7 @@ local SKILL_SPELLS = {
 local updater = CreateFrame("Frame", nil, WorldMapFrame)
 local pins = {}
 if MapUtils.CanvasPinLists ~= nil then tinsert(MapUtils.CanvasPinLists, pins) end
+if MapUtils.RegisterRenderLayer ~= nil then MapUtils:RegisterRenderLayer("Quest givers", function() return pins end) end
 local spots = {}
 local clusters = {}
 local sources = {}

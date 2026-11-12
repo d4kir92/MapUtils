@@ -108,6 +108,7 @@ if C_Map.GetMapChildrenInfo == nil or C_Map.GetMapRectOnMap == nil or C_QuestLog
 local updater = CreateFrame("Frame", nil, WorldMapFrame)
 local pins = {}
 tinsert(MapUtils.CanvasPinLists, pins)
+if MapUtils.RegisterRenderLayer ~= nil then MapUtils:RegisterRenderLayer("Quest turn-ins", function() return pins end) end
 local entries = {}
 local seen = {}
 local nativeQuests = {current = {}, pending = {}}

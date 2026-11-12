@@ -12,6 +12,7 @@ ignore:
   - data/cata/questgivers.lua
   - data/forever/instancepins.lua
   - data/forever/instances.lua
+  - data/forever/minimapcoarse.lua
   - data/forever/minimaplod.lua
   - data/forever/minimaptiles.lua
   - data/forever/questgivers.lua
@@ -21,6 +22,7 @@ ignore:
   - data/mists/instances.lua
   - data/mists/questgivers.lua
   - data/tbc/instances.lua
+  - data/tbc/minimapcoarse.lua
   - data/tbc/minimaplod.lua
   - data/tbc/minimaptiles.lua
   - data/tbc/questgivers.lua
@@ -29,6 +31,7 @@ ignore:
   - data/tbc/zonemasks.lua
   - data/wrath/instances.lua
   - data/wrath/questgivers.lua
+  - instancepins.lua
   - media/246.blp
   - media/256.blp
   - media/257.blp
@@ -94,6 +97,11 @@ ignore:
   - media/900002.blp
   - media/900003.blp
   - media/900005.blp
+  - media/minimapcoarse/coarse_forever_0.blp
+  - media/minimapcoarse/coarse_forever_1.blp
+  - media/minimapcoarse/coarse_tbc_0.blp
+  - media/minimapcoarse/coarse_tbc_1.blp
+  - media/minimapcoarse/coarse_tbc_530.blp
   - media/minimaplod/lodmask_0576698146.blp
   - media/minimaplod/lodmask_0ba163ebd8.blp
   - media/minimaplod/lodmask_0e25141ec2.blp
@@ -165,8 +173,6 @@ ignore:
   - media/minimaplod/lodmask_f6f8abdc7f.blp
   - media/minimaplod/lodmask_fabac684d2.blp
   - media/minimaplod/lod_006221578c.blp
-  - media/minimaplod/lod_0280547427.blp
-  - media/minimaplod/lod_03147f727a.blp
   - media/minimaplod/lod_059f00944e.blp
   - media/minimaplod/lod_05d32d9e45.blp
   - media/minimaplod/lod_0cf8cf6242.blp
@@ -175,7 +181,6 @@ ignore:
   - media/minimaplod/lod_1ef28a47c0.blp
   - media/minimaplod/lod_1f97b90175.blp
   - media/minimaplod/lod_1fb2a5a86f.blp
-  - media/minimaplod/lod_1ffc7d178f.blp
   - media/minimaplod/lod_20e3812bb5.blp
   - media/minimaplod/lod_2525c5af55.blp
   - media/minimaplod/lod_257f215d33.blp
@@ -185,7 +190,6 @@ ignore:
   - media/minimaplod/lod_297484995b.blp
   - media/minimaplod/lod_2b1717cbaf.blp
   - media/minimaplod/lod_2bded3b02a.blp
-  - media/minimaplod/lod_2e000fa7e8.blp
   - media/minimaplod/lod_2e31cc35cc.blp
   - media/minimaplod/lod_3406123a5a.blp
   - media/minimaplod/lod_36e9bf231a.blp
@@ -198,10 +202,8 @@ ignore:
   - media/minimaplod/lod_42c5aa7e43.blp
   - media/minimaplod/lod_4a613e703a.blp
   - media/minimaplod/lod_4eb2f3dc89.blp
-  - media/minimaplod/lod_563c9e888f.blp
   - media/minimaplod/lod_59965f4ae9.blp
   - media/minimaplod/lod_674d871b2d.blp
-  - media/minimaplod/lod_67e0d5f2fc.blp
   - media/minimaplod/lod_68f51627f8.blp
   - media/minimaplod/lod_697d3e1608.blp
   - media/minimaplod/lod_699ea6e34a.blp
@@ -209,22 +211,16 @@ ignore:
   - media/minimaplod/lod_6dc5382328.blp
   - media/minimaplod/lod_70c93e5b9e.blp
   - media/minimaplod/lod_7688c5f2fd.blp
-  - media/minimaplod/lod_772fc7f955.blp
   - media/minimaplod/lod_7ae97d5e06.blp
   - media/minimaplod/lod_7b55e0c450.blp
   - media/minimaplod/lod_7bbb3a3f99.blp
-  - media/minimaplod/lod_7d59159eca.blp
   - media/minimaplod/lod_80224df087.blp
-  - media/minimaplod/lod_89992888e7.blp
-  - media/minimaplod/lod_8ac5ec5f73.blp
   - media/minimaplod/lod_96bf0a9efb.blp
-  - media/minimaplod/lod_9743c65ab3.blp
   - media/minimaplod/lod_9b3658b53c.blp
   - media/minimaplod/lod_9cf96b18bf.blp
   - media/minimaplod/lod_a2d9bb95c8.blp
   - media/minimaplod/lod_a35ca05890.blp
   - media/minimaplod/lod_a5066fbc4a.blp
-  - media/minimaplod/lod_a862888c91.blp
   - media/minimaplod/lod_a938e88894.blp
   - media/minimaplod/lod_a94168b18a.blp
   - media/minimaplod/lod_ac4c204f0d.blp
@@ -232,11 +228,8 @@ ignore:
   - media/minimaplod/lod_b07e8b4611.blp
   - media/minimaplod/lod_b2094eabf1.blp
   - media/minimaplod/lod_b64163764c.blp
-  - media/minimaplod/lod_ba88be0169.blp
-  - media/minimaplod/lod_bb12600798.blp
   - media/minimaplod/lod_bdaced5647.blp
   - media/minimaplod/lod_be02680a9c.blp
-  - media/minimaplod/lod_be9c971948.blp
   - media/minimaplod/lod_beb6c6f0e7.blp
   - media/minimaplod/lod_c180efd8bc.blp
   - media/minimaplod/lod_c5a6e98c6c.blp
@@ -244,15 +237,11 @@ ignore:
   - media/minimaplod/lod_d0595a087c.blp
   - media/minimaplod/lod_d59565aec7.blp
   - media/minimaplod/lod_d6d767d27d.blp
-  - media/minimaplod/lod_d8303947c8.blp
-  - media/minimaplod/lod_dbe379f5e9.blp
-  - media/minimaplod/lod_ddd382d89e.blp
   - media/minimaplod/lod_dedefcbcfe.blp
   - media/minimaplod/lod_e054f5f39f.blp
   - media/minimaplod/lod_e25e833ec7.blp
   - media/minimaplod/lod_e54b465f97.blp
   - media/minimaplod/lod_e5ff57fb9b.blp
-  - media/minimaplod/lod_e6b8aaa1c7.blp
   - media/minimaplod/lod_fa4d560b89.blp
   - media/minimaplod/lod_fab2c66529.blp
   - media/zonemasks/137090_forever.blp

@@ -2752,6 +2752,7 @@ end
 local worldPins = {}
 MapUtils.CanvasPinLists = MapUtils.CanvasPinLists or {}
 tinsert(MapUtils.CanvasPinLists, worldPins)
+if MapUtils.RegisterRenderLayer ~= nil then MapUtils:RegisterRenderLayer("World pins", function() return worldPins end) end
 local worldPinPool = nil
 local worldMapID = nil
 local worldScale = nil
