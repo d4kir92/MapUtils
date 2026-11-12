@@ -528,10 +528,20 @@ function Profiler.CreateUI()
 		elapsed = 0
 		Profiler.Refresh()
 	end)
-	window:HookScript("OnShow", Profiler.Refresh)
+	window:HookScript("OnShow", function()
+		Profiler.UpdateScroll()
+		Profiler.Refresh()
+	end)
 	Profiler.window = window
 
 	return window
+end
+
+function Profiler.UpdateScroll()
+	local window = Profiler.window
+	if window == nil then return end
+	if window.UpdateScroll ~= nil then window:UpdateScroll() end
+	if window.scroll ~= nil and window.scroll.UpdateScrollChildRect ~= nil then window.scroll:UpdateScrollChildRect() end
 end
 
 function Profiler.FormatMs(value)
