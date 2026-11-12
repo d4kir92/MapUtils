@@ -773,6 +773,8 @@ function MapLevelZoom.OnMouseWheel(container, delta)
 end
 
 local SmoothZoom = {
+	extents = {time = 0},
+	extentsInterval = 0.5,
 	factor = 1.2,
 	spaceZoom = 12,
 	zoneZoom = 6,
@@ -880,7 +882,14 @@ end
 
 function SmoothZoom.WidenExtents(container)
 	if not MapUtils:IsOneMap() or container.mapID == nil then return end
-	container.scrollXExtentsMin, container.scrollXExtentsMax, container.scrollYExtentsMin, container.scrollYExtentsMax = SmoothZoom.GetExtents(container, container:GetCanvasScale())
+	local scale = container:GetCanvasScale()
+	local width, height = container:GetSize()
+	local now = GetTime()
+	local cache = SmoothZoom.extents
+	if cache.mapID == container.mapID and cache.scale == scale and cache.width == width and cache.height == height and now - cache.time < SmoothZoom.extentsInterval and container.scrollXExtentsMin == cache[1] and container.scrollXExtentsMax == cache[2] and container.scrollYExtentsMin == cache[3] and container.scrollYExtentsMax == cache[4] then return end
+	container.scrollXExtentsMin, container.scrollXExtentsMax, container.scrollYExtentsMin, container.scrollYExtentsMax = SmoothZoom.GetExtents(container, scale)
+	cache.mapID, cache.scale, cache.width, cache.height, cache.time = container.mapID, scale, width, height, now
+	cache[1], cache[2], cache[3], cache[4] = container.scrollXExtentsMin, container.scrollXExtentsMax, container.scrollYExtentsMin, container.scrollYExtentsMax
 end
 
 function SmoothZoom.SetView(container, scale, x, y, targetScale, targetX, targetY, preserveCityScale)

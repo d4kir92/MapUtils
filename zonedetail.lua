@@ -496,16 +496,33 @@ local function DrawZone(continentID, continentRect, mapID, mode, width, height)
 	zone.frame:Show()
 end
 
+local insideCache = {}
 local function IsInside(mapID, ancestorID)
+	if mapID == nil or ancestorID == nil then return false end
+	local cached = insideCache[mapID]
+	if cached ~= nil and cached[ancestorID] ~= nil then return cached[ancestorID] end
 	local info = C_Map.GetMapInfo(mapID)
+	if info == nil then return false end
+	local result = false
 	local guard = 0
 	while info ~= nil and info.parentMapID ~= nil and info.parentMapID > 0 and guard < 10 do
-		if info.parentMapID == ancestorID then return true end
+		if info.parentMapID == ancestorID then
+			result = true
+			break
+		end
+
 		info = C_Map.GetMapInfo(info.parentMapID)
 		guard = guard + 1
 	end
 
-	return false
+	if cached == nil then
+		cached = {}
+		insideCache[mapID] = cached
+	end
+
+	cached[ancestorID] = result
+
+	return result
 end
 
 MapUtils.IsMapInside = IsInside
@@ -688,8 +705,8 @@ local function GetMode(mapID)
 	return GetStyle(mapID) == "MAP" and not GetEmbeddedCityStyle(mapID) and MODE_OFF or MODE_AREAS
 end
 
-local function RawSpaceRect(mapID)
-	if mapID == nil then return nil end
+local rectCache = {}
+local function ComputeSpaceRect(mapID)
 	local space = GetSpace(mapID)
 	if space == nil then return nil end
 	if mapID == space then return 0, 1, 0, 1 end
@@ -702,6 +719,20 @@ local function RawSpaceRect(mapID)
 	local width, height = right - left, bottom - top
 
 	return -left / width, (1 - left) / width, -top / height, (1 - top) / height
+end
+
+local function RawSpaceRect(mapID)
+	if mapID == nil then return nil end
+	local cached = rectCache[mapID]
+	if cached == nil then
+		local left, right, top, bottom = ComputeSpaceRect(mapID)
+		cached = left ~= nil and {left, right, top, bottom} or false
+		rectCache[mapID] = cached
+	end
+
+	if cached == false then return nil end
+
+	return cached[1], cached[2], cached[3], cached[4]
 end
 
 local function GetSpaceRect(mapID)
@@ -724,7 +755,7 @@ function MapUtils:IsZoneDetailMap(mapID)
 end
 
 function MapUtils:GetZoneDetailSpaceRect(mapID)
-	if not MapUtils:IsZoneDetailMap(mapID) then return nil end
+	if GetMode() ~= MODE_FULL then return nil end
 
 	return GetSpaceRect(mapID)
 end

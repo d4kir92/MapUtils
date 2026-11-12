@@ -2779,7 +2779,10 @@ local function UpdateWorldPins()
 		convergencesOn = MapUtils:IsForever()
 	end
 	local baseLevel = GetWorldPinLevel(child)
-	if mapID == worldMapID and scale == worldScale and piersOn == worldPiers and dungeonsOn == worldDungeons and flightsOn == worldFlights and meetingStonesOn == worldMeetingStones and crossingsOn == worldCrossings and spiritHealersOn == worldSpiritHealers and convergencesOn == worldConvergences then
+	local sameState = mapID == worldMapID and piersOn == worldPiers and dungeonsOn == worldDungeons and flightsOn == worldFlights and meetingStonesOn == worldMeetingStones and crossingsOn == worldCrossings and spiritHealersOn == worldSpiritHealers and convergencesOn == worldConvergences
+	local zooming = sameState and scale ~= worldScale and scale ~= PinCache.seenScale and #worldPins > 0
+	PinCache.seenScale = scale
+	if sameState and (scale == worldScale or zooming) then
 		for _, pin in ipairs(worldPins) do
 			pin.baseLevel = baseLevel
 			UpdatePinLevel(pin, pin.entry ~= nil and IsEntryWaypoint(pin.mapID, pin.entry))
