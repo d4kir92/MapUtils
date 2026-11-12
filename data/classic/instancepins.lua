@@ -20,9 +20,9 @@ pins["291"] = {
 }
 pins["292"] = {
 	{"level", 0.123, 0.883, "291", true},
-	{"boss", 0.561, 0.265, 646, "Mr. Smite <The Ship's First Mate>", 20, 2026, 1},
-	{"boss", 0.632, 0.389, 647, "Captain Greenskin", 20, 7113, 1},
-	{"boss", 0.603, 0.455, 639, "Edwin VanCleef <Defias Kingpin>", 21, 2029, 1},
+	{"boss", 0.531, 0.175, 646, "Mr. Smite <The Ship's First Mate>", 20, 2026, 1},
+	{"boss", 0.604, 0.375, 647, "Captain Greenskin", 20, 7113, 1},
+	{"boss", 0.604, 0.448, 639, "Edwin VanCleef <Defias Kingpin>", 21, 2029, 1},
 	{"boss", 0.668, 0.398, 645, "Cookie <The Ship's Cook>", 20, 1305, 1},
 }
 pins["279"] = {
@@ -96,18 +96,18 @@ pins["221"] = {
 	{"boss", 0.329, 0.602, 4887, "Ghamoo-ra", 25, 5027, 1},
 	{"boss", 0.101, 0.360, 4831, "Lady Sarevess", 25, 4979, 1},
 	{"boss", 0.536, 0.568, 6243, "Gelihast", 26, 1773, 1},
-	{"boss", 0.614, 0.625, 12902, "Lorgus Jett", 26, 12822, 1},
 }
 pins["222"] = {
 	{"level", 0.477, 0.707, "223"},
 	{"level", 0.350, 0.290, "221"},
 	{"boss", 0.519, 0.816, 4832, "Twilight Lord Kelris", 27, 4939, 1},
 	{"boss", 0.856, 0.866, 4829, "Aku'mai", 28, 2837, 1},
+	{"boss", 0.334, 0.695, 12902, "Lorgus Jett", 26, 12822, 1},
+	{"boss", 0.407, 0.720, 12876, "Baron Aquanis", 28, 110, 1},
 }
 pins["223"] = {
 	{"level", 0.300, 0.612, "222", true},
 	{"boss", 0.606, 0.312, 4830, "Old Serra'kis", 26, 1816, 1},
-	{"boss", 0.234, 0.498, 12876, "Baron Aquanis", 28, 110, 1},
 }
 pins["226"] = {
 	{"entrance", 0.644, 0.275},
@@ -121,6 +121,7 @@ pins["227"] = {
 	{"level", 0.430, 0.830, "226", true},
 	{"level", 0.640, 0.580, "226", true},
 	{"boss", 0.755, 0.450, 7079, "Viscous Fallout", 30, 5497, 1},
+	{"boss", 0.242, 0.678, 6235, "Electrocutioner 6000", 32, 6915, 1},
 }
 pins["228"] = {
 	{"entrance", 0.870, 0.480},
@@ -132,8 +133,7 @@ pins["228"] = {
 pins["229"] = {
 	{"level", 0.481, 0.540, "228", true},
 	{"level", 0.710, 0.773, "228", true},
-	{"boss", 0.508, 0.331, 6235, "Electrocutioner 6000", 32, 6915, 1},
-	{"boss", 0.295, 0.540, 6228, "Dark Iron Ambassador", 41, 6669, 2},
+	{"boss", 0.465, 0.640, 6228, "Dark Iron Ambassador", 41, 6669, 2},
 	{"boss", 0.313, 0.300, 7800, "Mekgineer Thermaplugg", 34, 6980, 1},
 }
 pins["301"] = {

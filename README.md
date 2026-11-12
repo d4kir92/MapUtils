@@ -55,7 +55,7 @@ MapUtils includes translations for all World of Warcraft client locales:
 
 - Combat pin handling (`CombatPins` in `mapframe.lua`) adapted from [OpenMap](https://github.com/openmap-world/openmap) (MIT, © 2026 OpenMap contributors). See `THIRD_PARTY_LICENSES.md`.
 - Quest giver and quest turn-in data derived from [QuestieDB](https://github.com/Questie/QuestieDB) and [Questie](https://github.com/Questie/Questie) (GPLv3). See `THIRD_PARTY_LICENSES.md`.
-- WoW Forever dungeon maps (City of Dalaran, Excavation Site: Wetlands, Ruins of Lordaeron, Hall of the Thanes, The Drowned City, Krol'dok Stronghold, Shaper's Terrace) by [Santiago Reyes - Atlas de Azeroth: Forever](https://asguevara433.wixsite.com/srmaps/post/proyecto-atlas-de-azeroth-forever), used with the author's general permission for addons. Watermarks and credits are kept in the art.
+- WoW Forever dungeon maps (City of Dalaran, Excavation Site: Wetlands, Ruins of Lordaeron, Hall of the Thanes, The Drowned City, Krol'dok Stronghold, Alcaz Prison, Shaper's Terrace) by [Santiago Reyes - Atlas de Azeroth: Forever](https://asguevara433.wixsite.com/srmaps/post/proyecto-atlas-de-azeroth-forever), used with the author's general permission for addons. Watermarks and credits are kept in the art.
 
 ## License
 

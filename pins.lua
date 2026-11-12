@@ -918,6 +918,7 @@ AddDungeon(
 	{
 		["name"] = "Alcaz Prison",
 		["foreverOnly"] = true,
+		["instanceMap"] = 900003,
 		["minLevel"] = 48,
 		["maxLevel"] = 53,
 	},
