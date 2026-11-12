@@ -1047,7 +1047,7 @@ base.cull = {
 	interval = 0.1,
 	hideDelay = 0.3,
 	switchWindow = 0.6,
-	minZoneScale = 0.3
+	minZoneScale = 0.05
 }
 
 function base.cull.Track(region)

@@ -444,7 +444,18 @@ function MapUtils:InitSetting()
 	AddCategory("MAPLABELS", 2)
 	AddCVarCheckbox("worldMapShowPlayerCoords", "LID_SHOWPLAYERCOORDS", ADDED_1019)
 	AddCVarCheckbox("worldMapShowCursorCoords", "LID_SHOWCURSORCOORDS", ADDED_1019)
-	if MapUtils:HasCoordsCVar("worldMapShowPlayerCoords") then maset:AddDependency(AddCheckbox("COORDSIMPROVEMENTS", true, function() MapUtils:RefreshCoords() end, nil, "2026-10-06"), IsAnyCoordsShown) end
+	maset:AddDependency(
+		AddDropdown(
+			"COORDSSTYLE",
+			"WIDGET",
+			{
+				{["value"] = "WIDGET", ["label"] = MapUtils:Trans("LID_COORDSSTYLEWIDGET")},
+				{["value"] = "POSITION", ["label"] = MapUtils:Trans("LID_COORDSSTYLEPOSITION")}
+			},
+			function() MapUtils:RefreshCoords() end, nil, "2026-11-12"
+		),
+		IsAnyCoordsShown
+	)
 	maset:AddDependency(AddCVarCheckbox("coordsByTenths", "LID_COORDSBYTENTHS", ADDED_1019), IsAnyCoordsShown)
 	AddCheckbox("ZONELEVELS", true)
 	AddCheckbox("ZONERECLEVELS", true, nil, nil, "2026-10-02")
