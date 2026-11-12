@@ -27,7 +27,7 @@ local Transport = {
 	lastAnnounce = {},
 	received = {},
 	queryGap = 600,
-	staleAge = 2 * 86400,
+	staleQueryGap = 1800,
 	maxAge = 30 * 86400,
 	selfPriority = 6 * 3600,
 	futureTolerance = 5,
@@ -796,25 +796,42 @@ function Transport.SendData(ids, dist, target)
 	if #parts > 0 then MapUtils.Comm.Send("T", "!" .. Transport.GetCode() .. table.concat(parts, ";"), dist, target) end
 end
 
+function Transport.IsStale(known)
+	return Transport.IsOutdated(known) or Transport.Now() - known.t > Transport.driftAge
+end
+
 function Transport.GetWanted()
-	local ids = {}
+	local missing, stale = {}, {}
 	for id in pairs(Transport.GetRoutes()) do
 		local known = Transport.GetKnown(id)
-		if known == nil or Transport.IsOutdated(known) or Transport.Now() - known.t > Transport.staleAge then tinsert(ids, id) end
+		if known == nil then
+			tinsert(missing, id)
+		elseif Transport.IsStale(known) then
+			tinsert(stale, id)
+		end
 	end
 
-	table.sort(ids)
+	table.sort(missing)
+	table.sort(stale)
 
-	return ids
+	return missing, stale
 end
 
 function Transport.Query(force)
 	if not Transport.SyncEnabled() then return end
-	if not force and Transport.lastQuery ~= nil and GetTime() - Transport.lastQuery < Transport.queryGap then return end
-	local ids = Transport.GetWanted()
-	if #ids == 0 then return end
-	Transport.lastQuery = GetTime()
-	MapUtils.Comm.Send("T", "?" .. Transport.GetCode() .. table.concat(ids, ","), "ALL")
+	local now = GetTime()
+	if not force and Transport.lastQuery ~= nil and now - Transport.lastQuery < Transport.queryGap then return end
+	local missing, stale = Transport.GetWanted()
+	if #stale > 0 and not force and Transport.lastStaleQuery ~= nil and now - Transport.lastStaleQuery < Transport.staleQueryGap then wipe(stale) end
+	if #missing == 0 and #stale == 0 then return end
+	Transport.lastQuery = now
+	local body = table.concat(missing, ",")
+	if #stale > 0 then
+		Transport.lastStaleQuery = now
+		body = body .. "|" .. table.concat(stale, ",")
+	end
+
+	MapUtils.Comm.Send("T", "?" .. Transport.GetCode() .. body, "ALL")
 end
 
 function Transport.QueueAnnounce(id)
@@ -861,14 +878,17 @@ function Transport.OnQuery(body, chatType)
 
 	local fresh = false
 	local count = 0
-	for idText in body:gmatch("%d+") do
-		local id = tonumber(idText)
-		local known = id ~= nil and Transport.GetKnown(id) or nil
-		count = count + 1
-		if count > 32 then break end
-		if known ~= nil and known.s == "self" and not Transport.IsOutdated(known) then
-			pending.ids[id] = true
-			if Transport.Now() - known.t < 3600 then fresh = true end
+	local missingText, staleText = body:match("^([^|]*)|?(.*)$")
+	for _, part in ipairs({{missingText or "", false}, {staleText or "", true}}) do
+		for idText in part[1]:gmatch("%d+") do
+			local id = tonumber(idText)
+			local known = id ~= nil and Transport.GetKnown(id) or nil
+			count = count + 1
+			if count > 32 then break end
+			if known ~= nil and known.s == "self" and not Transport.IsOutdated(known) and (not part[2] or not Transport.IsStale(known)) then
+				pending.ids[id] = true
+				if Transport.Now() - known.t < 3600 then fresh = true end
+			end
 		end
 	end
 
