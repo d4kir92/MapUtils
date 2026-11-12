@@ -22,6 +22,21 @@ local function IsEnabled(key)
 	return MapUtils:IsCoordsOptionEnabled(key)
 end
 
+local state = {optionsTime = -1, optionsInterval = 0.5, version = 0, last = {}}
+local function ReadOptions()
+	local now = GetTime()
+	if now - state.optionsTime < state.optionsInterval then return end
+	state.optionsTime = now
+	local enabled = MapUtils:GetConfig("COORDSIMPROVEMENTS", true) == true or not MapUtils:HasCoordsCVar("worldMapShowPlayerCoords")
+	local cursorOn = IsEnabled("worldMapShowCursorCoords")
+	local playerOn = IsEnabled("worldMapShowPlayerCoords")
+	local tenths = IsEnabled("coordsByTenths")
+	if enabled ~= state.enabled or cursorOn ~= state.cursorOn or playerOn ~= state.playerOn or tenths ~= state.tenths then
+		state.enabled, state.cursorOn, state.playerOn, state.tenths = enabled, cursorOn, playerOn, tenths
+		state.version = state.version + 1
+	end
+end
+
 local function ShowCoords(label, x, y, px, py, width, height, offsetY)
 	if x == nil or y == nil or px == nil or py == nil or x < 0 or x > 1 or y < 0 or y > 1 then
 		label:Hide()
@@ -31,7 +46,7 @@ local function ShowCoords(label, x, y, px, py, width, height, offsetY)
 	label:ClearAllPoints()
 	label:SetPoint("CENTER", updater, "TOPLEFT", width * math.max(0.1, math.min(0.9, px)), -height * math.max(0.1, math.min(0.9, py + offsetY)))
 	local text
-	if IsEnabled("coordsByTenths") then
+	if state.tenths then
 		text = format("%.1f, %.1f", x * 100, y * 100)
 	else
 		text = format("%d, %d", math.floor(x * 100 + 0.5), math.floor(y * 100 + 0.5))
@@ -93,47 +108,100 @@ local function RefreshNativeCoords(enabled)
 	end
 end
 
-function MapUtils:RefreshCoords()
-	if updater == nil then return end
+local function HideAll()
 	updater.player:Hide()
 	updater.cursor:Hide()
-	local enabled = MapUtils:GetConfig("COORDSIMPROVEMENTS", true) == true or not MapUtils:HasCoordsCVar("worldMapShowPlayerCoords")
-	RefreshNativeCoords(enabled)
-	if not enabled then return end
+	state.last.version = nil
+end
+
+local function RefreshCursor(scroll, width, height, scrollScale, scrollLeft, scrollTop, viewChanged)
+	local last = state.last
+	if not state.cursorOn or scroll.GetNormalizedCursorPosition == nil or not scroll:IsMouseOver() then
+		if last.cx ~= nil then
+			updater.cursor:Hide()
+			last.cx, last.cy = nil, nil
+		end
+
+		return
+	end
+
+	local cx, cy = GetCursorPosition()
+	if not viewChanged and cx == last.cx and cy == last.cy then return end
+	last.cx, last.cy = cx, cy
+	local x, y = scroll:GetNormalizedCursorPosition()
+	local px, py = (cx / scrollScale - scrollLeft) / width, (scrollTop - cy / scrollScale) / height
+	if px >= 0 and px <= 1 and py >= 0 and py <= 1 then
+		ShowCoords(updater.cursor, x, y, px, py, width, height, -0.1)
+	else
+		updater.cursor:Hide()
+	end
+end
+
+local function RefreshPlayer(child, mapID, width, height, scrollScale, childScale, scrollLeft, scrollTop, viewChanged)
+	local last = state.last
+	if not state.playerOn or C_Map == nil or C_Map.GetPlayerMapPosition == nil then
+		updater.player:Hide()
+		last.wx, last.wy = nil, nil
+
+		return
+	end
+
+	local wy, wx = UnitPosition("player")
+	if not viewChanged and wx ~= nil and wx == last.wx and wy == last.wy then return end
+	last.wx, last.wy = wx, wy
+	local x, y = GetPlayerPos(mapID)
+	local left, top = child:GetLeft(), child:GetTop()
+	local childWidth, childHeight = child:GetSize()
+	if x == nil or y == nil or left == nil or top == nil or childWidth == nil or childHeight == nil then
+		updater.player:Hide()
+
+		return
+	end
+
+	local scale = childScale / scrollScale
+	local px = (left * scale - scrollLeft + x * childWidth * scale) / width
+	local py = (scrollTop - top * scale + y * childHeight * scale) / height
+	if px >= 0 and px <= 1 and py >= 0 and py <= 1 then
+		ShowCoords(updater.player, x, y, px, py, width, height, 0.1)
+	else
+		updater.player:Hide()
+	end
+end
+
+function MapUtils:RefreshCoords()
+	if updater == nil then return end
+	ReadOptions()
+	RefreshNativeCoords(state.enabled)
+	if not state.enabled then
+		HideAll()
+
+		return
+	end
+
 	local map = WorldMapFrame
 	local scroll = map.ScrollContainer
 	local child = scroll.Child
 	local width, height = scroll:GetSize()
-	if width == nil or height == nil or width <= 0 or height <= 0 then return end
-	if child == nil then return end
-	local childWidth, childHeight = child:GetSize()
-	if childWidth == nil or childHeight == nil or childWidth <= 0 or childHeight <= 0 then return end
-	local scrollScale, childScale = scroll:GetEffectiveScale(), child:GetEffectiveScale()
-	if scrollScale == nil or childScale == nil or scrollScale <= 0 or childScale <= 0 then return end
-	if IsEnabled("worldMapShowCursorCoords") and scroll.GetNormalizedCursorPosition ~= nil then
-		local x, y = scroll:GetNormalizedCursorPosition()
-		local cx, cy = GetCursorPosition()
-		local scale = scrollScale
-		local left, top = scroll:GetLeft(), scroll:GetTop()
-		if left ~= nil and top ~= nil then
-			local px, py = (cx / scale - left) / width, (top - cy / scale) / height
-			if px >= 0 and px <= 1 and py >= 0 and py <= 1 then ShowCoords(updater.cursor, x, y, px, py, width, height, -0.1) end
-		end
+	local scrollScale = scroll:GetEffectiveScale()
+	local childScale = child and child:GetEffectiveScale()
+	local scrollLeft, scrollTop = scroll:GetLeft(), scroll:GetTop()
+	if child == nil or width == nil or height == nil or width <= 0 or height <= 0 or scrollScale == nil or scrollScale <= 0 or childScale == nil or childScale <= 0 or scrollLeft == nil or scrollTop == nil then
+		HideAll()
+
+		return
 	end
 
-	if IsEnabled("worldMapShowPlayerCoords") and C_Map and C_Map.GetPlayerMapPosition and child ~= nil then
-		local x, y = GetPlayerPos(map:GetMapID())
-		if x ~= nil and y ~= nil then
-			local scale = childScale / scrollScale
-			local left, top = child:GetLeft(), child:GetTop()
-			local scrollLeft, scrollTop = scroll:GetLeft(), scroll:GetTop()
-			if left ~= nil and top ~= nil and scrollLeft ~= nil and scrollTop ~= nil then
-				local px = (left * scale - scrollLeft + x * childWidth * scale) / width
-				local py = (scrollTop - top * scale + y * childHeight * scale) / height
-				if px >= 0 and px <= 1 and py >= 0 and py <= 1 then ShowCoords(updater.player, x, y, px, py, width, height, 0.1) end
-			end
-		end
+	local left, top = child:GetLeft(), child:GetTop()
+	local mapID = map:GetMapID()
+	local last = state.last
+	local viewChanged = last.version ~= state.version or last.mapID ~= mapID or last.width ~= width or last.height ~= height or last.scrollScale ~= scrollScale or last.childScale ~= childScale or last.scrollLeft ~= scrollLeft or last.scrollTop ~= scrollTop or last.left ~= left or last.top ~= top
+	if viewChanged then
+		last.version, last.mapID, last.width, last.height = state.version, mapID, width, height
+		last.scrollScale, last.childScale, last.scrollLeft, last.scrollTop, last.left, last.top = scrollScale, childScale, scrollLeft, scrollTop, left, top
 	end
+
+	RefreshCursor(scroll, width, height, scrollScale, scrollLeft, scrollTop, viewChanged)
+	RefreshPlayer(child, mapID, width, height, scrollScale, childScale, scrollLeft, scrollTop, viewChanged)
 end
 
 local function InitCoords()
@@ -151,6 +219,8 @@ local function InitCoords()
 	updater:SetScript("OnShow", function()
 		updater.player:Hide()
 		updater.cursor:Hide()
+		state.last = {}
+		state.optionsTime = -1
 	end)
 	updater:SetScript("OnUpdate", MapUtils.Profile("coords OnUpdate", function() MapUtils:RefreshCoords() end))
 end
