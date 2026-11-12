@@ -818,17 +818,24 @@ function Profiler.CountRegion(region, stats)
 	end
 end
 
+function Profiler.CountRegions(stats, ...)
+	for i = 1, select("#", ...) do
+		Profiler.CountRegion(select(i, ...), stats)
+	end
+end
+
+function Profiler.CountChildren(stats, skip, ...)
+	for i = 1, select("#", ...) do
+		local child = select(i, ...)
+		if not skip[child] then Profiler.CountFrame(child, stats, skip) end
+	end
+end
+
 function Profiler.CountFrame(frame, stats, skip)
 	if not frame:IsVisible() then return end
 	stats.frames = stats.frames + 1
-	for i = 1, select("#", frame:GetRegions()) do
-		Profiler.CountRegion(select(i, frame:GetRegions()), stats)
-	end
-
-	for i = 1, select("#", frame:GetChildren()) do
-		local child = select(i, frame:GetChildren())
-		if not skip[child] then Profiler.CountFrame(child, stats, skip) end
-	end
+	Profiler.CountRegions(stats, frame:GetRegions())
+	Profiler.CountChildren(stats, skip, frame:GetChildren())
 end
 
 function Profiler.NewStats()
@@ -850,12 +857,7 @@ function Profiler.MeasureLayers()
 	for _, layer in ipairs(render.layers) do
 		local stats = Profiler.NewStats()
 		for _, frame in ipairs(framesOf[layer]) do
-			local skip = {}
-			for other, otherLayer in pairs(owner) do
-				if other ~= frame and otherLayer ~= nil then skip[other] = true end
-			end
-
-			Profiler.CountFrame(frame, stats, skip)
+			Profiler.CountFrame(frame, stats, owner)
 		end
 
 		results[layer] = stats

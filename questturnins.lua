@@ -66,7 +66,17 @@ function MapUtils:UpdateCanvasPinsNow()
 end
 
 if WorldMapFrame ~= nil and WorldMapFrame.OnCanvasScaleChanged ~= nil then hooksecurefunc(WorldMapFrame, "OnCanvasScaleChanged", MapUtils.Profile("questturnins canvas scale", function() MapUtils:RescaleCanvasPins() end)) end
-if WorldMapFrame ~= nil and WorldMapFrame.OnMapChanged ~= nil then hooksecurefunc(WorldMapFrame, "OnMapChanged", MapUtils.Profile("questturnins map changed", function() MapUtils:UpdateCanvasPinsNow() end)) end
+function MapUtils:QueueCanvasPinsUpdate()
+	MapUtils:RescaleCanvasPins()
+	if MapUtils.canvasPinsQueued then return end
+	MapUtils.canvasPinsQueued = true
+	C_Timer.After(0, function()
+		MapUtils.canvasPinsQueued = false
+		MapUtils:UpdateCanvasPinsNow()
+	end)
+end
+
+if WorldMapFrame ~= nil and WorldMapFrame.OnMapChanged ~= nil then hooksecurefunc(WorldMapFrame, "OnMapChanged", MapUtils.Profile("questturnins map changed", function() MapUtils:QueueCanvasPinsUpdate() end)) end
 function MapUtils:GetOneMapQuestSources(mapID)
 	if mapID == nil or MapUtils.IsOneMap == nil or not MapUtils:IsOneMap() or MapUtils.IsZoneDetailMap == nil or MapUtils.GetZoneDetailSources == nil or not MapUtils:IsZoneDetailMap(mapID) then return nil end
 	local cache = MapUtils.OneMapQuestSources

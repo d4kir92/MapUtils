@@ -322,7 +322,16 @@ function QG.GetTurnIns(giver)
 end
 
 function QG.GetAvailableCache()
-	local key = format("%d:%d:%d:%s:%s", player.level or 0, player.green or 0, player.side or 0, tostring(QG.showStarts), tostring(QG.showEnds))
+	local logCount, logSum, doneCount, doneSum = 0, 0, 0, 0
+	for questID in pairs(inLog) do
+		logCount, logSum = logCount + 1, logSum + questID
+	end
+
+	for questID in pairs(complete) do
+		doneCount, doneSum = doneCount + 1, doneSum + questID
+	end
+
+	local key = format("%d:%d:%d:%s:%s:%d:%d:%d:%d", player.level or 0, player.green or 0, player.side or 0, tostring(QG.showStarts), tostring(QG.showEnds), logCount, logSum, doneCount, doneSum)
 	for index = 1, #CATEGORY_KEYS do
 		key = key .. (enabledCategories[index] and "1" or "0")
 	end
@@ -876,6 +885,12 @@ updater:RegisterEvent("MODIFIER_STATE_CHANGED")
 updater:SetScript(
 	"OnEvent",
 	function(_, event)
+		if event == "QUEST_LOG_UPDATE" then
+			dirty = true
+
+			return
+		end
+
 		if event ~= "MODIFIER_STATE_CHANGED" then
 			dirty = true
 			QG.stale = true
