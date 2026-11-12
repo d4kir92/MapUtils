@@ -29,7 +29,7 @@ function UI.WindowMixin:AddCheckbox(tab)
         cb.row = row
     end
 
-    local element = UI:Add(win, holder, UI.ROW, text, true, tab.search, tab.added)
+    local element = UI:Add(win, holder, UI.ROW, text, true, tab.search, tab.added, tab)
     cb.uiElement = element
     function cb:UpdateLabel()
         if tab.textFunc == nil then return end
