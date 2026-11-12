@@ -83,4 +83,5 @@ data\tbc\minimaptiles.lua
 data\tbc\minimaplod.lua
 data\tbc\minimapcoarse.lua
 debug.lua
+importexport.lua
 settings.lua

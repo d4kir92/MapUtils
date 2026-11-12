@@ -78,4 +78,5 @@ battlefieldmap.lua
 reveal.lua
 zonedetail.lua
 debug.lua
+importexport.lua
 settings.lua

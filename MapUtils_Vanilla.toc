@@ -81,4 +81,5 @@ data\era\minimaptiles.lua
 data\era\minimaplod.lua
 data\era\minimapcoarse.lua
 debug.lua
+importexport.lua
 settings.lua

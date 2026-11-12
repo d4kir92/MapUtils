@@ -86,4 +86,5 @@ data\forever\minimaptiles.lua
 data\forever\minimaplod.lua
 data\forever\minimapcoarse.lua
 debug.lua
+importexport.lua
 settings.lua

@@ -582,11 +582,13 @@ end
 
 function EditMode.ShowPanel(element)
 	local panel = EditMode.CreatePanel()
+	local keepPosition = panel:IsShown() and panel.element == element
 	if panel.element ~= nil and panel.element ~= element and panel.element.mover ~= nil then EditMode.Skin(panel.element.mover, false) end
 	panel.element = element
 	EditMode.Skin(element.mover, true)
 	EditMode.LayoutPanel(panel, element)
 	EditMode.RefreshPanel()
+	if keepPosition then return end
 	local point = EditMode.Get(element, "POINT", nil) or element.defaultPoint[1]
 	panel:ClearAllPoints()
 	if point:sub(1, 3) == "TOP" or point == "LEFT" or point == "RIGHT" then
@@ -596,6 +598,12 @@ function EditMode.ShowPanel(element)
 	end
 
 	panel:Show()
+	local left, top = panel:GetLeft(), panel:GetTop()
+	local mapLeft, mapBottom = map:GetLeft(), map:GetBottom()
+	if left and top and mapLeft and mapBottom then
+		panel:ClearAllPoints()
+		panel:SetPoint("TOPLEFT", map, "BOTTOMLEFT", left - mapLeft, top - mapBottom)
+	end
 end
 
 function EditMode.ShowChoiceMenu(owner, name, values, keys, default)

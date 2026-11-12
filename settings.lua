@@ -1,7 +1,9 @@
 local _, MapUtils = ...
 local ICON = MapUtils:GetAddonIcon()
-local DEFAULT_WIDTH = 420
-local DEFAULT_HEIGHT = 300
+local DEFAULT_WIDTH = 620
+local DEFAULT_HEIGHT = 420
+local MIN_WIDTH = 500
+local DISCORD = "https://discord.gg/RaQas87749"
 local ADDED_0927 = "2026-09-27"
 local ADDED_0928 = "2026-09-28"
 local ADDED_1003 = "2026-10-03"
@@ -314,9 +316,10 @@ function MapUtils:InitSetting()
 	maset = MapUtils:CreateUIWindow({
 		["name"] = "MapUtilsSettings",
 		["pTab"] = {"CENTER"},
-		["width"] = MapUtils:GetConfig("WINDOWWIDTH", DEFAULT_WIDTH),
+		["width"] = math.max(MIN_WIDTH, MapUtils:GetConfig("WINDOWWIDTH", DEFAULT_WIDTH)),
 		["height"] = MapUtils:GetConfig("WINDOWHEIGHT", DEFAULT_HEIGHT),
-		["minWidth"] = 340,
+		["minWidth"] = MIN_WIDTH,
+		["navigation"] = true,
 		["minHeight"] = 220,
 		["onResize"] = function(width, height)
 			MapUtils:SV(MAUTTAB, "WINDOWWIDTH", width)
@@ -328,7 +331,32 @@ function MapUtils:InitSetting()
 	})
 
 	maset:SuspendLayout()
-	maset:AddSearch()
+	local canImport = MapUtils:CanImportExport()
+	maset:AddSearch({["rightInset"] = canImport and 128 or 0})
+	if canImport then
+		local importBtn = CreateFrame("Button", "MapUtilsSettingsImportExport", maset.header, "UIPanelButtonTemplate")
+		importBtn:SetSize(120, 22)
+		importBtn:SetPoint("RIGHT", maset.header, "RIGHT", -2, 1)
+		importBtn:SetText(MapUtils:Trans("LID_IMPORTEXPORT"))
+		importBtn:SetScript("OnClick", function() MapUtils:ToggleImportExport() end)
+	end
+
+	local footer = maset:AddFooter({["height"] = 24})
+	footer.Discord = CreateFrame("EditBox", "MapUtilsSettingsDiscord", footer, "InputBoxTemplate")
+	footer.Discord:SetPoint("LEFT", footer, "LEFT", 12, 0)
+	footer.Discord:SetSize(220, 20)
+	footer.Discord:SetAutoFocus(false)
+	footer.Discord:SetText(DISCORD)
+	footer.Discord:SetCursorPosition(0)
+	footer.Discord:SetScript("OnTextChanged", function(sel, userInput)
+		if userInput then
+			sel:SetText(DISCORD)
+			sel:HighlightText()
+		end
+	end)
+
+	footer.Discord:SetScript("OnEditFocusGained", function(sel) sel:HighlightText() end)
+	footer.Discord:SetScript("OnEscapePressed", function(sel) sel:ClearFocus() end)
 	AddCategory("GENERAL")
 	AddCheckbox("MMBTN", MapUtils:GetWoWBuild() ~= "RETAIL", function()
 		if MAUTTAB["MMBTN"] then
