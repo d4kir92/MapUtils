@@ -134,6 +134,7 @@ function MapUtils:AddLibraryBookTooltip(entry)
 
 	if book.subzone ~= nil then GameTooltip:AddLine(book.subzone, 1, 0.82, 0) end
 	if book.note ~= nil then GameTooltip:AddLine(book.note, 1, 1, 1, true) end
+	GameTooltip:AddLine(MapUtils:Trans("LID_LIBRARYBOOKHIDEHINT"), 0.6, 0.6, 0.6, true)
 end
 
 function LibraryBooks.GetSignature()

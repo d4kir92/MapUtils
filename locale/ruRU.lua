@@ -83,6 +83,7 @@ MapUtils:AddTrans("ruRU", "LID_IMPORTINVALID", "Неверная строка и
 MapUtils:AddTrans("ruRU", "LID_INSTANCEMAPS", "Карты подземелий и рейдов")
 MapUtils:AddTrans("ruRU", "LID_LEFTCLICK", "Левый клик")
 MapUtils:AddTrans("ruRU", "LID_LIBRARYBOOK", "Библиотечная книга")
+MapUtils:AddTrans("ruRU", "LID_LIBRARYBOOKHIDEHINT", "Скрывается с карты, как только книга сдана библиотекарю.")
 MapUtils:AddTrans("ruRU", "LID_LIBRARYBOOKINBAGS", "В сумках")
 MapUtils:AddTrans("ruRU", "LID_LIBRARYBOOKINBANK", "В банке")
 MapUtils:AddTrans("ruRU", "LID_LIBRARYBOOKS", "Библиотечные книги")

@@ -83,6 +83,7 @@ MapUtils:AddTrans("ptBR", "LID_IMPORTINVALID", "Texto de importação inválido.
 MapUtils:AddTrans("ptBR", "LID_INSTANCEMAPS", "Mapas de masmorras e raides")
 MapUtils:AddTrans("ptBR", "LID_LEFTCLICK", "Clique esquerdo")
 MapUtils:AddTrans("ptBR", "LID_LIBRARYBOOK", "Livro da biblioteca")
+MapUtils:AddTrans("ptBR", "LID_LIBRARYBOOKHIDEHINT", "Oculto no mapa assim que o livro for entregue a um bibliotecário.")
 MapUtils:AddTrans("ptBR", "LID_LIBRARYBOOKINBAGS", "Nas bolsas")
 MapUtils:AddTrans("ptBR", "LID_LIBRARYBOOKINBANK", "No banco")
 MapUtils:AddTrans("ptBR", "LID_LIBRARYBOOKS", "Livros da biblioteca")

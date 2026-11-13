@@ -83,6 +83,7 @@ MapUtils:AddTrans("frFR", "LID_IMPORTINVALID", "Chaîne d'importation invalide."
 MapUtils:AddTrans("frFR", "LID_INSTANCEMAPS", "Cartes de donjons et de raids")
 MapUtils:AddTrans("frFR", "LID_LEFTCLICK", "Clic gauche")
 MapUtils:AddTrans("frFR", "LID_LIBRARYBOOK", "Livre de bibliothèque")
+MapUtils:AddTrans("frFR", "LID_LIBRARYBOOKHIDEHINT", "Masqué sur la carte dès que le livre est rendu à un bibliothécaire.")
 MapUtils:AddTrans("frFR", "LID_LIBRARYBOOKINBAGS", "Dans les sacs")
 MapUtils:AddTrans("frFR", "LID_LIBRARYBOOKINBANK", "À la banque")
 MapUtils:AddTrans("frFR", "LID_LIBRARYBOOKS", "Livres de bibliothèque")

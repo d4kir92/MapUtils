@@ -83,6 +83,7 @@ MapUtils:AddTrans("esMX", "LID_IMPORTINVALID", "Cadena de importación no válid
 MapUtils:AddTrans("esMX", "LID_INSTANCEMAPS", "Mapas de mazmorras y bandas")
 MapUtils:AddTrans("esMX", "LID_LEFTCLICK", "Clic izquierdo")
 MapUtils:AddTrans("esMX", "LID_LIBRARYBOOK", "Libro de la biblioteca")
+MapUtils:AddTrans("esMX", "LID_LIBRARYBOOKHIDEHINT", "Se oculta del mapa en cuanto entregas el libro a un bibliotecario.")
 MapUtils:AddTrans("esMX", "LID_LIBRARYBOOKINBAGS", "En las bolsas")
 MapUtils:AddTrans("esMX", "LID_LIBRARYBOOKINBANK", "En el banco")
 MapUtils:AddTrans("esMX", "LID_LIBRARYBOOKS", "Libros de la biblioteca")

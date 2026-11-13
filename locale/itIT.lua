@@ -83,6 +83,7 @@ MapUtils:AddTrans("itIT", "LID_IMPORTINVALID", "Stringa di importazione non vali
 MapUtils:AddTrans("itIT", "LID_INSTANCEMAPS", "Mappe di dungeon e incursioni")
 MapUtils:AddTrans("itIT", "LID_LEFTCLICK", "Clic sinistro")
 MapUtils:AddTrans("itIT", "LID_LIBRARYBOOK", "Libro della biblioteca")
+MapUtils:AddTrans("itIT", "LID_LIBRARYBOOKHIDEHINT", "Nascosto dalla mappa non appena il libro viene consegnato a un bibliotecario.")
 MapUtils:AddTrans("itIT", "LID_LIBRARYBOOKINBAGS", "Nelle borse")
 MapUtils:AddTrans("itIT", "LID_LIBRARYBOOKINBANK", "In banca")
 MapUtils:AddTrans("itIT", "LID_LIBRARYBOOKS", "Libri della biblioteca")

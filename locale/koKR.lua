@@ -83,6 +83,7 @@ MapUtils:AddTrans("koKR", "LID_IMPORTINVALID", "잘못된 가져오기 문자열
 MapUtils:AddTrans("koKR", "LID_INSTANCEMAPS", "던전 및 공격대 지도")
 MapUtils:AddTrans("koKR", "LID_LEFTCLICK", "왼쪽 클릭")
 MapUtils:AddTrans("koKR", "LID_LIBRARYBOOK", "도서관 책")
+MapUtils:AddTrans("koKR", "LID_LIBRARYBOOKHIDEHINT", "사서에게 책을 반납하면 지도에서 숨겨집니다.")
 MapUtils:AddTrans("koKR", "LID_LIBRARYBOOKINBAGS", "가방에 있음")
 MapUtils:AddTrans("koKR", "LID_LIBRARYBOOKINBANK", "은행에 있음")
 MapUtils:AddTrans("koKR", "LID_LIBRARYBOOKS", "도서관 책")
