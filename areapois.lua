@@ -35,8 +35,8 @@ end
 function AreaPOIs.IsHidden(mapID, pin)
 	local id = AreaPOIs.GetID(pin)
 	if id == nil then return false end
-	if AreaPOIs.capitals[id] then return MapUtils:GetConfig("CAPITALPOIS", false) ~= true end
-	if MapUtils:GetConfig("TOWNPOIS", false) == true or mapID == nil then return false end
+	if AreaPOIs.capitals[id] then return not MapUtils:IsPinShownOnMap("CAPITALPOIS", false, mapID) end
+	if MapUtils:IsPinShownOnMap("TOWNPOIS", false, mapID) or mapID == nil then return false end
 	local info = C_AreaPoiInfo.GetAreaPOIInfo(mapID, id)
 	if info == nil and type(pin.poiInfo) == "table" and pin.poiInfo.areaPoiID == id then info = pin.poiInfo end
 

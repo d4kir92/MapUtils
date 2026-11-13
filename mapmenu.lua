@@ -10,6 +10,9 @@ local MapMenu = {
 	filterShift = 25,
 	cogAtlas = "QuestLog-icon-setting",
 	cogTexture = "Interface\\Buttons\\UI-OptionsButton",
+	boxTexture = "Interface\\Buttons\\UI-CheckBox-Up",
+	checkTexture = "Interface\\Buttons\\UI-CheckBox-Check",
+	boxSize = 18,
 	offColor = {
 		r = 0.5,
 		g = 0.5,
@@ -78,6 +81,63 @@ function MapMenu.GetEntries()
 	return entries
 end
 
+function MapMenu.InitDual(button, entry)
+	local previous = nil
+	for _, getter in ipairs({entry.zone, entry.azeroth}) do
+		local box = button:AttachTexture()
+		box:SetTexture(MapMenu.boxTexture)
+		box:SetDrawLayer("ARTWORK", 0)
+		box:SetSize(MapMenu.boxSize, MapMenu.boxSize)
+		if previous == nil then
+			box:SetPoint("LEFT", button, "LEFT", 0, 0)
+		else
+			box:SetPoint("LEFT", previous, "RIGHT", 0, 0)
+		end
+
+		if getter() then
+			local check = button:AttachTexture()
+			check:SetTexture(MapMenu.checkTexture)
+			check:SetDrawLayer("ARTWORK", 1)
+			check:SetAllPoints(box)
+		end
+
+		previous = box
+	end
+
+	if button.fontString ~= nil then
+		button.fontString:ClearAllPoints()
+		button.fontString:SetPoint("LEFT", previous, "RIGHT", 2, 0)
+	end
+
+	button:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+end
+
+function MapMenu.ResetDual(button)
+	button:RegisterForClicks("LeftButtonUp")
+end
+
+function MapMenu.AddModernDual(root, entry)
+	local element = root:CreateButton(entry.text, function(_, inputData)
+		entry.func(inputData and inputData.buttonName or "LeftButton")
+
+		return MenuResponse ~= nil and MenuResponse.Refresh or nil
+	end)
+
+	element:AddInitializer(function(button) MapMenu.InitDual(button, entry) end)
+	if element.AddResetter ~= nil then element:AddResetter(MapMenu.ResetDual) end
+
+	return element
+end
+
+function MapMenu.GetDualText(entry)
+	local parts = {}
+	for _, getter in ipairs({entry.zone, entry.azeroth}) do
+		tinsert(parts, format("|T%s:%d:%d|t", getter() and MapMenu.checkTexture or MapMenu.boxTexture, MapMenu.boxSize, MapMenu.boxSize))
+	end
+
+	return table.concat(parts) .. " " .. entry.text
+end
+
 function MapMenu.AddModernEntry(root, entry)
 	if entry.divider then
 		root:CreateDivider()
@@ -85,8 +145,16 @@ function MapMenu.AddModernEntry(root, entry)
 		return
 	end
 
+	if entry.title then
+		root:CreateTitle(entry.text)
+
+		return
+	end
+
 	local element = nil
-	if entry.checked ~= nil and entry.radio then
+	if entry.dual then
+		element = MapMenu.AddModernDual(root, entry)
+	elseif entry.checked ~= nil and entry.radio then
 		element = root:CreateRadio(entry.text, entry.checked, entry.func)
 	elseif entry.checked ~= nil then
 		element = root:CreateCheckbox(entry.text, entry.checked, entry.func)
@@ -133,6 +201,17 @@ function MapUtils:ShowEntryMenu(owner, entries)
 			if entry.divider then
 				info.text = ""
 				info.disabled = true
+			elseif entry.title then
+				info.text = entry.text
+				info.isTitle = true
+				info.notCheckable = true
+			elseif entry.dual then
+				info.text = MapMenu.GetDualText(entry)
+				info.notCheckable = true
+				info.keepShownOnClick = true
+				info.func = function() entry.func(GetMouseButtonClicked ~= nil and GetMouseButtonClicked() or "LeftButton") end
+				info.hasArrow = entry.children ~= nil
+				info.menuList = entry.children
 			else
 				info.text = entry.text
 				info.func = entry.func

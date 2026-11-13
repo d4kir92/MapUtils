@@ -20,7 +20,20 @@ local EditMode = {
 	fallbackColor = {0.25, 0.6, 1},
 	selectedColor = {1, 0.82, 0},
 	guideColor = {1, 0.15, 0.15, 0.9},
-	settingNames = {"POINT", "X", "Y", "CX", "ALIGN", "SCALE", "ORIENT", "SHOWN"},
+	settingNames = {"POINT", "X", "Y", "CX", "ALIGN", "SCALE", "ORIENT", "SHOWN", "COLLAPSIBLE", "STYLE", "EDGE", "ICONSTYLE"},
+	iconStyles = {"SPLIT", "GLOW"},
+	iconStyleKeys = {
+		["SPLIT"] = "LID_ICONSTYLESPLIT",
+		["GLOW"] = "LID_ICONSTYLEGLOW",
+	},
+	dropdownTemplate = "WowStyle1DropdownTemplate",
+	dropdownWidth = 120,
+	styles = {"WIDGET", "COLLAPSE", "SIDEBAR"},
+	styleKeys = {
+		["WIDGET"] = "LID_STYLEWIDGET",
+		["COLLAPSE"] = "LID_STYLECOLLAPSE",
+		["SIDEBAR"] = "LID_STYLESIDEBAR",
+	},
 	hiddenColor = {1, 0.2, 0.2},
 	aligns = {"AUTO", "LEFT", "CENTER", "RIGHT"},
 	alignKeys = {
@@ -123,6 +136,77 @@ end
 
 function EditMode.GetOrientation(element)
 	return EditMode.Get(element, "ORIENT", element.defaultOrientation or "VERTICAL")
+end
+
+function EditMode.GetStyle(element)
+	if not EditMode.HasOption(element, "styles") then return "WIDGET" end
+	MAUTTAB = MAUTTAB or {}
+	local style = MAUTTAB[element.key .. "_STYLE"]
+	if style == nil then style = MAUTTAB[element.key .. "_COLLAPSIBLE"] == true and "COLLAPSE" or "WIDGET" end
+
+	return style
+end
+
+function EditMode.GetIconStyle(element)
+	return EditMode.Get(element, "ICONSTYLE", "SPLIT")
+end
+
+function EditMode.IsSidebar(element)
+	return EditMode.GetStyle(element) == "SIDEBAR"
+end
+
+function EditMode.GetEdge(element)
+	return EditMode.Get(element, "EDGE", element.defaultEdge or "RIGHT")
+end
+
+function EditMode.EdgeAt(x, y, w, h)
+	local edge, best = "LEFT", x
+	for name, distance in pairs({
+		["RIGHT"] = w - x,
+		["BOTTOM"] = y,
+		["TOP"] = h - y
+	}) do
+		if distance < best then edge, best = name, distance end
+	end
+
+	return edge
+end
+
+function EditMode.PlaceOnEdge(edge, left, bottom, width, height, w, h)
+	if edge == "LEFT" then
+		left = 0
+	elseif edge == "RIGHT" then
+		left = math.max(w - width, 0)
+	elseif edge == "BOTTOM" then
+		bottom = 0
+	elseif edge == "TOP" then
+		bottom = math.max(h - height, 0)
+	end
+
+	return left, bottom
+end
+
+function EditMode.GetFrameSize(element)
+	local ratio = EditMode.GetRatio(element)
+
+	return element.frame:GetWidth() * ratio, element.frame:GetHeight() * ratio
+end
+
+function EditMode.SnapToEdge(element)
+	local left, right, bottom, top, w, h = EditMode.GetRect(element)
+	if left == nil then return end
+	local edge = EditMode.EdgeAt((left + right) / 2, (bottom + top) / 2, w, h)
+	EditMode.Set(element, "EDGE", edge)
+	if element.OnLayout ~= nil then element.OnLayout() end
+	local width, height = EditMode.GetFrameSize(element)
+	left = EditMode.Clamp((left + right - width) / 2, 0, math.max(w - width, 0))
+	bottom = EditMode.Clamp((bottom + top - height) / 2, 0, math.max(h - height, 0))
+	left, bottom = EditMode.PlaceOnEdge(edge, left, bottom, width, height, w, h)
+	local ratio = EditMode.GetRatio(element)
+	element.frame:ClearAllPoints()
+	element.frame:SetPoint("BOTTOMLEFT", map.ScrollContainer, "BOTTOMLEFT", left / ratio, bottom / ratio)
+	EditMode.Save(element)
+	EditMode.Apply(element)
 end
 
 function EditMode.GetScale(element)
@@ -364,12 +448,19 @@ function EditMode.UpdateDrag(guides)
 	local container = map.ScrollContainer
 	local w, h = container:GetWidth(), container:GetHeight()
 	local x, y = EditMode.GetCursor()
+	local edge = nil
+	if EditMode.IsSidebar(drag.element) then
+		edge = EditMode.EdgeAt(x, y, w, h)
+		if edge ~= drag.edge then EditMode.ChangeDragEdge(drag, edge) end
+	end
+
 	local left = EditMode.SnapGrid(x + drag.offsetX, w)
 	local bottom = EditMode.SnapGrid(y + drag.offsetY, h)
 	left = EditMode.Clamp(left, 0, math.max(w - drag.width, 0))
 	bottom = EditMode.Clamp(bottom, 0, math.max(h - drag.height, 0))
-	local snapX = math.abs(left + drag.width / 2 - w / 2) <= EditMode.snap
-	local snapY = math.abs(bottom + drag.height / 2 - h / 2) <= EditMode.snap
+	left, bottom = EditMode.PlaceOnEdge(edge, left, bottom, drag.width, drag.height, w, h)
+	local snapX = edge ~= "LEFT" and edge ~= "RIGHT" and math.abs(left + drag.width / 2 - w / 2) <= EditMode.snap
+	local snapY = edge ~= "TOP" and edge ~= "BOTTOM" and math.abs(bottom + drag.height / 2 - h / 2) <= EditMode.snap
 	if snapX then left = w / 2 - drag.width / 2 end
 	if snapY then bottom = h / 2 - drag.height / 2 end
 	guides.vertical:SetShown(snapX)
@@ -378,6 +469,15 @@ function EditMode.UpdateDrag(guides)
 	local ratio = EditMode.GetRatio(drag.element)
 	frame:ClearAllPoints()
 	frame:SetPoint("BOTTOMLEFT", container, "BOTTOMLEFT", left / ratio, bottom / ratio)
+end
+
+function EditMode.ChangeDragEdge(drag, edge)
+	drag.edge = edge
+	EditMode.Set(drag.element, "EDGE", edge)
+	if drag.element.OnLayout ~= nil then drag.element.OnLayout() end
+	drag.width, drag.height = EditMode.GetFrameSize(drag.element)
+	drag.offsetX = -drag.width / 2
+	drag.offsetY = -drag.height / 2
 end
 
 function EditMode.StartDrag(element)
@@ -390,7 +490,8 @@ function EditMode.StartDrag(element)
 		offsetX = left - x,
 		offsetY = bottom - y,
 		width = right - left,
-		height = top - bottom
+		height = top - bottom,
+		edge = EditMode.IsSidebar(element) and EditMode.GetEdge(element) or nil
 	}
 
 	guides.vertical:Hide()
@@ -456,18 +557,56 @@ function EditMode.CreateSlider(panel, parent)
 	return slider
 end
 
-function EditMode.CreateChoiceRow(panel, labelKey, onClick)
+function EditMode.CreateChoiceRow(panel, labelKey, choice)
 	local row = CreateFrame("Frame", nil, panel)
-	row:SetSize(226, 24)
+	row:SetSize(226, 26)
+	row.choice = choice
 	row.label = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
 	row.label:SetPoint("LEFT", row, "LEFT", 0, 0)
 	row.label:SetText(MapUtils:Trans(labelKey))
-	row.button = CreateFrame("Button", nil, row, "UIPanelButtonTemplate")
-	row.button:SetSize(110, 22)
+	if DoesTemplateExist ~= nil and DoesTemplateExist(EditMode.dropdownTemplate) then
+		row.dropdown = true
+		row.button = CreateFrame("DropdownButton", nil, row, EditMode.dropdownTemplate)
+		row.button:SetWidth(EditMode.dropdownWidth)
+		row.button:SetupMenu(function(_, root)
+			local element = panel.element
+			if element == nil then return end
+			for _, value in ipairs(choice.values) do
+				root:CreateRadio(MapUtils:Trans(choice.keys[value]), function() return choice.get(element) == value end, function() EditMode.SelectChoice(element, choice.name, value) end)
+			end
+		end)
+	else
+		row.button = CreateFrame("Button", nil, row, "UIPanelButtonTemplate")
+		row.button:SetSize(EditMode.dropdownWidth, 22)
+		row.button:SetScript("OnClick", function(self) EditMode.ShowChoiceMenu(self, choice) end)
+	end
+
 	row.button:SetPoint("RIGHT", row, "RIGHT", 0, 0)
-	row.button:SetScript("OnClick", onClick)
 
 	return row
+end
+
+function EditMode.RefreshChoiceRow(row, element)
+	if row.dropdown then
+		row.button:GenerateMenu()
+
+		return
+	end
+
+	local choice = row.choice
+	row.button:SetText(MapUtils:Trans(choice.keys[choice.get(element)] or choice.keys[choice.values[1]]))
+end
+
+function EditMode.SelectChoice(element, name, value)
+	EditMode.Set(element, name, value)
+	if name == "ALIGN" then EditMode.Save(element) end
+	EditMode.Apply(element)
+	if name == "STYLE" then
+		if value == "SIDEBAR" then EditMode.SnapToEdge(element) end
+		EditMode.ShowPanel(element)
+	end
+
+	EditMode.RefreshPanel()
 end
 
 function EditMode.CreatePanel()
@@ -477,6 +616,13 @@ function EditMode.CreatePanel()
 	panel:SetFrameStrata("DIALOG")
 	panel:SetClampedToScreen(true)
 	panel:EnableMouse(true)
+	panel:SetMovable(true)
+	panel:RegisterForDrag("LeftButton")
+	panel:SetScript("OnDragStart", function(self) self:StartMoving() end)
+	panel:SetScript("OnDragStop", function(self)
+		self:StopMovingOrSizing()
+		if self.SetUserPlaced ~= nil then self:SetUserPlaced(false) end
+	end)
 	if panel.SetBackdrop ~= nil then
 		panel:SetBackdrop({
 			bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
@@ -515,8 +661,41 @@ function EditMode.CreatePanel()
 		EditMode.Skin(element.mover)
 	end)
 
-	panel.alignRow = EditMode.CreateChoiceRow(panel, "LID_TEXTALIGN", function(self) EditMode.ShowChoiceMenu(self, "ALIGN", EditMode.aligns, EditMode.alignKeys, "AUTO") end)
-	panel.orientRow = EditMode.CreateChoiceRow(panel, "LID_ORIENTATION", function(self) EditMode.ShowChoiceMenu(self, "ORIENT", EditMode.orients, EditMode.orientKeys, panel.element.defaultOrientation or "VERTICAL") end)
+	panel.styleRow = EditMode.CreateChoiceRow(panel, "LID_WIDGETSTYLE", {
+		name = "STYLE",
+		values = EditMode.styles,
+		keys = EditMode.styleKeys,
+		get = EditMode.GetStyle
+	})
+	panel.iconRow = EditMode.CreateChoiceRow(panel, "LID_ICONSTYLE", {
+		name = "ICONSTYLE",
+		values = EditMode.iconStyles,
+		keys = EditMode.iconStyleKeys,
+		get = EditMode.GetIconStyle
+	})
+	for _, row in ipairs({panel.styleRow, panel.iconRow}) do
+		local titleKey = row == panel.styleRow and "LID_WIDGETSTYLE" or "LID_ICONSTYLE"
+		row.button:HookScript("OnEnter", function(self)
+			GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+			GameTooltip:SetText(MapUtils:Trans(titleKey))
+			GameTooltip:AddLine(MapUtils:Trans(titleKey .. "DESC"), 1, 1, 1, true)
+			GameTooltip:Show()
+		end)
+
+		row.button:HookScript("OnLeave", function() GameTooltip:Hide() end)
+	end
+	panel.alignRow = EditMode.CreateChoiceRow(panel, "LID_TEXTALIGN", {
+		name = "ALIGN",
+		values = EditMode.aligns,
+		keys = EditMode.alignKeys,
+		get = function(element) return EditMode.Get(element, "ALIGN", "AUTO") end
+	})
+	panel.orientRow = EditMode.CreateChoiceRow(panel, "LID_ORIENTATION", {
+		name = "ORIENT",
+		values = EditMode.orients,
+		keys = EditMode.orientKeys,
+		get = EditMode.GetOrientation
+	})
 	panel.scaleRow = CreateFrame("Frame", nil, panel)
 	panel.scaleRow:SetSize(226, 40)
 	panel.scaleLabel = panel.scaleRow:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
@@ -533,6 +712,7 @@ function EditMode.CreatePanel()
 	end)
 
 	panel:SetScript("OnHide", function(self)
+		self:StopMovingOrSizing()
 		if self.element ~= nil and self.element.mover ~= nil then EditMode.Skin(self.element.mover, false) end
 		self.element = nil
 	end)
@@ -547,8 +727,10 @@ function EditMode.LayoutPanel(panel, element)
 	local y = -36
 	local rows = {
 		{panel.shownRow, true, 28},
+		{panel.styleRow, EditMode.HasOption(element, "styles"), 28},
+		{panel.iconRow, EditMode.HasOption(element, "iconStyles"), 28},
 		{panel.alignRow, EditMode.HasOption(element, "align"), 28},
-		{panel.orientRow, EditMode.HasOption(element, "orientation"), 28},
+		{panel.orientRow, EditMode.HasOption(element, "orientation") and not EditMode.IsSidebar(element), 28},
 		{panel.scaleRow, EditMode.HasOption(element, "scale"), 44},
 		{panel.reset, true, 30},
 	}
@@ -571,8 +753,9 @@ function EditMode.RefreshPanel()
 	if element == nil then return end
 	panel.title:SetText(MapUtils:Trans(element.title))
 	panel.shownCheck:SetChecked(EditMode.IsShown(element))
-	panel.alignRow.button:SetText(MapUtils:Trans(EditMode.alignKeys[EditMode.Get(element, "ALIGN", "AUTO")] or "LID_ALIGNAUTO"))
-	panel.orientRow.button:SetText(MapUtils:Trans(EditMode.orientKeys[EditMode.GetOrientation(element)] or "LID_VERTICAL"))
+	for _, row in ipairs({panel.styleRow, panel.iconRow, panel.alignRow, panel.orientRow}) do
+		EditMode.RefreshChoiceRow(row, element)
+	end
 	local scale = EditMode.GetScale(element)
 	panel.scaleLabel:SetText(MapUtils:Trans("LID_WIDGETSCALE", nil, scale))
 	panel.updating = true
@@ -606,21 +789,16 @@ function EditMode.ShowPanel(element)
 	end
 end
 
-function EditMode.ShowChoiceMenu(owner, name, values, keys, default)
+function EditMode.ShowChoiceMenu(owner, choice)
 	local element = EditMode.panel and EditMode.panel.element
 	if element == nil then return end
 	local entries = {}
-	for _, value in ipairs(values) do
+	for _, value in ipairs(choice.values) do
 		tinsert(entries, {
-			["text"] = MapUtils:Trans(keys[value]),
+			["text"] = MapUtils:Trans(choice.keys[value]),
 			["radio"] = true,
-			["checked"] = function() return EditMode.Get(element, name, default) == value end,
-			["func"] = function()
-				EditMode.Set(element, name, value)
-				if name == "ALIGN" then EditMode.Save(element) end
-				EditMode.Apply(element)
-				EditMode.RefreshPanel()
-			end,
+			["checked"] = function() return choice.get(element) == value end,
+			["func"] = function() EditMode.SelectChoice(element, choice.name, value) end,
 		})
 	end
 
@@ -658,6 +836,18 @@ end
 
 function MapUtils:GetMapEditOrientation(element)
 	return EditMode.GetOrientation(element)
+end
+
+function MapUtils:GetMapEditStyle(element)
+	return EditMode.GetStyle(element)
+end
+
+function MapUtils:GetMapEditIconStyle(element)
+	return EditMode.GetIconStyle(element)
+end
+
+function MapUtils:GetMapEditEdge(element)
+	return EditMode.GetEdge(element)
 end
 
 function MapUtils:IsMapEditElementVisible(element)

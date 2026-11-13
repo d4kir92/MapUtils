@@ -27,8 +27,14 @@ function MapUtils:LibraryBookPinsAvailable()
 	return MapUtils:IsForever() and type(MapUtils.LIBRARYBOOKS) == "table"
 end
 
-function MapUtils:LibraryBookPinsEnabled(minimap)
-	return MapUtils:LibraryBookPinsAvailable() and LibraryBooks.Get(minimap and LibraryBooks.minimapKey or LibraryBooks.pinsKey)
+function MapUtils:LibraryBookPinsEnabled(minimap, anyMap)
+	if not MapUtils:LibraryBookPinsAvailable() then return false end
+	if minimap then return LibraryBooks.Get(LibraryBooks.minimapKey) end
+	local key = LibraryBooks.pinsKey
+	if not MapUtils:IsPinCategoryEnabled(key) then return false end
+	if anyMap then return MapUtils:GetPinScopeShown(key, LibraryBooks.defaults[key], false) or MapUtils:GetPinScopeShown(key, LibraryBooks.defaults[key], true) end
+
+	return MapUtils:GetPinScopeShown(key, LibraryBooks.defaults[key], MapUtils:IsAzerothMap())
 end
 
 function MapUtils:RefreshLibraryBooks()
@@ -148,7 +154,7 @@ function LibraryBooks.GetSignature()
 end
 
 function LibraryBooks.CheckChanged()
-	if not MapUtils:LibraryBookPinsEnabled() and not MapUtils:LibraryBookPinsEnabled(true) then return end
+	if not MapUtils:LibraryBookPinsEnabled(false, true) and not MapUtils:LibraryBookPinsEnabled(true) then return end
 	local signature = LibraryBooks.GetSignature()
 	if LibraryBooks.signature == signature then return end
 	local first = LibraryBooks.signature == nil

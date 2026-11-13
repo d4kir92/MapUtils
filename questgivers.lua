@@ -302,7 +302,7 @@ end
 
 function QG.IsShownOnMap(mapID)
 	if mapID == nil or C_Map.GetMapInfo(mapID) == nil or QG.IsAddOnLoaded("Questie") then return false end
-	QG.showStarts = MapUtils:GetConfig("QUESTGIVERWORLDMAPPINS", true) == true
+	QG.showStarts = MapUtils:IsPinShownOnMap("QUESTGIVERWORLDMAPPINS", true, mapID)
 	QG.showEnds = MapUtils:GetQuestTurnInDefault() and MapUtils:GetConfig("QUESTGIVERTURNIN", true) == true
 	if not QG.showStarts and not QG.showEnds then return false end
 
@@ -813,10 +813,11 @@ function QG.Layout(canvas)
 	local scale = canvas:GetScale()
 	local width, height = canvas:GetWidth(), canvas:GetHeight()
 	if scale == nil or scale <= 0 or width <= 0 or height <= 0 then return end
-	local key = format("%s|%s|%s|%d", scale, width, height, #spots)
+	local factor = MapUtils:GetPinSizeFactor("QUESTGIVERWORLDMAPPINS")
+	local key = format("%s|%s|%s|%d|%s", scale, width, height, #spots, factor)
 	if key == layoutKey then return end
 	layoutKey = key
-	local size = ICON_SIZE / scale
+	local size = ICON_SIZE / scale * factor
 	QG.BuildClusters(width, height, size)
 	local level = canvas:GetFrameLevel() + PIN_LEVEL
 	for index, cluster in ipairs(clusters) do

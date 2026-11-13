@@ -248,6 +248,32 @@ local function AddSlider(key, default, minValue, maxValue, step, func, label, ad
 	})
 end
 
+local function AddPinEnabled(key, refresh, label, added)
+	return AddCheckbox(key .. "_ENABLED", true, function()
+		if refresh then refresh() end
+		if MapUtils.RefreshPinToggles then MapUtils:RefreshPinToggles() end
+	end, label or "LID_WORLDMAPPINS", added)
+end
+
+local function AddPinSize(key, refresh)
+	local pv = MapUtils.PinVisibility
+	local slider = AddSlider(key .. "_SIZE", MapUtils:GetPinSizeDefault(key), pv.sizeMin, pv.sizeMax, pv.sizeStep, refresh, "LID_PINSIZE", "2026-11-13", true)
+	Requires(slider, key .. "_ENABLED")
+
+	return slider
+end
+
+local function AddPinCategory(key, refresh, label, added)
+	local control = AddPinEnabled(key, refresh, label, added)
+	AddPinSize(key, refresh)
+
+	return control
+end
+
+local function RefreshPins()
+	MapUtils:RefreshPins()
+end
+
 local function AddTerrainFadeSliders(prefix, city)
 	local startValue, endValue = MapUtils:GetTerrainFadeThresholds(city)
 	local start, finish
@@ -379,29 +405,31 @@ function MapUtils:InitSetting()
 	if MapUtils.RefreshCommChannel then AddTooltip(AddCheckbox("COMMCHANNEL", true, function() MapUtils:RefreshCommChannel() end, nil, "2026-10-28"), "LID_COMMCHANNEL", "LID_COMMCHANNELDESC") end
 	AddCategory("WORLDMAP", nil, nil, ADDED_0927)
 	if MapUtils.RefreshGuildMembers then
-		for _, key in ipairs({"GUILDMEMBERPINS", "GUILDMEMBERLEVEL", "GUILDMEMBERNAME", "GUILDMEMBERSHARE", "GUILDMEMBERZONES"}) do
-			local default = key == "GUILDMEMBERPINS" or key == "GUILDMEMBERSHARE" or key == "GUILDMEMBERZONES"
+		local guildPins = AddPinEnabled("GUILDMEMBERPINS", function() MapUtils:RefreshGuildMembers() end, "LID_GUILDMEMBERPINS", "2026-10-29")
+		AddTooltip(guildPins, "LID_GUILDMEMBERPINS", "LID_GUILDMEMBERPINSDESC")
+		for _, key in ipairs({"GUILDMEMBERLEVEL", "GUILDMEMBERNAME", "GUILDMEMBERSHARE", "GUILDMEMBERZONES"}) do
+			local default = key == "GUILDMEMBERSHARE" or key == "GUILDMEMBERZONES"
 			local control = AddCheckbox(key, default, function()
 				MapUtils:SetSharedSetting(key, MapUtils:GetConfig(key, default))
 				MapUtils:RefreshGuildMembers()
 			end, nil, key == "GUILDMEMBERZONES" and "2026-11-11" or (default and "2026-10-29" or "2026-11-06"))
 			guildCheckboxes[key] = control
-			if key ~= "GUILDMEMBERPINS" and key ~= "GUILDMEMBERSHARE" then Requires(control, "GUILDMEMBERPINS") end
+			if key ~= "GUILDMEMBERSHARE" then Requires(control, "GUILDMEMBERPINS_ENABLED") end
 			AddTooltip(control, "LID_" .. key, "LID_" .. key .. "DESC")
 		end
 	end
 	if MapUtils:IsForever() or MapUtils.RefreshQuestTurnIns or MapUtils.RefreshQuestGivers then AddCategory("QUESTS", 2, nil, ADDED_1104) end
 	if MapUtils:IsForever() then AddCheckbox("REMEMBERQUESTCATEGORIES", true, function() MapUtils:RestoreQuestCategories() end) end
 	if MapUtils.RefreshQuestGivers then
-		AddTooltip(AddCheckbox("QUESTGIVERWORLDMAPPINS", true, function() MapUtils:RefreshQuestGivers() end, nil, ADDED_1104), "LID_QUESTGIVERWORLDMAPPINS", "LID_QUESTGIVERWORLDMAPPINSDESC")
+		AddTooltip(AddPinCategory("QUESTGIVERWORLDMAPPINS", function() MapUtils:RefreshQuestGivers() end, "LID_QUESTGIVERWORLDMAPPINS", ADDED_1104), "LID_QUESTGIVERWORLDMAPPINS", "LID_QUESTGIVERWORLDMAPPINSDESC")
 		for _, key in ipairs({"QUESTGIVEREVENT", "QUESTGIVERDAILY", "QUESTGIVERREP"}) do
-			Requires(AddCheckbox(key, false, function() MapUtils:RefreshQuestGivers() end, nil, ADDED_1104), "QUESTGIVERWORLDMAPPINS")
+			Requires(AddCheckbox(key, false, function() MapUtils:RefreshQuestGivers() end, nil, ADDED_1104), "QUESTGIVERWORLDMAPPINS_ENABLED")
 		end
 
 		if MapUtils:GetQuestTurnInDefault() then AddTooltip(AddCheckbox("QUESTGIVERTURNIN", true, function() MapUtils:RefreshQuestGivers() end, nil, ADDED_1104), "LID_QUESTGIVERTURNIN", "LID_QUESTGIVERTURNINDESC") end
 	end
 
-	if MapUtils.RefreshQuestTurnIns then AddCheckbox("QUESTTURNINWORLDMAPPINS", true, function() MapUtils:RefreshQuestTurnIns() end, nil, "2026-10-07") end
+	if MapUtils.RefreshQuestTurnIns then AddPinCategory("QUESTTURNINWORLDMAPPINS", function() MapUtils:RefreshQuestTurnIns() end, "LID_QUESTTURNINWORLDMAPPINS", "2026-10-07") end
 	AddCategory("MAPWINDOW", 2, nil, ADDED_0927)
 	local byMoveAny = MapUtils:IsWorldMapByMoveAny()
 	for _, key in ipairs({"WORLDMAPMOVE", "WORLDMAPSCALE"}) do
@@ -520,20 +548,20 @@ function MapUtils:InitSetting()
 		{value = "NEW", label = MapUtils:Trans("LID_PIERICONNEW")},
 		{value = "PORTALS", label = MapUtils:Trans("LID_PIERICONPORTALS")},
 	}, function() MapUtils:RefreshPins() end)
-	AddCheckbox("WORLDMAPPINS", true, function() MapUtils:RefreshPins() end)
+	AddPinCategory("WORLDMAPPINS", RefreshPins)
 	AddCheckbox("MINIMAPPINS", true, function() MapUtils:RefreshPins() end)
 	if MapUtils.TRANSPORTROUTES ~= nil then
-		AddCheckbox("VESSELWORLDMAPPINS", true, function() MapUtils:RefreshTransports() end, nil, "2026-10-28")
+		AddPinCategory("VESSELWORLDMAPPINS", function() MapUtils:RefreshTransports() end, "LID_VESSELWORLDMAPPINS", "2026-10-28")
 		AddCheckbox("VESSELMINIMAPPINS", true, function() MapUtils:RefreshTransports() end, nil, "2026-10-28")
 	end
 
 	AddExploreCheckbox("PIER")
 	AddCategory("DUNGEONS", 2)
-	AddSharedCheckbox("DUNGEONWORLDMAPPINS", "LID_WORLDMAPPINS")
+	AddPinCategory("DUNGEONWORLDMAPPINS", RefreshPins)
 	AddSharedCheckbox("DUNGEONMINIMAPPINS", "LID_MINIMAPPINS")
 	AddExploreCheckbox("DUNGEON")
 	AddCategory("MEETINGSTONES", 2, nil, ADDED_0928)
-	AddSharedCheckbox("MEETINGSTONEWORLDMAPPINS", "LID_WORLDMAPPINS", ADDED_0928)
+	AddPinCategory("MEETINGSTONEWORLDMAPPINS", RefreshPins, nil, ADDED_0928)
 	AddSharedCheckbox("MEETINGSTONEMINIMAPPINS", "LID_MINIMAPPINS", ADDED_0928)
 	AddExploreCheckbox("MEETINGSTONE")
 	if not MapUtils.nativeInstanceMaps then
@@ -546,7 +574,7 @@ function MapUtils:InitSetting()
 
 	if MapUtils:IsForever() then
 		AddCategory("SPIRITHEALERS", 2, nil, "2026-10-06")
-		AddCheckbox("SPIRITHEALERWORLDMAPPINS", false, function() MapUtils:RefreshPins() end, "LID_WORLDMAPPINS")
+		AddPinCategory("SPIRITHEALERWORLDMAPPINS", RefreshPins)
 		AddCheckbox("SPIRITHEALERMINIMAPPINS", false, function() MapUtils:RefreshPins() end, "LID_MINIMAPPINS")
 		AddDropdown("SPIRITHEALERSTYLE", "NORMAL", {
 			{value = "NORMAL", label = MapUtils:Trans("LID_NORMAL")},
@@ -554,7 +582,7 @@ function MapUtils:InitSetting()
 		}, function() MapUtils:RefreshPins() end)
 		AddExploreCheckbox("SPIRITHEALER")
 		AddCategory("CONVERGENCES", 2, nil, ADDED_1017)
-		AddCheckbox("CONVERGENCEWORLDMAPPINS", true, function() MapUtils:RefreshPins() end, "LID_WORLDMAPPINS", ADDED_1017)
+		AddPinCategory("CONVERGENCEWORLDMAPPINS", RefreshPins, nil, ADDED_1017)
 		AddCheckbox("CONVERGENCEMINIMAPPINS", false, function() MapUtils:RefreshPins() end, "LID_MINIMAPPINS", ADDED_1017)
 		AddCheckbox("CONVERGENCENONSKYBORNE", false, function() MapUtils:RefreshPins() end, "LID_CONVERGENCENONSKYBORNE", ADDED_1017)
 		AddExploreCheckbox("CONVERGENCE")
@@ -566,22 +594,22 @@ function MapUtils:InitSetting()
 	end
 
 	AddCategory("FLIGHTPOINTS", 2)
-	AddCheckbox("FLIGHTWORLDMAPPINS", true, function() MapUtils:RefreshPins() end, "LID_WORLDMAPPINS")
+	AddPinCategory("FLIGHTWORLDMAPPINS", RefreshPins)
 	AddCheckbox("FLIGHTMINIMAPPINS", true, function() MapUtils:RefreshPins() end, "LID_MINIMAPPINS")
 	AddExploreCheckbox("FLIGHT")
 	AddCategory("ZONECROSSINGS", 2, nil, ADDED_1003)
-	AddCheckbox("CROSSINGWORLDMAPPINS", true, function() MapUtils:RefreshPins() end, "LID_WORLDMAPPINS", ADDED_1003)
+	AddPinCategory("CROSSINGWORLDMAPPINS", RefreshPins, nil, ADDED_1003)
 	AddExploreCheckbox("CROSSING")
 	if MapUtils.RefreshAreaPOIs ~= nil then
 		AddCategory("AREAPOIS", 2, nil, "2026-10-28")
-		AddCheckbox("TOWNPOIS", false, function() MapUtils:RefreshAreaPOIs() end, nil, "2026-10-28")
-		AddCheckbox("CAPITALPOIS", false, function() MapUtils:RefreshAreaPOIs() end, nil, "2026-10-28")
+		AddPinEnabled("TOWNPOIS", function() MapUtils:RefreshAreaPOIs() end, "LID_TOWNPOIS", "2026-10-28")
+		AddPinEnabled("CAPITALPOIS", function() MapUtils:RefreshAreaPOIs() end, "LID_CAPITALPOIS", "2026-10-28")
 	end
 
 	if MapUtils:LibraryBookPinsAvailable() then
 		AddCategory("FOREVER", 2, nil, "2026-11-13")
 		AddCategory("LIBRARYBOOKS", 3, nil, "2026-11-13")
-		AddCheckbox("LIBRARYBOOKWORLDMAPPINS", true, function() MapUtils.LibraryBooks.Set("LIBRARYBOOKWORLDMAPPINS", MAUTTAB["LIBRARYBOOKWORLDMAPPINS"] == true) end, "LID_WORLDMAPPINS", "2026-11-13")
+		AddPinCategory("LIBRARYBOOKWORLDMAPPINS", function() MapUtils:RefreshLibraryBooks() end, nil, "2026-11-13")
 		AddCheckbox("LIBRARYBOOKMINIMAPPINS", true, function() MapUtils:RefreshPins() end, "LID_MINIMAPPINS", "2026-11-13")
 		AddTooltip(AddCheckbox("LIBRARYBOOKSHOWUNEXPLORED", true, function() MapUtils.LibraryBooks.Set("LIBRARYBOOKSHOWUNEXPLORED", MAUTTAB["LIBRARYBOOKSHOWUNEXPLORED"] == true) end, "LID_SHOWUNEXPLORED", "2026-11-13"), "LID_SHOWUNEXPLORED", "LID_LIBRARYBOOKSHOWUNEXPLOREDDESC")
 	end

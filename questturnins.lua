@@ -287,7 +287,7 @@ local function UpdatePins()
 	local mapID = WorldMapFrame:GetMapID()
 	local mapType = GetMapType(mapID)
 	local getter = C_CVar and C_CVar.GetCVarBool or GetCVarBool
-	if mapType == nil or Enum == nil or Enum.UIMapType == nil or (mapType ~= Enum.UIMapType.World and mapType ~= Enum.UIMapType.Continent and MapUtils:GetOneMapQuestSources(mapID) == nil) or not MapUtils:GetConfig("QUESTTURNINWORLDMAPPINS", true) or (getter and not getter("questPOI")) then
+	if mapType == nil or Enum == nil or Enum.UIMapType == nil or (mapType ~= Enum.UIMapType.World and mapType ~= Enum.UIMapType.Continent and MapUtils:GetOneMapQuestSources(mapID) == nil) or not MapUtils:IsPinShownOnMap("QUESTTURNINWORLDMAPPINS", true, mapID) or (getter and not getter("questPOI")) then
 		HidePins()
 		lastMapID = nil
 		return
@@ -324,9 +324,10 @@ local function UpdatePins()
 			SetPinAtlas(pin.pushed, selected and "UI-QuestPoi-QuestNumber-Pressed-SuperTracked" or "UI-QuestPoi-QuestNumber-Pressed")
 		end
 
-		pin:SetSize(20 / scale, 20 / scale)
+		local pinScale = scale / MapUtils:GetPinSizeFactor("QUESTTURNINWORLDMAPPINS")
+		pin:SetSize(20 / pinScale, 20 / pinScale)
 		for _, texture in ipairs(pin.textures) do
-			if texture.pixelWidth then texture:SetSize(texture.pixelWidth / scale, texture.pixelHeight / scale) end
+			if texture.pixelWidth then texture:SetSize(texture.pixelWidth / pinScale, texture.pixelHeight / pinScale) end
 		end
 
 		pin:SetFrameLevel(canvas:GetFrameLevel() + 30)

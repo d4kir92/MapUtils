@@ -2615,31 +2615,31 @@ local function HideAll(pins)
 end
 
 local function PiersEnabled(worldMap)
-	if worldMap then return MapUtils:GetConfig("WORLDMAPPINS", true) == true end
+	if worldMap then return MapUtils:IsPinShownOnMap("WORLDMAPPINS", true) end
 
 	return MapUtils:GetConfig("MINIMAPPINS", true) == true
 end
 
 local function DungeonsEnabled(worldMap)
-	if worldMap then return MapUtils:GetConfig("DUNGEONWORLDMAPPINS", true) == true end
+	if worldMap then return MapUtils:IsPinShownOnMap("DUNGEONWORLDMAPPINS", true) end
 
 	return MapUtils:GetConfig("DUNGEONMINIMAPPINS", true) == true
 end
 
 local function FlightsEnabled(worldMap)
-	if worldMap then return MapUtils:GetConfig("FLIGHTWORLDMAPPINS", true) == true end
+	if worldMap then return MapUtils:IsPinShownOnMap("FLIGHTWORLDMAPPINS", true) end
 
 	return MapUtils:GetConfig("FLIGHTMINIMAPPINS", true) == true
 end
 
 local function MeetingStonesEnabled(worldMap)
-	if worldMap then return MapUtils:GetConfig("MEETINGSTONEWORLDMAPPINS", true) == true end
+	if worldMap then return MapUtils:IsPinShownOnMap("MEETINGSTONEWORLDMAPPINS", true) end
 
 	return MapUtils:GetConfig("MEETINGSTONEMINIMAPPINS", true) == true
 end
 
 local function CrossingsEnabled()
-	return MapUtils:GetConfig("CROSSINGWORLDMAPPINS", true) == true
+	return MapUtils:IsPinShownOnMap("CROSSINGWORLDMAPPINS", true)
 end
 
 local function BuildList(mapID, piersOn, dungeonsOn, flightsOn, meetingStonesOn, crossingsOn, spiritHealersOn, convergencesOn, unfiltered, libraryBooksOn)
@@ -2716,14 +2716,35 @@ end
 MapUtils.BuildPinList = BuildList
 MapUtils.GetEntryWorldPos = GetEntryWorldPos
 MapUtils.OneMapPinCache = {}
-function MapUtils:GetOneMapForeignPins(mapID, piersOn, dungeonsOn, convergencesOn, libraryBooksOn)
-	if not (piersOn or dungeonsOn or convergencesOn or libraryBooksOn) or MapUtils.IsOneMap == nil or not MapUtils:IsOneMap() or MapUtils.IsZoneDetailMap == nil or not MapUtils:IsZoneDetailMap(mapID) then return nil end
-	local space = MapUtils:GetZoneDetailSpace()
-	if mapID == space then dungeonsOn = false end
-	local hostInfo = C_Map.GetMapInfo(mapID)
-	if hostInfo == nil or hostInfo.mapType ~= Enum.UIMapType.Zone then convergencesOn = false end
-	if not piersOn and not dungeonsOn and not convergencesOn and not libraryBooksOn then return nil end
-	local key = format("%d:%s:%s:%s:%s:%d", mapID, tostring(piersOn), tostring(dungeonsOn), tostring(convergencesOn), tostring(libraryBooksOn), convergencesOn and math.floor(GetTime() / 5) or 0)
+function MapUtils:GetAzerothPinSources(mapID)
+	MapUtils.AzerothPinSources = MapUtils.AzerothPinSources or {}
+	local cached = MapUtils.AzerothPinSources[mapID]
+	if cached ~= nil then return cached end
+	local sources = {}
+	local children = C_Map.GetMapChildrenInfo ~= nil and C_Map.GetMapChildrenInfo(mapID, nil, true) or nil
+	for _, child in ipairs(children or {}) do
+		if child.mapType == Enum.UIMapType.Continent or child.mapType == Enum.UIMapType.Zone then tinsert(sources, child.mapID) end
+	end
+
+	MapUtils.AzerothPinSources[mapID] = sources
+
+	return sources
+end
+
+function MapUtils:GetOneMapForeignPins(mapID, piersOn, dungeonsOn, convergencesOn, libraryBooksOn, flightsOn, meetingStonesOn, crossingsOn, spiritHealersOn)
+	if mapID == nil or Enum == nil or Enum.UIMapType == nil then return nil end
+	local azeroth = MapUtils:IsAzerothMap(mapID)
+	local oneMap = MapUtils.IsOneMap ~= nil and MapUtils:IsOneMap() and MapUtils.IsZoneDetailMap ~= nil and MapUtils:IsZoneDetailMap(mapID)
+	if not oneMap and not azeroth then return nil end
+	if not azeroth then
+		flightsOn, meetingStonesOn, crossingsOn, spiritHealersOn = false, false, false, false
+		local hostInfo = C_Map.GetMapInfo(mapID)
+		if hostInfo == nil or hostInfo.mapType ~= Enum.UIMapType.Zone then convergencesOn = false end
+	end
+
+	if not (piersOn or dungeonsOn or convergencesOn or libraryBooksOn or flightsOn or meetingStonesOn or crossingsOn or spiritHealersOn) then return nil end
+	local space = oneMap and MapUtils:GetZoneDetailSpace() or mapID
+	local key = format("%d:%s:%s:%s:%s:%s:%s:%s:%s:%s:%d", mapID, tostring(oneMap), tostring(piersOn), tostring(dungeonsOn), tostring(convergencesOn), tostring(libraryBooksOn), tostring(flightsOn), tostring(meetingStonesOn), tostring(crossingsOn), tostring(spiritHealersOn), convergencesOn and math.floor(GetTime() / 5) or 0)
 	local cache = MapUtils.OneMapPinCache
 	if cache.key == key then return cache.items end
 	local hostLeft, hostRight, hostTop, hostBottom = 0, 1, 0, 1
@@ -2743,22 +2764,32 @@ function MapUtils:GetOneMapForeignPins(mapID, piersOn, dungeonsOn, convergencesO
 		return false
 	end
 
-	local own = BuildList(mapID, piersOn, dungeonsOn, false, false, false, false, false, nil, libraryBooksOn)
+	local own = BuildList(mapID, piersOn, dungeonsOn, flightsOn, meetingStonesOn, crossingsOn, spiritHealersOn, false, nil, libraryBooksOn)
 	if own ~= nil then
 		for _, entry in ipairs(own) do
 			Remember(entry, hostLeft + entry.x * (hostRight - hostLeft), hostTop + entry.y * (hostBottom - hostTop))
 		end
 	end
 
-	for _, sourceID in ipairs(MapUtils:GetZoneDetailSources()) do
+	local enabled = {
+		["dungeon"] = dungeonsOn,
+		["convergence"] = convergencesOn,
+		["librarybook"] = libraryBooksOn,
+		["flight"] = flightsOn,
+		["meetingstone"] = meetingStonesOn,
+		["crossing"] = crossingsOn,
+		["spirithealer"] = spiritHealersOn,
+	}
+
+	for _, sourceID in ipairs(oneMap and MapUtils:GetZoneDetailSources() or MapUtils:GetAzerothPinSources(mapID)) do
 		if sourceID ~= mapID then
 			local left, right, top, bottom = C_Map.GetMapRectOnMap(sourceID, space)
-			local list = left ~= nil and right > left and bottom > top and BuildList(sourceID, piersOn, dungeonsOn, false, false, false, false, convergencesOn, nil, libraryBooksOn)
+			local list = left ~= nil and right > left and bottom > top and BuildList(sourceID, piersOn, dungeonsOn, flightsOn, meetingStonesOn, crossingsOn, spiritHealersOn, convergencesOn, nil, libraryBooksOn)
 			if list then
 				for _, entry in ipairs(list) do
-					if entry.kind == nil or entry.kind == "dungeon" and dungeonsOn or entry.kind == "convergence" and convergencesOn or entry.kind == "librarybook" and libraryBooksOn then
+					if entry.kind == nil and piersOn or entry.kind ~= nil and enabled[entry.kind] then
 						local u, v = left + entry.x * (right - left), top + entry.y * (bottom - top)
-						if entry.kind ~= "dungeon" and entry.kind ~= "librarybook" or not IsSeen(entry, u, v) then
+						if entry.kind == nil or entry.kind == "convergence" or not IsSeen(entry, u, v) then
 							Remember(entry, u, v)
 							tinsert(
 								items,
@@ -2925,7 +2956,7 @@ local function UpdateWorldPins()
 	local flightsOn = FlightsEnabled(true)
 	local meetingStonesOn = MeetingStonesEnabled(true)
 	local crossingsOn = CrossingsEnabled()
-	local spiritHealersOn = MapUtils:IsForever() and MapUtils:GetConfig("SPIRITHEALERWORLDMAPPINS", false) == true
+	local spiritHealersOn = MapUtils:IsForever() and MapUtils:IsPinShownOnMap("SPIRITHEALERWORLDMAPPINS", false)
 	local convergencesOn = MapUtils.ConvergencePinsEnabled ~= nil and MapUtils:ConvergencePinsEnabled(true)
 	local libraryBooksOn = MapUtils.LibraryBookPinsEnabled ~= nil and MapUtils:LibraryBookPinsEnabled()
 	if MapUtils:IsDebug() then
@@ -2962,7 +2993,7 @@ local function UpdateWorldPins()
 		tinsert(list, entry)
 	end
 
-	local foreign = MapUtils:GetOneMapForeignPins(mapID, piersOn, dungeonsOn, convergencesOn, libraryBooksOn)
+	local foreign = MapUtils:GetOneMapForeignPins(mapID, piersOn, dungeonsOn, convergencesOn, libraryBooksOn, flightsOn, meetingStonesOn, crossingsOn, spiritHealersOn)
 	local ownCount = #list
 	if foreign ~= nil then
 		for _, item in ipairs(foreign) do
@@ -2994,16 +3025,17 @@ local function UpdateWorldPins()
 		local icon = GetEntryIcon(entry)
 		ApplyIcon(pin, icon)
 		ApplyEntryTint(pin, entry)
+		local factor = MapUtils:GetPinKindSizeFactor(entry.kind)
 		if entry.kind == "crossing" or entry.kind == "dungeon" and entry.entrance == "path" then
-			pin:SetSize(dungeonSize * 0.7, dungeonSize * 0.7)
+			pin:SetSize(dungeonSize * 0.7 * factor, dungeonSize * 0.7 * factor)
 		elseif entry.kind == "dungeon" then
-			local entranceSize = math.min(DUNGEON_ICON_SIZE, GetAtlasWidth(icon) or DUNGEON_ICON_SIZE) * poiScale / scale
+			local entranceSize = math.min(DUNGEON_ICON_SIZE, GetAtlasWidth(icon) or DUNGEON_ICON_SIZE) * poiScale / scale * factor
 			pin:SetSize(entranceSize, entranceSize)
 		elseif entry.kind == "flight" then
-			local flightSize = (GetAtlasWidth(entry.icon) or ICON_SIZE) * poiScale / scale
+			local flightSize = (GetAtlasWidth(entry.icon) or ICON_SIZE) * poiScale / scale * factor
 			pin:SetSize(flightSize, flightSize)
 		else
-			pin:SetSize(size, size)
+			pin:SetSize(size * factor, size * factor)
 		end
 
 		UpdatePinStyle(pin)

@@ -427,7 +427,9 @@ function Transport.HideFrom(list, first)
 end
 
 function Transport.Enabled(worldMap)
-	return MapUtils:GetConfig(worldMap and "VESSELWORLDMAPPINS" or "VESSELMINIMAPPINS", true) == true
+	if worldMap then return MapUtils:IsPinShownOnMap("VESSELWORLDMAPPINS", true) end
+
+	return MapUtils:GetConfig("VESSELMINIMAPPINS", true) == true
 end
 
 function Transport.GetCanvas()
@@ -580,7 +582,7 @@ function Transport.UpdateWorld()
 	local projections = canvas ~= nil and Transport.Enabled(true) and MapUtils.GetMapRect ~= nil and Transport.GetProjections(WorldMapFrame:GetMapID()) or nil
 	if projections ~= nil and canvas:GetScale() > 0 then
 		local w, h = canvas:GetWidth(), canvas:GetHeight()
-		local size = Transport.iconSize / canvas:GetScale()
+		local size = Transport.iconSize / canvas:GetScale() * MapUtils:GetPinSizeFactor("VESSELWORLDMAPPINS")
 		for id, route in pairs(Transport.GetRoutes()) do
 			local instance, wx, wy, angle, zoning = Transport.GetWorldMapPosition(id)
 			local mx, my = nil, nil
