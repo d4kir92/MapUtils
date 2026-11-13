@@ -65,6 +65,7 @@ questturnins.lua
 data\wrath\questgivers.lua
 questgivers.lua
 guildmembers.lua
+custommarkers.lua
 zonelevels.lua
 data\classic\instancepins.lua
 instancemap.lua

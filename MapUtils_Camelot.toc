@@ -70,6 +70,7 @@ questturnins.lua
 data\forever\questgivers.lua
 questgivers.lua
 guildmembers.lua
+custommarkers.lua
 zonelevels.lua
 data\classic\instancepins.lua
 data\forever\instancepins.lua

@@ -252,7 +252,8 @@ local PinCache = {
 	["atlas"] = {},
 	["atlasWidth"] = {},
 	["halfCoords"] = {},
-	["mergePixels"] = 16
+	["mergePixels"] = 16,
+	["druidFlights"] = {[62] = true, [63] = true}
 }
 
 local MINIMAP_YARDS = {}
@@ -1899,12 +1900,14 @@ local function GetFlights(mapID)
 	local playerFaction = UnitFactionGroup("player")
 	if info == nil or playerFaction == nil then return nil end
 	local list = {}
+	local _, playerClass = UnitClass("player")
 	if info.mapType ~= nil and info.mapType >= ZONE_MAP_TYPE then
 		local ok, nodes = pcall(C_TaxiMap.GetTaxiNodesForMap, mapID)
 		if ok and type(nodes) == "table" then
 			for _, node in ipairs(nodes) do
 				local faction = TAXI_FACTIONS[node.faction] or "Neutral"
-				if node.position ~= nil and (type(node.name) ~= "string" or strfind(strlower(node.name), "^zzold") == nil) and (faction == "Neutral" or faction == playerFaction) then
+				local druidFlight = PinCache.druidFlights[node.nodeID] == true
+				if node.position ~= nil and (type(node.name) ~= "string" or strfind(strlower(node.name), "^zzold") == nil) and (faction == "Neutral" or faction == playerFaction) and (not druidFlight or playerClass == "DRUID") then
 					local entry = {}
 					entry.kind = "flight"
 					entry.nodeID = node.nodeID
@@ -1914,6 +1917,10 @@ local function GetFlights(mapID)
 					local known = MapUtils:GetFlightKnowledge()[node.nodeID]
 					entry.discoveryKnown = entry.undiscovered or known ~= nil or MapUtils:GetWoWBuild() == "RETAIL" and not MapUtils:IsForever() and type(node.isUndiscovered) == "boolean"
 					if not entry.undiscovered and known ~= nil then entry.undiscovered = not known end
+					if druidFlight then
+						entry.undiscovered = false
+						entry.discoveryKnown = true
+					end
 					entry.icon = GetFlightIcon(node, faction)
 					entry.x, entry.y = node.position:GetXY()
 					local transportNode = type(entry.icon) == "string" and strfind(strlower(entry.icon), "taxinode_continent", 1, true) ~= nil

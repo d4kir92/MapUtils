@@ -133,6 +133,14 @@ local Toggles = {
 			available = function() return MapUtils.RefreshGuildMembers ~= nil and MapUtils.SetGuildOption ~= nil end
 		},
 		{
+			key = "CUSTOMMARKERWORLDMAPPINS",
+			label = "LID_CUSTOMMARKERS",
+			default = true,
+			refresh = "RefreshCustomMarkers",
+			file = "Interface\\TargetingFrame\\UI-RaidTargetingIcon_1",
+			available = function() return MapUtils.RefreshCustomMarkers ~= nil end
+		},
+		{
 			key = "TOWNPOIS",
 			label = "LID_TOWNS",
 			default = false,
