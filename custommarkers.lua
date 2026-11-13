@@ -10,6 +10,7 @@ local CM = {
 	iconButtonSize = 32,
 	iconStep = 36,
 	defaultIcon = "Interface\\Icons\\INV_Misc_QuestionMark",
+	circleMask = "Interface\\CharacterFrame\\TempPortraitAlphaMask",
 	macroIconSources = {"GetLooseMacroIcons", "GetLooseMacroItemIcons", "GetMacroIcons", "GetMacroItemIcons"},
 }
 
@@ -25,6 +26,40 @@ function CM.ResolveIcon(icon)
 	if icon == nil or icon == "" then return CM.defaultIcon end
 
 	return tonumber(icon) or icon
+end
+
+function CM.CreateMask(owner, anchor)
+	if owner.CreateMaskTexture == nil then return nil end
+	local mask = owner:CreateMaskTexture()
+	mask:SetTexture(CM.circleMask, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+	mask:SetAllPoints(anchor)
+
+	return mask
+end
+
+function CM.AddMask(texture, mask)
+	if mask ~= nil and texture ~= nil and texture.AddMaskTexture ~= nil then texture:AddMaskTexture(mask) end
+end
+
+function CM.CreateRoundIcon(owner)
+	owner.outline = owner:CreateTexture(nil, "BACKGROUND")
+	owner.outline:SetAllPoints(owner)
+	owner.outline:SetColorTexture(0, 0, 0, 1)
+	owner.icon = owner:CreateTexture(nil, "ARTWORK")
+	owner.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+	owner.outerMask = CM.CreateMask(owner, owner)
+	owner.innerMask = CM.CreateMask(owner, owner.icon)
+	CM.AddMask(owner.outline, owner.outerMask)
+	CM.AddMask(owner.icon, owner.innerMask)
+	CM.SetRoundInset(owner, 1)
+end
+
+function CM.SetRoundInset(owner, inset)
+	if owner.roundInset == inset then return end
+	owner.roundInset = inset
+	owner.icon:ClearAllPoints()
+	owner.icon:SetPoint("TOPLEFT", owner, "TOPLEFT", inset, -inset)
+	owner.icon:SetPoint("BOTTOMRIGHT", owner, "BOTTOMRIGHT", -inset, inset)
 end
 
 function CM.IsInstanceShown()
@@ -134,12 +169,12 @@ end
 function CM.CreatePin(canvas)
 	local pin = CreateFrame("Button", nil, canvas)
 	pin:RegisterForClicks("LeftButtonUp", "RightButtonUp", "MiddleButtonUp")
-	pin.icon = pin:CreateTexture(nil, "ARTWORK")
-	pin.icon:SetAllPoints(pin)
+	CM.CreateRoundIcon(pin)
 	pin.highlight = pin:CreateTexture(nil, "HIGHLIGHT")
 	pin.highlight:SetAllPoints(pin)
 	pin.highlight:SetTexture("Interface\\Buttons\\ButtonHilight-Square")
 	pin.highlight:SetBlendMode("ADD")
+	CM.AddMask(pin.highlight, pin.outerMask)
 	pin.label = pin:CreateFontString(nil, "OVERLAY")
 	pin.label:SetPoint("TOP", pin, "BOTTOM", 0, -1)
 	pin:SetScript("OnEnter", CM.OnEnter)
@@ -175,6 +210,7 @@ function CM.UpdatePins()
 			pin.marker = marker
 			pin.icon:SetTexture(CM.ResolveIcon(marker.icon))
 			pin:SetSize(CM.size / pinScale, CM.size / pinScale)
+			CM.SetRoundInset(pin, 1 / scale)
 			pin.label:SetFont(font, CM.labelSize / pinScale, "OUTLINE")
 			pin.label:SetText(marker.name or "")
 			pin:SetFrameLevel(canvas:GetFrameLevel() + 40)
@@ -280,7 +316,7 @@ end
 function CM.SelectIcon(icon)
 	local dialog = CM.dialog
 	dialog.icon = icon
-	dialog.preview:SetTexture(CM.ResolveIcon(icon))
+	dialog.preview.icon:SetTexture(CM.ResolveIcon(icon))
 	CM.UpdateGrid()
 end
 
@@ -314,13 +350,14 @@ function CM.CreateIconButton(dialog, index)
 	local button = CreateFrame("Button", nil, dialog)
 	button:SetSize(size, size)
 	button:SetPoint("TOPLEFT", dialog.scroll, "TOPLEFT", ((index - 1) % CM.columns) * step, -math.floor((index - 1) / CM.columns) * step)
-	button.icon = button:CreateTexture(nil, "ARTWORK")
-	button.icon:SetAllPoints(button)
+	CM.CreateRoundIcon(button)
 	button:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD")
+	CM.AddMask(button:GetHighlightTexture(), button.outerMask)
 	button.selected = button:CreateTexture(nil, "OVERLAY")
 	button.selected:SetTexture("Interface\\Buttons\\CheckButtonHilight")
 	button.selected:SetBlendMode("ADD")
 	button.selected:SetAllPoints(button)
+	CM.AddMask(button.selected, button.outerMask)
 	button:SetScript("OnClick", function(self) if self.path ~= nil then CM.SelectIcon(self.path) end end)
 
 	return button
@@ -349,9 +386,10 @@ function CM.CreateDialog()
 	end
 
 	if dialog.CloseButton ~= nil then dialog.CloseButton:SetScript("OnClick", function() dialog:Hide() end) end
-	dialog.preview = dialog:CreateTexture(nil, "ARTWORK")
+	dialog.preview = CreateFrame("Frame", nil, dialog)
 	dialog.preview:SetSize(32, 32)
 	dialog.preview:SetPoint("TOPLEFT", 16, -32)
+	CM.CreateRoundIcon(dialog.preview)
 	dialog.nameBox = CM.CreateEditBox(dialog, width - 76)
 	dialog.nameBox:SetPoint("LEFT", dialog.preview, "RIGHT", 14, 0)
 	dialog.nameBox:SetMaxLetters(60)
@@ -402,7 +440,7 @@ function CM.OpenDialog(marker, pending)
 	dialog:Show()
 	dialog:Raise()
 	dialog.icon = source.icon or CM.defaultIcon
-	dialog.preview:SetTexture(CM.ResolveIcon(dialog.icon))
+	dialog.preview.icon:SetTexture(CM.ResolveIcon(dialog.icon))
 	CM.ScrollToIcon(dialog.icon)
 	dialog.nameBox:SetText(source.name or "")
 	dialog.nameBox:SetFocus()

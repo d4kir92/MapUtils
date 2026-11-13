@@ -19,6 +19,8 @@ local AreaPOIs = {
 		[1785] = true,
 		[1961] = true
 	},
+	icons = {},
+	captured = {},
 	maps = {},
 	hooked = {}
 }
@@ -32,20 +34,65 @@ function AreaPOIs.GetID(pin)
 	return nil
 end
 
-function AreaPOIs.IsHidden(mapID, pin)
+function AreaPOIs.GetKind(mapID, pin)
 	local id = AreaPOIs.GetID(pin)
-	if id == nil then return false end
-	if AreaPOIs.capitals[id] then return not MapUtils:IsPinShownOnMap("CAPITALPOIS", false, mapID) end
-	if MapUtils:IsPinShownOnMap("TOWNPOIS", false, mapID) or mapID == nil then return false end
-	local info = C_AreaPoiInfo.GetAreaPOIInfo(mapID, id)
+	if id == nil then return nil end
+	if AreaPOIs.capitals[id] then return "capital" end
+	local info = mapID and C_AreaPoiInfo.GetAreaPOIInfo(mapID, id)
 	if info == nil and type(pin.poiInfo) == "table" and pin.poiInfo.areaPoiID == id then info = pin.poiInfo end
+	if info ~= nil and AreaPOIs.towns[info.textureIndex] == true then return "town" end
 
-	return info ~= nil and AreaPOIs.towns[info.textureIndex] == true
+	return nil
+end
+
+function AreaPOIs.IsHidden(mapID, pin, kind)
+	if kind == "capital" then return not MapUtils:IsPinShownOnMap("CAPITALPOIS", false, mapID) end
+	if kind == "town" then return not MapUtils:IsPinShownOnMap("TOWNPOIS", false, mapID) end
+
+	return false
+end
+
+function AreaPOIs.GetIcon(kind)
+	if AreaPOIs.icons[kind] ~= nil then return AreaPOIs.icons[kind] end
+	local saved = type(MAUTTAB) == "table" and type(MAUTTAB["POIICONS"]) == "table" and MAUTTAB["POIICONS"][kind] or nil
+	if type(saved) == "table" then AreaPOIs.icons[kind] = saved end
+
+	return AreaPOIs.icons[kind]
+end
+
+function AreaPOIs.ReadIcon(texture)
+	if texture == nil then return nil end
+	local atlas = texture.GetAtlas and texture:GetAtlas()
+	if type(atlas) == "string" and atlas ~= "" then return {atlas = atlas} end
+	local file = texture:GetTexture()
+	if file == nil then return nil end
+	local left, top, _, bottom, right = texture:GetTexCoord()
+	if left == nil then return nil end
+
+	return {file = file, left = left, right = right, top = top, bottom = bottom}
+end
+
+function AreaPOIs.Capture(pin, kind)
+	if kind == nil or AreaPOIs.captured[kind] then return end
+	local icon = AreaPOIs.ReadIcon(pin.Texture or pin.texture)
+	if icon == nil then return end
+	AreaPOIs.captured[kind] = true
+	AreaPOIs.icons[kind] = icon
+	if type(MAUTTAB) == "table" then
+		MAUTTAB["POIICONS"] = type(MAUTTAB["POIICONS"]) == "table" and MAUTTAB["POIICONS"] or {}
+		MAUTTAB["POIICONS"][kind] = icon
+	end
+
+	if MapUtils.RefreshPinToggleIcons ~= nil then MapUtils:RefreshPinToggleIcons() end
 end
 
 function AreaPOIs.OnPinShow(pin)
 	local map = pin.GetMap and pin:GetMap()
-	if map ~= nil and map.GetMapID ~= nil and AreaPOIs.IsHidden(map:GetMapID(), pin) then pin:Hide() end
+	if map == nil or map.GetMapID == nil then return end
+	local mapID = map:GetMapID()
+	local kind = AreaPOIs.GetKind(mapID, pin)
+	AreaPOIs.Capture(pin, kind)
+	if AreaPOIs.IsHidden(mapID, pin, kind) then pin:Hide() end
 end
 
 function AreaPOIs.Apply(map)
@@ -57,7 +104,9 @@ function AreaPOIs.Apply(map)
 			pin:HookScript("OnShow", AreaPOIs.OnPinShow)
 		end
 
-		pin:SetShown(not AreaPOIs.IsHidden(mapID, pin))
+		local kind = AreaPOIs.GetKind(mapID, pin)
+		AreaPOIs.Capture(pin, kind)
+		pin:SetShown(not AreaPOIs.IsHidden(mapID, pin, kind))
 	end
 end
 
@@ -106,7 +155,7 @@ function AreaPOIs.Report()
 				if id ~= nil or type(pin.name) == "string" then
 					local info = id and mapID and C_AreaPoiInfo.GetAreaPOIInfo(mapID, id)
 					local index = info and info.textureIndex or pin.poiInfo and pin.poiInfo.textureIndex
-					MapUtils:INFO(format("%s | %s | id %s | textureIndex %s | atlas %s | shown %s | alpha %.2f | hidden %s | hook %s", tostring(template), tostring(pin.name), tostring(id), tostring(index), tostring(info and info.atlasName), tostring(pin:IsShown()), pin:GetAlpha(), tostring(template == AreaPOIs.template and AreaPOIs.IsHidden(mapID, pin)), tostring(AreaPOIs.hooked[pin] == true)))
+					MapUtils:INFO(format("%s | %s | id %s | textureIndex %s | atlas %s | shown %s | alpha %.2f | hidden %s | hook %s", tostring(template), tostring(pin.name), tostring(id), tostring(index), tostring(info and info.atlasName), tostring(pin:IsShown()), pin:GetAlpha(), tostring(template == AreaPOIs.template and AreaPOIs.IsHidden(mapID, pin, AreaPOIs.GetKind(mapID, pin))), tostring(AreaPOIs.hooked[pin] == true)))
 				end
 			end
 		end

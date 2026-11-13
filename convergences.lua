@@ -70,8 +70,11 @@ local Convergence = {
 		elemental = 1259686,
 		leyline = 1259705
 	},
-	atlas = "MagePortalAlliance",
-	atlasKnown = nil,
+	factionAtlas = {
+		Horde = "MagePortalHorde",
+		Alliance = "MagePortalAlliance"
+	},
+	atlasKnown = {},
 	fallbackIcons = {
 		elemental = "Interface\\Icons\\Spell_Nature_Cyclone",
 		leyline = "Interface\\Icons\\Spell_Arcane_Arcane04"
@@ -173,8 +176,9 @@ function Convergence.GetVariantName(variant)
 end
 
 function Convergence.GetVariantIcon(variant)
-	if Convergence.atlasKnown == nil then Convergence.atlasKnown = MapUtils.AtlasExists ~= nil and MapUtils:AtlasExists(Convergence.atlas) == true end
-	if Convergence.atlasKnown then return Convergence.atlas end
+	local atlas = Convergence.factionAtlas[UnitFactionGroup("player")] or Convergence.factionAtlas.Alliance
+	if Convergence.atlasKnown[atlas] == nil then Convergence.atlasKnown[atlas] = MapUtils.AtlasExists ~= nil and MapUtils:AtlasExists(atlas) == true end
+	if Convergence.atlasKnown[atlas] then return atlas end
 	local icon = nil
 	if C_Spell ~= nil and C_Spell.GetSpellTexture ~= nil then icon = C_Spell.GetSpellTexture(Convergence.icons[variant]) end
 

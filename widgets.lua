@@ -11,6 +11,8 @@ local Toggles = {
 	gap = 3,
 	iconInset = 1,
 	menuIcon = 14,
+	badgeScale = 0.6,
+	badgeCoords = {0, 0.625, 0, 0.625},
 	offAlpha = 0.4,
 	expandIcon = "Interface\\Buttons\\UI-PlusButton-Up",
 	collapseIcon = "Interface\\Buttons\\UI-MinusButton-Up",
@@ -56,7 +58,7 @@ local Toggles = {
 			label = "LID_DUNGEONS",
 			default = true,
 			shared = true,
-			atlas = {"Dungeon", "DungeonSkull"},
+			atlas = {"questlog-questtypeicon-dungeon", "Dungeon", "DungeonSkull"},
 			file = "Interface\\Icons\\INV_Misc_Bone_Skull_02"
 		},
 		{
@@ -80,6 +82,14 @@ local Toggles = {
 			default = true,
 			refresh = "RefreshPins",
 			file = "Interface\\Icons\\Spell_Arcane_Arcane04",
+			factionAtlas = {
+				Horde = {"MagePortalHorde"},
+				Alliance = {"MagePortalAlliance"}
+			},
+			factionFile = {
+				Horde = "Interface\\Icons\\Spell_Nature_Cyclone",
+				Alliance = "Interface\\Icons\\Spell_Arcane_Arcane04"
+			},
 			available = function() return MapUtils:IsForever() end
 		},
 		{
@@ -146,6 +156,7 @@ local Toggles = {
 			default = false,
 			refresh = "RefreshAreaPOIs",
 			file = "Interface\\Minimap\\Tracking\\Innkeeper",
+			poiIcon = "capital",
 			available = function() return MapUtils.RefreshAreaPOIs ~= nil end
 		},
 		{
@@ -154,6 +165,15 @@ local Toggles = {
 			default = false,
 			refresh = "RefreshAreaPOIs",
 			file = "Interface\\Icons\\INV_BannerPVP_02",
+			factionFile = {
+				Horde = "Interface\\Icons\\INV_BannerPVP_01",
+				Alliance = "Interface\\Icons\\INV_BannerPVP_02"
+			},
+			poiIcon = "capital",
+			badge = {
+				Horde = "Interface\\TargetingFrame\\UI-PVP-Horde",
+				Alliance = "Interface\\TargetingFrame\\UI-PVP-Alliance"
+			},
 			available = function() return MapUtils.RefreshAreaPOIs ~= nil end
 		},
 	},
@@ -294,16 +314,52 @@ function Toggles.Click(category, mouseButton)
 	end
 end
 
+function Toggles.GetFile(category)
+	local faction = UnitFactionGroup("player")
+	if category.factionFile ~= nil and category.factionFile[faction] ~= nil then return category.factionFile[faction] end
+
+	return category.file
+end
+
 function Toggles.GetIcon(category)
-	if category.atlas ~= nil and MapUtils.FindAtlas ~= nil then
-		local atlas = MapUtils:FindAtlas(category.atlas)
+	local poiIcon = Toggles.GetPOIIcon(category)
+	if poiIcon ~= nil and poiIcon.atlas ~= nil then return poiIcon.atlas, true end
+	local atlasList = category.atlas
+	local faction = UnitFactionGroup("player")
+	if category.factionAtlas ~= nil and category.factionAtlas[faction] ~= nil then atlasList = category.factionAtlas[faction] end
+	if atlasList ~= nil and MapUtils.FindAtlas ~= nil then
+		local atlas = MapUtils:FindAtlas(atlasList)
 		if atlas ~= nil then return atlas, true end
 	end
 
-	return category.file, false
+	return Toggles.GetFile(category), false
+end
+
+function Toggles.GetPOIIcon(category)
+	if category.poiIcon == nil or MapUtils.AreaPOIs == nil then return nil end
+
+	return MapUtils.AreaPOIs.GetIcon(category.poiIcon)
+end
+
+function Toggles.GetPOICoords(category)
+	local icon = Toggles.GetPOIIcon(category)
+	if icon == nil or icon.file == nil then return nil end
+
+	return icon.file, icon.left, icon.right, icon.top, icon.bottom
 end
 
 function Toggles.GetIconMarkup(category)
+	local markup = Toggles.GetBaseIconMarkup(category)
+	local badge = Toggles.GetBadge(category)
+	if badge == nil then return markup end
+	local c = Toggles.badgeCoords
+
+	return strtrim(markup) .. format("|T%s:%d:%d:0:0:64:64:%d:%d:%d:%d|t ", badge, Toggles.menuIcon, Toggles.menuIcon, c[1] * 64, c[2] * 64, c[3] * 64, c[4] * 64)
+end
+
+function Toggles.GetBaseIconMarkup(category)
+	local poiFile, left, right, top, bottom = Toggles.GetPOICoords(category)
+	if poiFile ~= nil then return format("|T%s:%d:%d:0:0:1024:1024:%d:%d:%d:%d|t ", poiFile, Toggles.menuIcon, Toggles.menuIcon, math.floor(left * 1024 + 0.5), math.floor(right * 1024 + 0.5), math.floor(top * 1024 + 0.5), math.floor(bottom * 1024 + 0.5)) end
 	local icon, isAtlas = Toggles.GetIcon(category)
 	if isAtlas then return format("|A:%s:%d:%d|a ", icon, Toggles.menuIcon, Toggles.menuIcon) end
 
@@ -311,6 +367,8 @@ function Toggles.GetIconMarkup(category)
 end
 
 function Toggles.GetIconTexture(category)
+	local poiFile, left, right, top, bottom = Toggles.GetPOICoords(category)
+	if poiFile ~= nil then return poiFile, left, right, top, bottom end
 	local icon, isAtlas = Toggles.GetIcon(category)
 	if isAtlas and C_Texture ~= nil and C_Texture.GetAtlasInfo ~= nil then
 		local info = C_Texture.GetAtlasInfo(icon)
@@ -318,7 +376,7 @@ function Toggles.GetIconTexture(category)
 		if file ~= nil then return file, info.leftTexCoord, info.rightTexCoord, info.topTexCoord, info.bottomTexCoord end
 	end
 
-	return category.file, 0, 1, 0, 1
+	return Toggles.GetFile(category), 0, 1, 0, 1
 end
 
 function Toggles.GetStateText(on)
@@ -329,6 +387,10 @@ end
 
 function MapUtils:RefreshPinToggles()
 	Toggles.Layout()
+end
+
+function MapUtils:RefreshPinToggleIcons()
+	Toggles.Refresh()
 end
 
 function Toggles.GetMenuEntry(category)
@@ -468,6 +530,44 @@ function Toggles.CreateOutline(button)
 	return glow
 end
 
+function Toggles.GetBadge(category)
+	if category.badge == nil then return nil end
+
+	return category.badge[UnitFactionGroup("player")]
+end
+
+function Toggles.ApplyBadge(button)
+	local file = Toggles.GetBadge(button.category)
+	if file == nil then return end
+	if button.badge == nil then
+		button.badge = button:CreateTexture(nil, "OVERLAY")
+		button.badge:SetSize(Toggles.size * Toggles.badgeScale, Toggles.size * Toggles.badgeScale)
+		button.badge:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", 0, 0)
+	end
+
+	button.badge:SetTexture(file)
+	button.badge:SetTexCoord(unpack(Toggles.badgeCoords))
+end
+
+function Toggles.ApplyIcon(button)
+	local category = button.category
+	Toggles.ApplyBadge(button)
+	local file, l, r, t, b = Toggles.GetIconTexture(category)
+	local key = format("%s|%s|%s|%s|%s", tostring(file), tostring(l), tostring(r), tostring(t), tostring(b))
+	if button.iconKey == key then return end
+	button.iconKey = key
+	if category.offsetX ~= nil then
+		local shift = -category.offsetX / (Toggles.size - Toggles.iconInset * 2) * (r - l)
+		l, r = l + shift, r + shift
+	end
+
+	local middle = l + (r - l) / 2
+	for _, part in ipairs({{button.left, l, middle}, {button.right, middle, r}, {button.full, l, r}}) do
+		part[1]:SetTexture(file, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+		part[1]:SetTexCoord(part[2], part[3], t, b)
+	end
+end
+
 function Toggles.CreateButton(category)
 	local button = CreateFrame("Button", nil, Toggles.content)
 	button:SetSize(Toggles.size, Toggles.size)
@@ -475,20 +575,10 @@ function Toggles.CreateButton(category)
 	button.category = category
 	button.left = Toggles.CreateHalf(button, true)
 	button.right = Toggles.CreateHalf(button, false)
-	local file, l, r, t, b = Toggles.GetIconTexture(category)
-	if category.offsetX ~= nil then
-		local shift = -category.offsetX / (Toggles.size - Toggles.iconInset * 2) * (r - l)
-		l, r = l + shift, r + shift
-	end
-
-	local middle = l + (r - l) / 2
 	button.full = button:CreateTexture(nil, "ARTWORK")
 	button.full:SetPoint("TOPLEFT", button, "TOPLEFT", Toggles.iconInset, -Toggles.iconInset)
 	button.full:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -Toggles.iconInset, Toggles.iconInset)
-	for _, part in ipairs({{button.left, l, middle}, {button.right, middle, r}, {button.full, l, r}}) do
-		part[1]:SetTexture(file, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
-		part[1]:SetTexCoord(part[2], part[3], t, b)
-	end
+	Toggles.ApplyIcon(button)
 	button.glow = Toggles.CreateGlow(button)
 	button:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD")
 	button:SetScript("OnClick", function(self, mouseButton)
@@ -517,10 +607,12 @@ function Toggles.Refresh()
 	local glow = MapUtils:GetMapEditIconStyle(Toggles.element) == "GLOW"
 	for _, button in ipairs(list) do
 		local zone, azeroth = Toggles.GetState(button.category, false), Toggles.GetState(button.category, true)
+		if button.category.poiIcon ~= nil then Toggles.ApplyIcon(button) end
 		button.left:SetShown(not glow)
 		button.right:SetShown(not glow)
 		button.full:SetShown(glow)
 		button.glow:SetShown(glow and azeroth)
+		if button.badge ~= nil then Toggles.SetHalf(button.badge, zone or azeroth) end
 		if glow then
 			Toggles.SetHalf(button.full, zone)
 		else
