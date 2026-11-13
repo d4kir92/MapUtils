@@ -45,7 +45,9 @@ function D4:CreateUIWhatsNew(tab)
                 if row.control then
                     row.control:UpdateLabel()
                 elseif row.category then
-                    row.label:SetText(UI:Text(row.category.settingLabel))
+                    local text = UI:Text(row.category.settingLabel)
+                    row.header.Label:SetText(text)
+                    UI:SetLabel(row.element, text)
                 else
                     local setting = row.setting
                     row.label:SetText(UI:Text(setting.settingLabel))
@@ -61,23 +63,18 @@ function D4:CreateUIWhatsNew(tab)
         win:Layout()
     end
 
-    local function AddHeader(category)
-        local holder = CreateFrame("Frame", nil, win.content)
-        local label = holder:CreateFontString(nil, "OVERLAY", category.level == 1 and "GameFontNormalLarge" or "GameFontNormal")
-        label:SetPoint("LEFT", holder, "LEFT", 0, 0)
-        label:SetJustifyH("LEFT")
-        local line = holder:CreateTexture(nil, "ARTWORK")
-        line:SetHeight(1)
-        line:SetPoint("BOTTOMLEFT", holder, "BOTTOMLEFT", 0, 0)
-        line:SetPoint("BOTTOMRIGHT", holder, "BOTTOMRIGHT", 0, 0)
-        UI:SetSolidColor(line, 1, 0.82, 0, 0.35)
-        return {category = category, label = label, element = UI:Add(win, holder, UI.ROW, nil, true)}
+    local function AddHeader(category, id)
+        local header = win:AddCategory({label = category.settingLabel, key = id, added = category.added, level = category.level})
+        win.category = nil
+        win.categoryStack = {}
+        return {category = category, header = header, element = header.element}
     end
 
     local function AddCheckboxRow(setting)
         local source, options = setting.checkbox, setting.setting
         local control = win:AddCheckbox({
             label = options.label,
+            added = options.added,
             textFunc = options.textFunc,
             tooltip = options.tooltip,
             value = source:GetChecked(),
@@ -104,7 +101,8 @@ function D4:CreateUIWhatsNew(tab)
         body:SetPoint("TOPLEFT", label, "BOTTOMLEFT", 0, -4)
         body:SetWidth(win.contentWidth - 16)
         body:SetJustifyH("LEFT")
-        return {label = label, text = body, element = UI:Add(win, holder, UI.ROW, nil, true)}
+        holder.Label = label
+        return {label = label, text = body, element = UI:Add(win, holder, UI.ROW, nil, true, nil, setting.added)}
     end
 
     local function Show(onlyNew)
@@ -120,7 +118,7 @@ function D4:CreateUIWhatsNew(tab)
         if #entries == 0 then return end
 
         if not win then
-            win = D4:CreateUIWindow({name = tab.name, title = tab.title, width = 520, height = 250, resizable = false})
+            win = D4:CreateUIWindow({name = tab.name, title = tab.title, width = 520, height = 500, resizable = false})
             if tab.addLanguageButton then refreshLanguageButton = tab.addLanguageButton(win) end
             local header = win:AddHeader()
             heading = header:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
@@ -143,30 +141,33 @@ function D4:CreateUIWhatsNew(tab)
         end
 
         local order, shown = 0, {}
-        local function Place(id, row, depth)
+        local function Place(id, row, depth, parent)
             rows[id] = row
             order = order + 1
             row.element.hidden = false
             row.element.noticeOrder = order
             row.element.depth = depth
+            row.element.category = parent
         end
 
         for _, entry in ipairs(entries) do
-            local path = ""
+            local path, parent = "", nil
             local categories = GetCategories(entry.setting)
             for depth, category in ipairs(categories) do
                 path = path .. ":" .. (category.settingLabel or category.key or "")
                 local headerID = "category" .. path
+                local header = rows[headerID] or AddHeader(category, headerID)
                 if not shown[headerID] then
                     shown[headerID] = true
-                    Place(headerID, rows[headerID] or AddHeader(category), depth - 1)
+                    Place(headerID, header, depth - 1, parent)
                 end
+                parent = header.element
             end
 
             local row = rows[entry.id] or AddRow(entry.setting)
             row.setting = entry.setting
             if row.source then row.control:SetChecked(row.source:GetChecked()) end
-            Place(entry.id, row, #categories)
+            Place(entry.id, row, #categories, parent)
         end
         table.sort(win.elements, function(left, right) return (left.noticeOrder or math.huge) < (right.noticeOrder or math.huge) end)
 

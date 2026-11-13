@@ -83,6 +83,8 @@ MapUtils:AddTrans("ruRU", "LID_IMPORTINVALID", "Неверная строка и
 MapUtils:AddTrans("ruRU", "LID_INSTANCEMAPS", "Карты подземелий и рейдов")
 MapUtils:AddTrans("ruRU", "LID_LEFTCLICK", "Левый клик")
 MapUtils:AddTrans("ruRU", "LID_LIBRARYBOOK", "Библиотечная книга")
+MapUtils:AddTrans("ruRU", "LID_LIBRARYBOOKINBAGS", "В сумках")
+MapUtils:AddTrans("ruRU", "LID_LIBRARYBOOKINBANK", "В банке")
 MapUtils:AddTrans("ruRU", "LID_LIBRARYBOOKS", "Библиотечные книги")
 MapUtils:AddTrans("ruRU", "LID_LIBRARYBOOKSHOWUNEXPLOREDDESC", "Если отключено, показываются только книги, рядом с которыми этот персонаж уже был. Синхронизировано с режимом без спойлеров AzerothCompendium.")
 MapUtils:AddTrans("ruRU", "LID_MAPFADE", "Прозрачность при движении")

@@ -2665,14 +2665,14 @@ end
 MapUtils.BuildPinList = BuildList
 MapUtils.GetEntryWorldPos = GetEntryWorldPos
 MapUtils.OneMapPinCache = {}
-function MapUtils:GetOneMapForeignPins(mapID, piersOn, dungeonsOn, convergencesOn)
-	if not (piersOn or dungeonsOn or convergencesOn) or MapUtils.IsOneMap == nil or not MapUtils:IsOneMap() or MapUtils.IsZoneDetailMap == nil or not MapUtils:IsZoneDetailMap(mapID) then return nil end
+function MapUtils:GetOneMapForeignPins(mapID, piersOn, dungeonsOn, convergencesOn, libraryBooksOn)
+	if not (piersOn or dungeonsOn or convergencesOn or libraryBooksOn) or MapUtils.IsOneMap == nil or not MapUtils:IsOneMap() or MapUtils.IsZoneDetailMap == nil or not MapUtils:IsZoneDetailMap(mapID) then return nil end
 	local space = MapUtils:GetZoneDetailSpace()
 	if mapID == space then dungeonsOn = false end
 	local hostInfo = C_Map.GetMapInfo(mapID)
 	if hostInfo == nil or hostInfo.mapType ~= Enum.UIMapType.Zone then convergencesOn = false end
-	if not piersOn and not dungeonsOn and not convergencesOn then return nil end
-	local key = format("%d:%s:%s:%s:%d", mapID, tostring(piersOn), tostring(dungeonsOn), tostring(convergencesOn), convergencesOn and math.floor(GetTime() / 5) or 0)
+	if not piersOn and not dungeonsOn and not convergencesOn and not libraryBooksOn then return nil end
+	local key = format("%d:%s:%s:%s:%s:%d", mapID, tostring(piersOn), tostring(dungeonsOn), tostring(convergencesOn), tostring(libraryBooksOn), convergencesOn and math.floor(GetTime() / 5) or 0)
 	local cache = MapUtils.OneMapPinCache
 	if cache.key == key then return cache.items end
 	local hostLeft, hostRight, hostTop, hostBottom = 0, 1, 0, 1
@@ -2692,7 +2692,7 @@ function MapUtils:GetOneMapForeignPins(mapID, piersOn, dungeonsOn, convergencesO
 		return false
 	end
 
-	local own = BuildList(mapID, piersOn, dungeonsOn, false, false, false, false, false)
+	local own = BuildList(mapID, piersOn, dungeonsOn, false, false, false, false, false, nil, libraryBooksOn)
 	if own ~= nil then
 		for _, entry in ipairs(own) do
 			Remember(entry, hostLeft + entry.x * (hostRight - hostLeft), hostTop + entry.y * (hostBottom - hostTop))
@@ -2702,12 +2702,12 @@ function MapUtils:GetOneMapForeignPins(mapID, piersOn, dungeonsOn, convergencesO
 	for _, sourceID in ipairs(MapUtils:GetZoneDetailSources()) do
 		if sourceID ~= mapID then
 			local left, right, top, bottom = C_Map.GetMapRectOnMap(sourceID, space)
-			local list = left ~= nil and right > left and bottom > top and BuildList(sourceID, piersOn, dungeonsOn, false, false, false, false, convergencesOn)
+			local list = left ~= nil and right > left and bottom > top and BuildList(sourceID, piersOn, dungeonsOn, false, false, false, false, convergencesOn, nil, libraryBooksOn)
 			if list then
 				for _, entry in ipairs(list) do
-					if entry.kind == nil or entry.kind == "dungeon" and dungeonsOn or entry.kind == "convergence" and convergencesOn then
+					if entry.kind == nil or entry.kind == "dungeon" and dungeonsOn or entry.kind == "convergence" and convergencesOn or entry.kind == "librarybook" and libraryBooksOn then
 						local u, v = left + entry.x * (right - left), top + entry.y * (bottom - top)
-						if entry.kind ~= "dungeon" or not IsSeen(entry, u, v) then
+						if entry.kind ~= "dungeon" and entry.kind ~= "librarybook" or not IsSeen(entry, u, v) then
 							Remember(entry, u, v)
 							tinsert(
 								items,
@@ -2911,7 +2911,7 @@ local function UpdateWorldPins()
 		tinsert(list, entry)
 	end
 
-	local foreign = MapUtils:GetOneMapForeignPins(mapID, piersOn, dungeonsOn, convergencesOn)
+	local foreign = MapUtils:GetOneMapForeignPins(mapID, piersOn, dungeonsOn, convergencesOn, libraryBooksOn)
 	local ownCount = #list
 	if foreign ~= nil then
 		for _, item in ipairs(foreign) do

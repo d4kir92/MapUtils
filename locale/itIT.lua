@@ -83,6 +83,8 @@ MapUtils:AddTrans("itIT", "LID_IMPORTINVALID", "Stringa di importazione non vali
 MapUtils:AddTrans("itIT", "LID_INSTANCEMAPS", "Mappe di dungeon e incursioni")
 MapUtils:AddTrans("itIT", "LID_LEFTCLICK", "Clic sinistro")
 MapUtils:AddTrans("itIT", "LID_LIBRARYBOOK", "Libro della biblioteca")
+MapUtils:AddTrans("itIT", "LID_LIBRARYBOOKINBAGS", "Nelle borse")
+MapUtils:AddTrans("itIT", "LID_LIBRARYBOOKINBANK", "In banca")
 MapUtils:AddTrans("itIT", "LID_LIBRARYBOOKS", "Libri della biblioteca")
 MapUtils:AddTrans("itIT", "LID_LIBRARYBOOKSHOWUNEXPLOREDDESC", "Se disattivato, vengono mostrati solo i libri vicino ai quali questo personaggio è già stato. Sincronizzato con la modalità senza spoiler di AzerothCompendium.")
 MapUtils:AddTrans("itIT", "LID_MAPFADE", "Trasparenza in movimento")

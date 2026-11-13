@@ -83,6 +83,8 @@ MapUtils:AddTrans("esMX", "LID_IMPORTINVALID", "Cadena de importación no válid
 MapUtils:AddTrans("esMX", "LID_INSTANCEMAPS", "Mapas de mazmorras y bandas")
 MapUtils:AddTrans("esMX", "LID_LEFTCLICK", "Clic izquierdo")
 MapUtils:AddTrans("esMX", "LID_LIBRARYBOOK", "Libro de la biblioteca")
+MapUtils:AddTrans("esMX", "LID_LIBRARYBOOKINBAGS", "En las bolsas")
+MapUtils:AddTrans("esMX", "LID_LIBRARYBOOKINBANK", "En el banco")
 MapUtils:AddTrans("esMX", "LID_LIBRARYBOOKS", "Libros de la biblioteca")
 MapUtils:AddTrans("esMX", "LID_LIBRARYBOOKSHOWUNEXPLOREDDESC", "Si está desactivado, solo se muestran los libros cerca de los que ha estado este personaje. Sincronizado con el modo sin spoilers de AzerothCompendium.")
 MapUtils:AddTrans("esMX", "LID_MAPFADE", "Transparencia al moverse")

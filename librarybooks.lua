@@ -45,8 +45,19 @@ function LibraryBooks.GetState(book)
 	end
 
 	local done = C_QuestLog ~= nil and C_QuestLog.IsQuestFlaggedCompleted ~= nil and C_QuestLog.IsQuestFlaggedCompleted(book.questId)
+	if done then return "done", false end
+	local bags = LibraryBooks.GetCount(book.itemId, false)
+	if bags > 0 then return "bag", true end
+	if LibraryBooks.GetCount(book.itemId, true) > bags then return "bank", true end
 
-	return done and "done" or "missing", false
+	return "missing", false
+end
+
+function LibraryBooks.GetCount(itemId, includeBank)
+	local getter = C_Item ~= nil and C_Item.GetItemCount or GetItemCount
+	if getter == nil then return 0 end
+
+	return tonumber(getter(itemId, includeBank)) or 0
 end
 
 function LibraryBooks.GetIcon(book)
@@ -114,6 +125,13 @@ function MapUtils:AddLibraryBookTooltip(entry)
 	local book = entry.book
 	GameTooltip:AddLine(LibraryBooks.GetName(book), 1, 1, 1)
 	GameTooltip:AddLine(MapUtils:Trans("LID_LIBRARYBOOK"), 0.6, 0.6, 0.6)
+	local state = LibraryBooks.GetState(book)
+	if state == "bag" then
+		GameTooltip:AddLine(MapUtils:Trans("LID_LIBRARYBOOKINBAGS"), 0.4, 1, 0.4)
+	elseif state == "bank" then
+		GameTooltip:AddLine(MapUtils:Trans("LID_LIBRARYBOOKINBANK"), 0.4, 1, 0.4)
+	end
+
 	if book.subzone ~= nil then GameTooltip:AddLine(book.subzone, 1, 0.82, 0) end
 	if book.note ~= nil then GameTooltip:AddLine(book.note, 1, 1, 1, true) end
 end
@@ -152,6 +170,7 @@ MapUtils:RegisterSharedSettings({
 
 LibraryBooks.frame = CreateFrame("Frame")
 LibraryBooks.frame:RegisterEvent("QUEST_TURNED_IN")
+LibraryBooks.frame:RegisterEvent("BAG_UPDATE_DELAYED")
 LibraryBooks.frame:SetScript("OnEvent", function() LibraryBooks.CheckChanged() end)
 if WorldMapFrame ~= nil then WorldMapFrame:HookScript("OnShow", function() LibraryBooks.CheckChanged() end) end
 MapUtils.ProfileTable("LibraryBooks", LibraryBooks)

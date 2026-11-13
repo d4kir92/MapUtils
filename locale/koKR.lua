@@ -83,6 +83,8 @@ MapUtils:AddTrans("koKR", "LID_IMPORTINVALID", "잘못된 가져오기 문자열
 MapUtils:AddTrans("koKR", "LID_INSTANCEMAPS", "던전 및 공격대 지도")
 MapUtils:AddTrans("koKR", "LID_LEFTCLICK", "왼쪽 클릭")
 MapUtils:AddTrans("koKR", "LID_LIBRARYBOOK", "도서관 책")
+MapUtils:AddTrans("koKR", "LID_LIBRARYBOOKINBAGS", "가방에 있음")
+MapUtils:AddTrans("koKR", "LID_LIBRARYBOOKINBANK", "은행에 있음")
 MapUtils:AddTrans("koKR", "LID_LIBRARYBOOKS", "도서관 책")
 MapUtils:AddTrans("koKR", "LID_LIBRARYBOOKSHOWUNEXPLOREDDESC", "비활성화하면 이 캐릭터가 가까이 가 본 책만 표시됩니다. AzerothCompendium의 스포일러 방지 모드와 동기화됩니다.")
 MapUtils:AddTrans("koKR", "LID_MAPFADE", "이동 중 투명도")

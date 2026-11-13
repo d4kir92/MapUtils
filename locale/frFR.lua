@@ -83,6 +83,8 @@ MapUtils:AddTrans("frFR", "LID_IMPORTINVALID", "Chaîne d'importation invalide."
 MapUtils:AddTrans("frFR", "LID_INSTANCEMAPS", "Cartes de donjons et de raids")
 MapUtils:AddTrans("frFR", "LID_LEFTCLICK", "Clic gauche")
 MapUtils:AddTrans("frFR", "LID_LIBRARYBOOK", "Livre de bibliothèque")
+MapUtils:AddTrans("frFR", "LID_LIBRARYBOOKINBAGS", "Dans les sacs")
+MapUtils:AddTrans("frFR", "LID_LIBRARYBOOKINBANK", "À la banque")
 MapUtils:AddTrans("frFR", "LID_LIBRARYBOOKS", "Livres de bibliothèque")
 MapUtils:AddTrans("frFR", "LID_LIBRARYBOOKSHOWUNEXPLOREDDESC", "Si désactivé, seuls les livres dont ce personnage s'est approché sont affichés. Synchronisé avec le mode sans spoiler d'AzerothCompendium.")
 MapUtils:AddTrans("frFR", "LID_MAPFADE", "Transparence en mouvement")
