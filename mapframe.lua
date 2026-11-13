@@ -543,6 +543,7 @@ if frame ~= nil then
 		end)
 	end
 	frame:HookScript("OnShow", Apply)
+	frame:HookScript("OnSizeChanged", function() Apply() end)
 	fader = MapUtils:CreateMoveFader(
 		frame,
 		{
