@@ -22,6 +22,7 @@ local TOOLTIP_GIVERS = 8
 local COLLECT_DELAY = 0.5
 local CATEGORY_KEYS = {"QUESTGIVEREVENT", "QUESTGIVERDAILY", "QUESTGIVERREP"}
 local CATEGORY_TAGS = {"LID_QUESTTAGEVENT", "LID_QUESTTAGDAILY", "LID_QUESTTAGREP"}
+local INSTANCE_TAGS = {"LID_QUESTTAGDUNGEON", "LID_QUESTTAGRAID"}
 local SKILL_SPELLS = {
 	[129] = 3273,
 	[164] = 2018,
@@ -513,7 +514,8 @@ function QG.AddQuestLines(quests)
 		local level = QG.GetLevel(quest)
 		local color = GetQuestDifficultyColor and GetQuestDifficultyColor(level)
 		local tag = ""
-		if quest[5] then tag = " |cff9d9d9d(" .. MapUtils:Trans(CATEGORY_TAGS[quest[5]]) .. ")|r" end
+		if quest[22] then tag = " |cff9d9d9d(" .. MapUtils:Trans(INSTANCE_TAGS[quest[22]]) .. ")|r" end
+		if quest[5] then tag = tag .. " |cff9d9d9d(" .. MapUtils:Trans(CATEGORY_TAGS[quest[5]]) .. ")|r" end
 		if details and index > 1 then GameTooltip:AddLine(" ") end
 		if color then
 			GameTooltip:AddLine(format("%s[%d] %s%s", QG.INDENT, level, QG.GetTitle(questID, quest[3]), tag), color.r, color.g, color.b, true)
