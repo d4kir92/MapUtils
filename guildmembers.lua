@@ -34,7 +34,8 @@ end
 function MapUtils:GetGuildPinScopeShown(azeroth)
 	if MapUtils:GetConfig("GUILDMEMBERPINS", true) ~= true then return false end
 	local zone = MAUTTAB["GUILDMEMBERPINS_ZONE"] ~= false
-	if not azeroth or MAUTTAB["GUILDMEMBERPINS_AZEROTH"] == nil then return zone end
+	if not azeroth then return zone end
+	if MAUTTAB["GUILDMEMBERPINS_AZEROTH"] == nil then return MapUtils:GetPinAzerothDefault("GUILDMEMBERPINS", zone) end
 
 	return MAUTTAB["GUILDMEMBERPINS_AZEROTH"] == true
 end

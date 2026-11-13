@@ -15,7 +15,7 @@ local Toggles = {
 	expandIcon = "Interface\\Buttons\\UI-PlusButton-Up",
 	collapseIcon = "Interface\\Buttons\\UI-MinusButton-Up",
 	glowTemplate = "ActionButtonSpellAlertTemplate",
-	glowScale = 1.25,
+	glowScale = 1.4,
 	glowColor = {1, 0.82, 0},
 	glowThickness = 1,
 	glowLayers = {{0, 1}, {1, 0.35}},
@@ -112,6 +112,7 @@ local Toggles = {
 			default = true,
 			refresh = "RefreshQuestGivers",
 			file = "Interface\\GossipFrame\\AvailableQuestIcon",
+			offsetX = -1,
 			available = function() return MapUtils.RefreshQuestGivers ~= nil end
 		},
 		{
@@ -120,6 +121,7 @@ local Toggles = {
 			default = true,
 			refresh = "RefreshQuestTurnIns",
 			file = "Interface\\GossipFrame\\ActiveQuestIcon",
+			offsetX = -1,
 			available = function() return MapUtils.RefreshQuestTurnIns ~= nil end
 		},
 		{
@@ -359,7 +361,33 @@ function MapUtils:GetPinToggleEntries()
 		end
 	end
 
+	tinsert(entries, {["divider"] = true})
+	tinsert(entries, {
+		["text"] = MapUtils:Trans("LID_RESETPINTOGGLES"),
+		["func"] = Toggles.ResetDefaults,
+	})
+
 	return entries
+end
+
+function Toggles.ResetDefaults()
+	MAUTTAB = MAUTTAB or {}
+	for _, category in ipairs(Toggles.categories) do
+		if Toggles.IsAvailable(category) then
+			if category.guild then
+				MAUTTAB["GUILDMEMBERPINS_ZONE"] = nil
+				MAUTTAB["GUILDMEMBERPINS_AZEROTH"] = nil
+				MapUtils:SetGuildOption("GUILDMEMBERPINS", category.default)
+			else
+				Toggles.Apply(category, false, category.default)
+				MAUTTAB[category.key .. "_AZEROTH"] = nil
+				Toggles.RefreshCategory(category)
+			end
+		end
+	end
+
+	Notify.ShowText(MapUtils:Trans("LID_RESETPINTOGGLESDONE"))
+	Toggles.Refresh()
 end
 
 function Toggles.ShowTooltip(button)
@@ -440,16 +468,19 @@ function Toggles.CreateButton(category)
 	button.left = Toggles.CreateHalf(button, true)
 	button.right = Toggles.CreateHalf(button, false)
 	local file, l, r, t, b = Toggles.GetIconTexture(category)
+	if category.offsetX ~= nil then
+		local shift = -category.offsetX / (Toggles.size - Toggles.iconInset * 2) * (r - l)
+		l, r = l + shift, r + shift
+	end
+
 	local middle = l + (r - l) / 2
-	button.left:SetTexture(file)
-	button.left:SetTexCoord(l, middle, t, b)
-	button.right:SetTexture(file)
-	button.right:SetTexCoord(middle, r, t, b)
 	button.full = button:CreateTexture(nil, "ARTWORK")
 	button.full:SetPoint("TOPLEFT", button, "TOPLEFT", Toggles.iconInset, -Toggles.iconInset)
 	button.full:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -Toggles.iconInset, Toggles.iconInset)
-	button.full:SetTexture(file)
-	button.full:SetTexCoord(l, r, t, b)
+	for _, part in ipairs({{button.left, l, middle}, {button.right, middle, r}, {button.full, l, r}}) do
+		part[1]:SetTexture(file, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+		part[1]:SetTexCoord(part[2], part[3], t, b)
+	end
 	button.glow = Toggles.CreateGlow(button)
 	button:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD")
 	button:SetScript("OnClick", function(self, mouseButton)
@@ -481,9 +512,9 @@ function Toggles.Refresh()
 		button.left:SetShown(not glow)
 		button.right:SetShown(not glow)
 		button.full:SetShown(glow)
-		button.glow:SetShown(glow and zone)
+		button.glow:SetShown(glow and azeroth)
 		if glow then
-			Toggles.SetHalf(button.full, azeroth)
+			Toggles.SetHalf(button.full, zone)
 		else
 			Toggles.SetHalf(button.left, zone)
 			Toggles.SetHalf(button.right, azeroth)
@@ -729,9 +760,13 @@ function Notify.Render(text)
 end
 
 function Notify.Show(label, azeroth, value)
-	if Notify.frame == nil or Widgets.IsEditing() then return end
 	local key = format("LID_NOTIFY%s%s", azeroth and "AZEROTH" or "ZONE", value and "SHOWN" or "HIDDEN")
-	Notify.Render(MapUtils:Trans(key, nil, label))
+	Notify.ShowText(MapUtils:Trans(key, nil, label))
+end
+
+function Notify.ShowText(text)
+	if Notify.frame == nil or Widgets.IsEditing() then return end
+	Notify.Render(text)
 	Notify.remaining = Notify.holdTime + Notify.fadeTime
 	Notify.frame.text:SetAlpha(1)
 end
