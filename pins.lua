@@ -1727,7 +1727,57 @@ function PinCache.WatchOutline(pin)
 	PinCache.outlined[pin] = true
 end
 
+PinCache.bookBorderColors = {
+	bag = {0.2, 1, 0.2},
+	bank = {0.2, 1, 0.2},
+	missing = {1, 0.15, 0.15}
+}
+
+function PinCache.ApplyBookBorder(pin, entry)
+	local color = entry.kind == "librarybook" and PinCache.bookBorderColors[entry.state] or nil
+	if color == nil then
+		if pin.bookBorder ~= nil then
+			for _, edge in ipairs(pin.bookBorder) do
+				edge:Hide()
+			end
+		end
+
+		return
+	end
+
+	local icon = pin.texture
+	local t = pin.pixel or 1
+	if pin.bookBorder == nil then
+		pin.bookBorder = {}
+		for i = 1, 4 do
+			pin.bookBorder[i] = pin:CreateTexture(nil, "OVERLAY", nil, 1)
+		end
+	end
+
+	local top, bottom, left, right = unpack(pin.bookBorder)
+	for _, edge in ipairs(pin.bookBorder) do
+		edge:ClearAllPoints()
+		edge:SetColorTexture(color[1], color[2], color[3], 1)
+		edge:Show()
+	end
+
+	top:SetPoint("TOPLEFT", icon, "TOPLEFT", 0, 0)
+	top:SetPoint("TOPRIGHT", icon, "TOPRIGHT", 0, 0)
+	top:SetHeight(t)
+	bottom:SetPoint("BOTTOMLEFT", icon, "BOTTOMLEFT", 0, 0)
+	bottom:SetPoint("BOTTOMRIGHT", icon, "BOTTOMRIGHT", 0, 0)
+	bottom:SetHeight(t)
+	left:SetPoint("TOPLEFT", icon, "TOPLEFT", 0, 0)
+	left:SetPoint("BOTTOMLEFT", icon, "BOTTOMLEFT", 0, 0)
+	left:SetWidth(t)
+	right:SetPoint("TOPRIGHT", icon, "TOPRIGHT", 0, 0)
+	right:SetPoint("BOTTOMRIGHT", icon, "BOTTOMRIGHT", 0, 0)
+	right:SetWidth(t)
+end
+
 local function ApplyEntryTint(pin, entry)
+	pin.texture:SetAlpha(entry.kind == "librarybook" and (entry.state == "bag" or entry.state == "bank") and 0.5 or 1)
+	PinCache.ApplyBookBorder(pin, entry)
 	pin.texture:SetDesaturated(IsDesaturatedEntry(entry))
 	if entry.kind == "flight" and entry.undiscovered then
 		pin.texture:SetVertexColor(0.55, 0.55, 0.55)
@@ -1740,6 +1790,7 @@ local function ApplyEntryTint(pin, entry)
 	for _, half in ipairs({pin.textureLeft, pin.textureRight}) do
 		half:SetDesaturated(pin.texture:IsDesaturated())
 		half:SetVertexColor(pin.texture:GetVertexColor())
+		half:SetAlpha(pin.texture:GetAlpha())
 	end
 end
 
