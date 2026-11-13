@@ -18,6 +18,7 @@ ignore:
   - data/era/zonemasks.lua
   - data/forever/instancepins.lua
   - data/forever/instances.lua
+  - data/forever/librarybooks.lua
   - data/forever/minimapcoarse.lua
   - data/forever/minimaplod.lua
   - data/forever/minimaptiles.lua
@@ -36,6 +37,7 @@ ignore:
   - data/tbc/zonemasks.lua
   - data/wrath/questgivers.lua
   - instancepins.lua
+  - librarybooks.lua
   - media/2959.blp
   - media/2959_2.blp
   - media/2998.blp

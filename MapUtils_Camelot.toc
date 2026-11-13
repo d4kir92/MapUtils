@@ -61,6 +61,8 @@ transports.lua
 areapois.lua
 convergences_wowhead.lua
 convergences.lua
+data\forever\librarybooks.lua
+librarybooks.lua
 discovery.lua
 gathernodes.lua
 questturnins.lua

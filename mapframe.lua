@@ -1177,8 +1177,11 @@ function SmoothZoom.GlideInto(container, target)
 end
 
 function SmoothZoom.GlideOut(container)
-	if container == nil or not SmoothZoom.CanSwitch(container) then return false end
-	local parent = SmoothZoom.GetParent(container.mapID)
+	if container == nil or not MapUtils:IsOneMap() or InCombatLockdown() or container.zoomLevels == nil then return false end
+	if MapUtils.IsInstanceMapShown ~= nil and MapUtils:IsInstanceMapShown() then return false end
+	local parent = MapUtils.GetZoneDetailCityZone ~= nil and MapUtils:GetZoneDetailCityZone(container.mapID) or nil
+	if parent == nil and not SmoothZoom.CanSwitch(container) then return false end
+	parent = parent or SmoothZoom.GetParent(container.mapID)
 	if parent == nil then return false end
 	SmoothZoom.anim = nil
 	MapLevelZoom.lastSwitch = GetTime()

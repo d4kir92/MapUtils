@@ -234,7 +234,7 @@ function PinEdit.GetAddEntry(record)
 end
 
 function MapUtils:IsPinEditable(entry)
-	return entry ~= nil and entry.x ~= nil and entry.y ~= nil
+	return entry ~= nil and entry.x ~= nil and entry.y ~= nil and entry.kind ~= "librarybook"
 end
 
 function MapUtils:ApplyPinEdits(mapID, list, enabledKinds)

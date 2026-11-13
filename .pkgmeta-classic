@@ -12,6 +12,7 @@ ignore:
   - data/cata/questgivers.lua
   - data/forever/instancepins.lua
   - data/forever/instances.lua
+  - data/forever/librarybooks.lua
   - data/forever/minimapcoarse.lua
   - data/forever/minimaplod.lua
   - data/forever/minimaptiles.lua
@@ -32,6 +33,7 @@ ignore:
   - data/wrath/instances.lua
   - data/wrath/questgivers.lua
   - instancepins.lua
+  - librarybooks.lua
   - media/246.blp
   - media/256.blp
   - media/257.blp

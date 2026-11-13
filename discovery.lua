@@ -12,6 +12,7 @@ local Discovery = {
 		convergence = "CONVERGENCESHOWUNEXPLORED",
 		flight = "FLIGHTSHOWUNEXPLORED",
 		crossing = "CROSSINGSHOWUNEXPLORED",
+		librarybook = "LIBRARYBOOKSHOWUNEXPLORED",
 	},
 }
 
@@ -44,6 +45,7 @@ function Discovery.ShowsUnexplored(kind)
 end
 
 function MapUtils:IsPinDiscovered(mapID, entry)
+	if entry.seen == true then return true end
 	local key = Discovery.GetKey(mapID, entry)
 	if key == nil then return true end
 
@@ -88,7 +90,7 @@ end
 
 function Discovery.ScanMap(mapID, wx, wy, store, changed)
 	local forever = MapUtils:IsForever()
-	local list = MapUtils.BuildPinList(mapID, true, true, true, true, true, forever, forever, true)
+	local list = MapUtils.BuildPinList(mapID, true, true, true, true, true, forever, forever, true, forever)
 	local radiusSq = Discovery.radius * Discovery.radius
 	for _, entry in ipairs(list or {}) do
 		local key = Discovery.GetKey(mapID, entry)

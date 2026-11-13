@@ -2264,6 +2264,8 @@ local function OnPinEnter(pin)
 	elseif entry.kind == "convergence" then
 		GameTooltip:AddLine(entry.name, 1, 1, 1)
 		if entry.captured then GameTooltip:AddLine(MapUtils:Trans("LID_CONVERGENCECAPTURED"), 0.6, 0.6, 0.6) end
+	elseif entry.kind == "librarybook" then
+		MapUtils:AddLibraryBookTooltip(entry)
 	elseif entry.kind == "crossing" then
 		GameTooltip:AddLine(entry.name, 1, 1, 1)
 		GameTooltip:AddLine(MapUtils:Trans("LID_ZONECROSSING"), 0.6, 0.6, 0.6)
@@ -2587,7 +2589,7 @@ local function CrossingsEnabled()
 	return MapUtils:GetConfig("CROSSINGWORLDMAPPINS", true) == true
 end
 
-local function BuildList(mapID, piersOn, dungeonsOn, flightsOn, meetingStonesOn, crossingsOn, spiritHealersOn, convergencesOn, unfiltered)
+local function BuildList(mapID, piersOn, dungeonsOn, flightsOn, meetingStonesOn, crossingsOn, spiritHealersOn, convergencesOn, unfiltered, libraryBooksOn)
 	if mapID == nil then return nil end
 	local list = nil
 	if spiritHealersOn and MapUtils.SPIRITHEALERS[mapID] ~= nil then
@@ -2641,6 +2643,14 @@ local function BuildList(mapID, piersOn, dungeonsOn, flightsOn, meetingStonesOn,
 	if convergenceList ~= nil and #convergenceList > 0 then
 		list = list or {}
 		for _, entry in ipairs(convergenceList) do
+			tinsert(list, entry)
+		end
+	end
+
+	local bookList = libraryBooksOn and MapUtils.GetLibraryBookPins ~= nil and MapUtils:GetLibraryBookPins(mapID) or nil
+	if bookList ~= nil then
+		list = list or {}
+		for _, entry in ipairs(bookList) do
 			tinsert(list, entry)
 		end
 	end
@@ -2864,13 +2874,14 @@ local function UpdateWorldPins()
 	local crossingsOn = CrossingsEnabled()
 	local spiritHealersOn = MapUtils:IsForever() and MapUtils:GetConfig("SPIRITHEALERWORLDMAPPINS", false) == true
 	local convergencesOn = MapUtils.ConvergencePinsEnabled ~= nil and MapUtils:ConvergencePinsEnabled(true)
+	local libraryBooksOn = MapUtils.LibraryBookPinsEnabled ~= nil and MapUtils:LibraryBookPinsEnabled()
 	if MapUtils:IsDebug() then
 		piersOn, dungeonsOn, flightsOn, meetingStonesOn, crossingsOn = true, true, true, true, true
 		spiritHealersOn = MapUtils:IsForever()
 		convergencesOn = MapUtils:IsForever()
 	end
 	local baseLevel = GetWorldPinLevel(child)
-	local sameState = mapID == worldMapID and piersOn == worldPiers and dungeonsOn == worldDungeons and flightsOn == worldFlights and meetingStonesOn == worldMeetingStones and crossingsOn == worldCrossings and spiritHealersOn == worldSpiritHealers and convergencesOn == worldConvergences
+	local sameState = mapID == worldMapID and piersOn == worldPiers and dungeonsOn == worldDungeons and flightsOn == worldFlights and meetingStonesOn == worldMeetingStones and crossingsOn == worldCrossings and spiritHealersOn == worldSpiritHealers and convergencesOn == worldConvergences and libraryBooksOn == PinCache.worldLibraryBooks
 	local zooming = sameState and scale ~= worldScale and scale ~= PinCache.seenScale and #worldPins > 0
 	PinCache.seenScale = scale
 	if sameState and (scale == worldScale or zooming) then
@@ -2890,10 +2901,11 @@ local function UpdateWorldPins()
 	worldCrossings = crossingsOn
 	worldSpiritHealers = spiritHealersOn
 	worldConvergences = convergencesOn
+	PinCache.worldLibraryBooks = libraryBooksOn
 	worldPinPool:ReleaseAll()
 	wipe(worldPins)
 	local list = {}
-	for _, entry in ipairs(BuildList(mapID, piersOn, dungeonsOn, flightsOn, meetingStonesOn, crossingsOn, spiritHealersOn, convergencesOn) or {}) do
+	for _, entry in ipairs(BuildList(mapID, piersOn, dungeonsOn, flightsOn, meetingStonesOn, crossingsOn, spiritHealersOn, convergencesOn, nil, libraryBooksOn) or {}) do
 		tinsert(list, entry)
 	end
 

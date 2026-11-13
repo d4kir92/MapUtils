@@ -548,6 +548,11 @@ function MapUtils:InitSetting()
 		AddCheckbox("CONVERGENCEMINIMAPPINS", false, function() MapUtils:RefreshPins() end, "LID_MINIMAPPINS", ADDED_1017)
 		AddCheckbox("CONVERGENCENONSKYBORNE", false, function() MapUtils:RefreshPins() end, "LID_CONVERGENCENONSKYBORNE", ADDED_1017)
 		AddExploreCheckbox("CONVERGENCE")
+		if MapUtils:LibraryBookPinsAvailable() then
+			AddCategory("LIBRARYBOOKS", 2, nil, "2026-11-13")
+			AddCheckbox("LIBRARYBOOKWORLDMAPPINS", false, function() MapUtils.LibraryBooks.Set("LIBRARYBOOKWORLDMAPPINS", MAUTTAB["LIBRARYBOOKWORLDMAPPINS"] == true) end, "LID_WORLDMAPPINS", "2026-11-13")
+			AddTooltip(AddCheckbox("LIBRARYBOOKSHOWUNEXPLORED", true, function() MapUtils.LibraryBooks.Set("LIBRARYBOOKSHOWUNEXPLORED", MAUTTAB["LIBRARYBOOKSHOWUNEXPLORED"] == true) end, "LID_SHOWUNEXPLORED", "2026-11-13"), "LID_SHOWUNEXPLORED", "LID_LIBRARYBOOKSHOWUNEXPLOREDDESC")
+		end
 	end
 
 	if MapUtils.CanShowGatherNodes ~= nil and MapUtils:CanShowGatherNodes() then

@@ -62,6 +62,14 @@ local Toggles = {
 			available = function() return MapUtils:IsForever() end
 		},
 		{
+			key = "LIBRARYBOOKWORLDMAPPINS",
+			label = "LID_LIBRARYBOOKS",
+			default = false,
+			sync = true,
+			file = "Interface\\Icons\\INV_Misc_Book_09",
+			available = function() return MapUtils.LibraryBookPinsAvailable ~= nil and MapUtils:LibraryBookPinsAvailable() end
+		},
+		{
 			key = "FLIGHTWORLDMAPPINS",
 			label = "LID_FLIGHTPOINTS",
 			default = true,
@@ -164,6 +172,8 @@ function Toggles.Set(category, value)
 		MapUtils:SetSharedOption(category.key, value)
 	elseif category.guild then
 		MapUtils:SetGuildOption(category.key, value)
+	elseif category.sync then
+		MapUtils.LibraryBooks.Set(category.key, value)
 	else
 		MapUtils:SetMapOption(category.key, value, function()
 			local refresh = MapUtils[category.refresh]
@@ -188,6 +198,10 @@ function Toggles.GetIconMarkup(category)
 	if isAtlas then return format("|A:%s:%d:%d|a ", icon, Toggles.menuIcon, Toggles.menuIcon) end
 
 	return format("|T%s:%d:%d|t ", icon, Toggles.menuIcon, Toggles.menuIcon)
+end
+
+function MapUtils:RefreshPinToggles()
+	Toggles.Refresh()
 end
 
 function MapUtils:GetPinToggleEntries()
