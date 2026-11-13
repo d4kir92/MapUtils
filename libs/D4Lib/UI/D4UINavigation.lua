@@ -16,7 +16,7 @@ function UI.WindowMixin:UpdateContentWidth()
 end
 
 local function IsNavEntry(win, element)
-    if not element.isCategory or element.level > 2 then return false end
+    if not element.isCategory then return false end
     if element.hidden or not element.match then return false end
     local parent = element.category
     while parent do
@@ -150,7 +150,7 @@ function UI.WindowMixin:RefreshNav()
     local hasNew = {}
     local hasChildren = {}
     for _, element in ipairs(self.elements) do
-        if element.isCategory and element.level == 2 and not element.hidden and element.category then hasChildren[element.category] = true end
+        if element.isCategory and not element.hidden and element.category then hasChildren[element.category] = true end
         if not element.hidden and element.added and UI:IsNew(element.added) then
             local parent = element.isCategory and element or element.category
             while parent do
@@ -161,7 +161,7 @@ function UI.WindowMixin:RefreshNav()
     end
 
     for _, element in ipairs(self.elements) do
-        if element.isCategory and element.level == 1 then IsNavCollapsed(self, element) end
+        if element.isCategory then IsNavCollapsed(self, element) end
         if IsNavEntry(self, element) then
             index = index + 1
             local btn = nav.buttons[index] or CreateNavButton(self, index)
@@ -173,8 +173,11 @@ function UI.WindowMixin:RefreshNav()
             end
 
             btn.Label:ClearAllPoints()
-            btn.Label:SetPoint("LEFT", btn, "LEFT", 18 + (element.level - 1) * 8, 0)
-            local canToggle = element.level == 1 and hasChildren[element] == true
+            local indent = (element.level - 1) * 8
+            btn.Label:SetPoint("LEFT", btn, "LEFT", 18 + indent, 0)
+            local canToggle = hasChildren[element] == true
+            btn.Toggle:ClearAllPoints()
+            btn.Toggle:SetPoint("LEFT", btn, "LEFT", 3 + indent, 0)
             btn.Toggle:SetShown(canToggle)
             if canToggle then
                 local icon = element.navCollapsed and "Interface\\Buttons\\UI-PlusButton-Up" or "Interface\\Buttons\\UI-MinusButton-Up"

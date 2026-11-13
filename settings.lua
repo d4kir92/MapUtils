@@ -330,6 +330,15 @@ function MapUtils:InitSetting()
 		["title"] = format("|T%d:16:16:0:0|t MapUtils v%s", ICON, MapUtils:GetAddonVersion())
 	})
 
+	MAUTTAB.WHATSNEW = MAUTTAB.WHATSNEW or {}
+	MapUtils.WhatsNew = MapUtils:CreateUIWhatsNew({
+		["name"] = "MapUtilsWhatsNew",
+		["title"] = format("|T%d:16:16:0:0|t MapUtils v%s", ICON, MapUtils:GetAddonVersion()),
+		["db"] = MAUTTAB.WHATSNEW,
+		["since"] = "2026-11-13",
+		["getSettings"] = function() return maset end
+	})
+
 	maset:SuspendLayout()
 	local canImport = MapUtils:CanImportExport()
 	maset:AddSearch({["rightInset"] = canImport and 128 or 0})
@@ -366,6 +375,7 @@ function MapUtils:InitSetting()
 		end
 	end)
 
+	MapUtils.WhatsNew:AddSettingsCheckbox(maset, "2026-11-13")
 	if MapUtils.RefreshCommChannel then AddTooltip(AddCheckbox("COMMCHANNEL", true, function() MapUtils:RefreshCommChannel() end, nil, "2026-10-28"), "LID_COMMCHANNEL", "LID_COMMCHANNELDESC") end
 	AddCategory("WORLDMAP", nil, nil, ADDED_0927)
 	if MapUtils.RefreshGuildMembers then
@@ -548,11 +558,6 @@ function MapUtils:InitSetting()
 		AddCheckbox("CONVERGENCEMINIMAPPINS", false, function() MapUtils:RefreshPins() end, "LID_MINIMAPPINS", ADDED_1017)
 		AddCheckbox("CONVERGENCENONSKYBORNE", false, function() MapUtils:RefreshPins() end, "LID_CONVERGENCENONSKYBORNE", ADDED_1017)
 		AddExploreCheckbox("CONVERGENCE")
-		if MapUtils:LibraryBookPinsAvailable() then
-			AddCategory("LIBRARYBOOKS", 2, nil, "2026-11-13")
-			AddCheckbox("LIBRARYBOOKWORLDMAPPINS", false, function() MapUtils.LibraryBooks.Set("LIBRARYBOOKWORLDMAPPINS", MAUTTAB["LIBRARYBOOKWORLDMAPPINS"] == true) end, "LID_WORLDMAPPINS", "2026-11-13")
-			AddTooltip(AddCheckbox("LIBRARYBOOKSHOWUNEXPLORED", true, function() MapUtils.LibraryBooks.Set("LIBRARYBOOKSHOWUNEXPLORED", MAUTTAB["LIBRARYBOOKSHOWUNEXPLORED"] == true) end, "LID_SHOWUNEXPLORED", "2026-11-13"), "LID_SHOWUNEXPLORED", "LID_LIBRARYBOOKSHOWUNEXPLOREDDESC")
-		end
 	end
 
 	if MapUtils.CanShowGatherNodes ~= nil and MapUtils:CanShowGatherNodes() then
@@ -572,6 +577,15 @@ function MapUtils:InitSetting()
 		AddCheckbox("TOWNPOIS", false, function() MapUtils:RefreshAreaPOIs() end, nil, "2026-10-28")
 		AddCheckbox("CAPITALPOIS", false, function() MapUtils:RefreshAreaPOIs() end, nil, "2026-10-28")
 	end
+
+	if MapUtils:LibraryBookPinsAvailable() then
+		AddCategory("FOREVER", 2, nil, "2026-11-13")
+		AddCategory("LIBRARYBOOKS", 3, nil, "2026-11-13")
+		AddCheckbox("LIBRARYBOOKWORLDMAPPINS", true, function() MapUtils.LibraryBooks.Set("LIBRARYBOOKWORLDMAPPINS", MAUTTAB["LIBRARYBOOKWORLDMAPPINS"] == true) end, "LID_WORLDMAPPINS", "2026-11-13")
+		AddCheckbox("LIBRARYBOOKMINIMAPPINS", true, function() MapUtils:RefreshPins() end, "LID_MINIMAPPINS", "2026-11-13")
+		AddTooltip(AddCheckbox("LIBRARYBOOKSHOWUNEXPLORED", true, function() MapUtils.LibraryBooks.Set("LIBRARYBOOKSHOWUNEXPLORED", MAUTTAB["LIBRARYBOOKSHOWUNEXPLORED"] == true) end, "LID_SHOWUNEXPLORED", "2026-11-13"), "LID_SHOWUNEXPLORED", "LID_LIBRARYBOOKSHOWUNEXPLOREDDESC")
+	end
+
 	maset:UpdateDependencies()
 	maset:ResumeLayout()
 	MapUtils:CreateMinimapButton({
@@ -608,6 +622,7 @@ end
 
 loader:RegisterEvent("ADDON_LOADED")
 loader:RegisterEvent("CVAR_UPDATE")
+loader:RegisterEvent("PLAYER_ENTERING_WORLD")
 loader:SetScript("OnEvent", function(_, event, name)
 	if event == "CVAR_UPDATE" then
 		local checkbox = type(name) == "string" and cvarCheckboxes[strlower(name)]
@@ -618,6 +633,9 @@ loader:SetScript("OnEvent", function(_, event, name)
 	elseif event == "PLAYER_LOGIN" then
 		MapUtils:InitSetting()
 		MapUtils:RegisterCompendiumTabs()
+	elseif event == "PLAYER_ENTERING_WORLD" then
+		loader:UnregisterEvent(event)
+		if MapUtils.WhatsNew ~= nil then MapUtils.WhatsNew:ShowIfNew() end
 	elseif name == "AzerothCompendium" then
 		MapUtils:RegisterCompendiumTabs()
 	end

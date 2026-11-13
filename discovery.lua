@@ -31,6 +31,7 @@ end
 function Discovery.GetKey(mapID, entry)
 	local kind = Discovery.GetKind(entry)
 	if kind == "flight" and entry.nodeID ~= nil then return "flight:" .. tostring(entry.nodeID) end
+	if entry.source ~= nil and entry.sourceMapID ~= nil then mapID, entry = entry.sourceMapID, entry.source end
 	local x, y = entry.origX or entry.x, entry.origY or entry.y
 	if type(x) ~= "number" or type(y) ~= "number" then return nil end
 

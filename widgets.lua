@@ -64,7 +64,7 @@ local Toggles = {
 		{
 			key = "LIBRARYBOOKWORLDMAPPINS",
 			label = "LID_LIBRARYBOOKS",
-			default = false,
+			default = true,
 			sync = true,
 			file = "Interface\\Icons\\INV_Misc_Book_09",
 			available = function() return MapUtils.LibraryBookPinsAvailable ~= nil and MapUtils:LibraryBookPinsAvailable() end

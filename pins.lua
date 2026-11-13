@@ -2495,6 +2495,8 @@ local function OnPinClick(pin, button)
 	elseif entry ~= nil and IsPinMouseOver(pin) then
 		if IsCovered() then
 			if button == "RightButton" then MapUtils:ToggleInstanceMap() end
+		elseif button == "LeftButton" and entry.source ~= nil then
+			ToggleWaypoint(entry.sourceMapID, entry.source)
 		elseif button == "LeftButton" then
 			ToggleWaypoint(pin.mapID, entry)
 		elseif button == "RightButton" and entry.kind ~= "dungeon" and entry.kind ~= "flight" and GetDestinationMapID(entry) ~= nil then
@@ -2988,7 +2990,9 @@ local minimapConvergences = nil
 local function GetMinimapList(mapID, piersOn, dungeonsOn, flightsOn, meetingStonesOn)
 	local spiritHealersOn = MapUtils:IsForever() and MapUtils:GetConfig("SPIRITHEALERMINIMAPPINS", false) == true
 	local convergencesOn = MapUtils.ConvergencePinsEnabled ~= nil and MapUtils:ConvergencePinsEnabled(false)
-	if mapID == minimapMapID and piersOn == minimapPiers and dungeonsOn == minimapDungeons and flightsOn == minimapFlights and meetingStonesOn == minimapMeetingStones and spiritHealersOn == minimapSpiritHealers and convergencesOn == minimapConvergences then return minimapList end
+	local libraryBooksOn = MapUtils.LibraryBookPinsEnabled ~= nil and MapUtils:LibraryBookPinsEnabled(true)
+	if mapID == minimapMapID and piersOn == minimapPiers and dungeonsOn == minimapDungeons and flightsOn == minimapFlights and meetingStonesOn == minimapMeetingStones and spiritHealersOn == minimapSpiritHealers and convergencesOn == minimapConvergences and libraryBooksOn == PinCache.minimapLibraryBooks then return minimapList end
+	PinCache.minimapLibraryBooks = libraryBooksOn
 	minimapMapID = mapID
 	minimapPiers = piersOn
 	minimapDungeons = dungeonsOn
@@ -2996,7 +3000,7 @@ local function GetMinimapList(mapID, piersOn, dungeonsOn, flightsOn, meetingSton
 	minimapMeetingStones = meetingStonesOn
 	minimapSpiritHealers = spiritHealersOn
 	minimapConvergences = convergencesOn
-	minimapList = BuildList(mapID, piersOn, dungeonsOn, flightsOn, meetingStonesOn, false, spiritHealersOn, convergencesOn)
+	minimapList = BuildList(mapID, piersOn, dungeonsOn, flightsOn, meetingStonesOn, false, spiritHealersOn, convergencesOn, nil, libraryBooksOn)
 
 	return minimapList
 end

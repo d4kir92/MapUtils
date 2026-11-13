@@ -125,6 +125,7 @@ function UI:Add(win, frame, height, label, stretch, search, added, setting)
         ["added"] = added,
         ["settingLabel"] = setting and setting.label,
         ["whatsNew"] = setting and setting.whatsNew,
+        ["setting"] = setting,
     }
 
     if win.category then element.depth = win.category.depth + 1 end

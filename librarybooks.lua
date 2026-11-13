@@ -1,9 +1,11 @@
 local _, MapUtils = ...
 local LibraryBooks = {
 	pinsKey = "LIBRARYBOOKWORLDMAPPINS",
+	minimapKey = "LIBRARYBOOKMINIMAPPINS",
 	unexploredKey = "LIBRARYBOOKSHOWUNEXPLORED",
 	defaults = {
-		LIBRARYBOOKWORLDMAPPINS = false,
+		LIBRARYBOOKWORLDMAPPINS = true,
+		LIBRARYBOOKMINIMAPPINS = true,
 		LIBRARYBOOKSHOWUNEXPLORED = true
 	},
 	icon = "Interface\\Icons\\INV_Misc_Book_09",
@@ -25,8 +27,8 @@ function MapUtils:LibraryBookPinsAvailable()
 	return MapUtils:IsForever() and type(MapUtils.LIBRARYBOOKS) == "table"
 end
 
-function MapUtils:LibraryBookPinsEnabled()
-	return MapUtils:LibraryBookPinsAvailable() and LibraryBooks.Get(LibraryBooks.pinsKey)
+function MapUtils:LibraryBookPinsEnabled(minimap)
+	return MapUtils:LibraryBookPinsAvailable() and LibraryBooks.Get(minimap and LibraryBooks.minimapKey or LibraryBooks.pinsKey)
 end
 
 function MapUtils:RefreshLibraryBooks()
@@ -59,6 +61,17 @@ function LibraryBooks.GetName(book)
 	return name or book.name
 end
 
+function LibraryBooks.Project(point, mapID)
+	if point[1] == mapID then return point[2], point[3] end
+	if C_Map == nil or C_Map.GetMapRectOnMap == nil then return nil end
+	local minX, maxX, minY, maxY = C_Map.GetMapRectOnMap(point[1], mapID)
+	if minX == nil or maxX == nil or minY == nil or maxY == nil or maxX <= minX or maxY <= minY then return nil end
+	local x, y = minX + point[2] * (maxX - minX), minY + point[3] * (maxY - minY)
+	if x < 0 or x > 1 or y < 0 or y > 1 then return nil end
+
+	return x, y
+end
+
 function MapUtils:GetLibraryBookPins(mapID)
 	if mapID == nil or not MapUtils:LibraryBookPinsAvailable() then return nil end
 	local cached = LibraryBooks.cache[mapID]
@@ -68,11 +81,18 @@ function MapUtils:GetLibraryBookPins(mapID)
 		local state, seen = LibraryBooks.GetState(book)
 		if state ~= "done" then
 			for _, point in ipairs(book.points) do
-				if point[1] == mapID then
+				local x, y = LibraryBooks.Project(point, mapID)
+				if x ~= nil then
 					tinsert(list, {
 						kind = "librarybook",
-						x = point[2],
-						y = point[3],
+						x = x,
+						y = y,
+						sourceMapID = point[1],
+						source = {
+							kind = "librarybook",
+							x = point[2],
+							y = point[3]
+						},
 						icon = LibraryBooks.GetIcon(book),
 						name = book.name,
 						book = book,
@@ -109,7 +129,7 @@ function LibraryBooks.GetSignature()
 end
 
 function LibraryBooks.CheckChanged()
-	if not MapUtils:LibraryBookPinsEnabled() then return end
+	if not MapUtils:LibraryBookPinsEnabled() and not MapUtils:LibraryBookPinsEnabled(true) then return end
 	local signature = LibraryBooks.GetSignature()
 	if LibraryBooks.signature == signature then return end
 	local first = LibraryBooks.signature == nil
