@@ -1643,7 +1643,7 @@ local function LayoutPinIcon(pin, size, x, y)
 	end
 
 	local entry = pin.entry
-	local outlined = entry ~= nil and (entry.transport ~= nil or entry.kind == "spirithealer" or entry.kind == "flight")
+	local outlined = entry ~= nil and (entry.transport ~= nil or entry.kind == "spirithealer" or entry.kind == "flight" or entry.kind == "dungeon")
 	if not outlined and pin.outline == nil then return end
 	local sources = pin.splitIcon and {pin.textureLeft, pin.textureRight} or {pin.texture}
 	pin.outline = pin.outline or {}
@@ -3036,7 +3036,8 @@ local function UpdateWorldPins()
 		if entry.kind == "crossing" or entry.kind == "dungeon" and entry.entrance == "path" then
 			pin:SetSize(dungeonSize * 0.7 * factor, dungeonSize * 0.7 * factor)
 		elseif entry.kind == "dungeon" then
-			local entranceSize = math.min(DUNGEON_ICON_SIZE, GetAtlasWidth(icon) or DUNGEON_ICON_SIZE) * poiScale / scale * factor
+			local sizeIcon = icon == SPLIT_ICON and GetDungeonIcon() or icon
+			local entranceSize = math.min(DUNGEON_ICON_SIZE, GetAtlasWidth(sizeIcon) or DUNGEON_ICON_SIZE) * poiScale / scale * factor
 			pin:SetSize(entranceSize, entranceSize)
 		elseif entry.kind == "flight" then
 			local flightSize = (GetAtlasWidth(entry.icon) or ICON_SIZE) * poiScale / scale * factor
