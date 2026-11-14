@@ -675,6 +675,10 @@ local function GetStyle(mapID)
 	return CITY_MAPS[mapID] and cityStyle or zoneStyle
 end
 
+function MapUtils:IsCityMap(mapID)
+	return mapID ~= nil and CITY_MAPS[mapID] == true
+end
+
 function MapUtils:GetTerrainFadeThresholds(city)
 	local settings = type(MAUTTAB) == "table" and MAUTTAB or {}
 	local prefix = city and "CITYTERRAINFADE" or "ZONETERRAINFADE"

@@ -187,6 +187,14 @@ local Notify = {
 	minHeight = 12,
 }
 
+local Style = {
+	groupGap = 8,
+	icons = {
+		["MAP"] = "Interface\\Icons\\INV_Misc_Map02",
+		["TERRAIN"] = "Interface\\Icons\\Spell_Nature_Earthquake",
+	},
+}
+
 local Party = {
 	gap = 2,
 	rowGap = 12,
@@ -623,6 +631,60 @@ function Toggles.Refresh()
 			Toggles.SetHalf(button.right, azeroth)
 		end
 	end
+
+	Style.Refresh()
+end
+
+function Style.IsAvailable()
+	return MapUtils.IsCityMap ~= nil and MapUtils.GetMapStyle ~= nil and MapUtils.SetMapStyle ~= nil
+end
+
+-- The button switches the style of the map being viewed: city maps use their own setting.
+function Style.IsCity()
+	return MapUtils:IsCityMap(map:GetMapID())
+end
+
+-- Only Map and Terrain are toggled; the mixed style counts as Map.
+function Style.Get()
+	return MapUtils:GetMapStyle(Style.IsCity()) == "TERRAIN" and "TERRAIN" or "MAP"
+end
+
+function Style.GetNext(style)
+	return style == "TERRAIN" and "MAP" or "TERRAIN"
+end
+
+function Style.ShowTooltip(button)
+	GameTooltip:SetOwner(button, "ANCHOR_LEFT")
+	GameTooltip:SetText(MapUtils:Trans(Style.IsCity() and "LID_CITYMAPSTYLE" or "LID_ZONEMAPSTYLE"))
+	GameTooltip:AddLine(format(MapUtils:Trans("LID_MAPSTYLESWITCH"), MapUtils:Trans("LID_MAPSTYLE" .. Style.GetNext(Style.Get()))), 1, 1, 1)
+	GameTooltip:Show()
+end
+
+function Style.Refresh()
+	local button = Style.button
+	if button == nil then return end
+	button.icon:SetTexture(Style.icons[Style.Get()])
+	if GameTooltip:GetOwner() == button then Style.ShowTooltip(button) end
+end
+
+function Style.Create()
+	local button = CreateFrame("Button", nil, Toggles.content)
+	button:SetSize(Toggles.size, Toggles.size)
+	button.icon = button:CreateTexture(nil, "ARTWORK")
+	button.icon:SetPoint("TOPLEFT", button, "TOPLEFT", Toggles.iconInset, -Toggles.iconInset)
+	button.icon:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -Toggles.iconInset, Toggles.iconInset)
+	button:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD")
+	button:SetScript("OnClick", function()
+		MapUtils:SetMapStyle(Style.IsCity(), Style.GetNext(Style.Get()))
+		Style.Refresh()
+	end)
+
+	button:SetScript("OnEnter", Style.ShowTooltip)
+	button:SetScript("OnLeave", function() GameTooltip:Hide() end)
+	Style.button = button
+	MapUtils.RefreshMapStyleButton = function() Style.Refresh() end
+	if map.OnMapChanged ~= nil then hooksecurefunc(map, "OnMapChanged", Style.Refresh) end
+	Style.Refresh()
 end
 
 function Toggles.GetStyle()
@@ -672,6 +734,11 @@ function Toggles.GetVisibleButtons()
 		local shown = expanded and Toggles.IsEnabled(button.category)
 		button:SetShown(shown)
 		if shown then tinsert(list, button) end
+	end
+
+	if Style.button ~= nil then
+		Style.button:SetShown(expanded)
+		if expanded then tinsert(list, Style.button) end
 	end
 
 	return list
@@ -775,21 +842,23 @@ function Toggles.Layout()
 	local pad = sidebar and Toggles.sidebarPad or 0
 	local list = Toggles.GetVisibleButtons()
 	local previous = nil
+	local length = 0
 	for _, button in ipairs(list) do
+		local gap = button == Style.button and Style.groupGap or Toggles.gap
 		button:ClearAllPoints()
 		if previous == nil then
 			button:SetPoint("TOPLEFT", Toggles.content, "TOPLEFT", pad, -pad)
 		elseif vertical then
-			button:SetPoint("TOP", previous, "BOTTOM", 0, -Toggles.gap)
+			button:SetPoint("TOP", previous, "BOTTOM", 0, -gap)
 		else
-			button:SetPoint("LEFT", previous, "RIGHT", Toggles.gap, 0)
+			button:SetPoint("LEFT", previous, "RIGHT", gap, 0)
 		end
 
+		length = length + Toggles.size + (previous ~= nil and gap or 0)
 		previous = button
 	end
 
-	local count = math.max(#list, 1)
-	local length = count * Toggles.size + (count - 1) * Toggles.gap + pad * 2
+	length = math.max(length, Toggles.size) + pad * 2
 	local depth = Toggles.size + pad * 2
 	if vertical then
 		frame:SetSize(depth, length)
@@ -848,6 +917,7 @@ function Toggles.Create()
 		if Toggles.IsAvailable(category) then tinsert(Toggles.buttons, Toggles.CreateButton(category)) end
 	end
 
+	if Style.IsAvailable() then Style.Create() end
 	MapUtils:RegisterMapEditElement(Toggles.element)
 end
 

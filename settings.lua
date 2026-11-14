@@ -97,6 +97,29 @@ function MapUtils:SetGuildOption(key, value)
 	if MapUtils.RefreshGuildMembers then MapUtils:RefreshGuildMembers() end
 end
 
+local styleControls = {}
+function MapUtils:GetMapStyle(city)
+	local db = type(MAUTTAB) == "table" and MAUTTAB or {}
+	local zoneStyle = db["MAPSTYLE"] or "MIXED"
+	if not city then return zoneStyle end
+
+	return db["CITYMAPSTYLE"] or zoneStyle
+end
+
+function MapUtils:SetMapStyle(city, style)
+	local key = city and "CITYMAPSTYLE" or "MAPSTYLE"
+	MAUTTAB = MAUTTAB or {}
+	MapUtils:SV(MAUTTAB, key, style)
+	local control = styleControls[key]
+	if control ~= nil then
+		control.dropdown:SetValue(style)
+		control.showFade(style)
+	end
+
+	MapUtils:RefreshZoneDetail()
+	if MapUtils.RefreshMapStyleButton ~= nil then MapUtils:RefreshMapStyleButton() end
+end
+
 MapUtils:RegisterSharedSettings(
 	{
 		["keys"] = SHARED_KEYS,
@@ -500,6 +523,7 @@ function MapUtils:InitSetting()
 	local zoneStyle = AddDropdown("MAPSTYLE", "MIXED", mapStyles, function(style)
 		showZoneFade(style)
 		MapUtils:RefreshZoneDetail()
+		if MapUtils.RefreshMapStyleButton ~= nil then MapUtils:RefreshMapStyleButton() end
 	end, "LID_ZONEMAPSTYLE", ADDED_1022)
 	AddTooltip(zoneStyle, "LID_ZONEMAPSTYLE", "LID_MAPSTYLEDESC")
 	showZoneFade = AddTerrainFadeSliders("ZONETERRAINFADE", false)
@@ -507,10 +531,20 @@ function MapUtils:InitSetting()
 	local cityStyle = AddDropdown("CITYMAPSTYLE", MapUtils:GetConfig("MAPSTYLE", "MIXED"), mapStyles, function(style)
 		showCityFade(style)
 		MapUtils:RefreshZoneDetail()
+		if MapUtils.RefreshMapStyleButton ~= nil then MapUtils:RefreshMapStyleButton() end
 	end, nil, ADDED_1022)
 	AddTooltip(cityStyle, "LID_CITYMAPSTYLE", "LID_MAPSTYLEDESC")
 	showCityFade = AddTerrainFadeSliders("CITYTERRAINFADE", true)
 	showCityFade(MapUtils:GetConfig("CITYMAPSTYLE", "MIXED"))
+	styleControls["MAPSTYLE"] = {
+		["dropdown"] = zoneStyle,
+		["showFade"] = showZoneFade
+	}
+
+	styleControls["CITYMAPSTYLE"] = {
+		["dropdown"] = cityStyle,
+		["showFade"] = showCityFade
+	}
 	AddCategory("NAVIGATION", 2, nil, ADDED_0928)
 	AddTooltip(AddCheckbox("ALWAYSSHOWWAYPOINT", false, nil, nil, ADDED_0928), "LID_ALWAYSSHOWWAYPOINT", "LID_ALWAYSSHOWWAYPOINTDESC")
 	if (C_Navigation and C_Navigation.GetDistance) or WorldMapPin_GetDistance then
