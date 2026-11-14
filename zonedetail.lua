@@ -1973,7 +1973,8 @@ function MinimapLayer.Update()
 	local embeddedStyle = GetEmbeddedCityStyle(host)
 	local style = GetStyle(not embeddedStyle and host or nil)
 	local cityTerrain = embeddedStyle and embeddedStyle ~= "MAP"
-	if not container:IsShown() or container.refWidth == nil or style == "MAP" and not cityTerrain then
+	local underground = UNDERGROUND[host] and not MapUtils:IsOneMap()
+	if underground or not container:IsShown() or container.refWidth == nil or style == "MAP" and not cityTerrain then
 		if MinimapLayer.signature ~= nil or next(MinimapLayer.active) ~= nil then MinimapLayer.HideAll() end
 
 		return

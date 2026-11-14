@@ -3,6 +3,7 @@ if WorldMapFrame == nil or C_Map == nil then return end
 local CM = {
 	key = "CUSTOMMARKERWORLDMAPPINS",
 	size = 20,
+	level = 2550,
 	labelSize = 11,
 	pins = {},
 	columns = 10,
@@ -213,7 +214,7 @@ function CM.UpdatePins()
 			CM.SetRoundInset(pin, 1 / scale)
 			pin.label:SetFont(font, CM.labelSize / pinScale, "OUTLINE")
 			pin.label:SetText(marker.name or "")
-			pin:SetFrameLevel(canvas:GetFrameLevel() + 40)
+			pin:SetFrameLevel(canvas:GetFrameLevel() + CM.level)
 			MapUtils:SetCanvasPinScale(pin, scale)
 			pin:ClearAllPoints()
 			pin:SetPoint("CENTER", canvas, "TOPLEFT", width * x, -height * y)
