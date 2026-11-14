@@ -51,6 +51,13 @@ function MapUtils:GetConfig(key, value)
 	return MAUTTAB[key]
 end
 
+function MapUtils:GetMapViewMode()
+	MAUTTAB = MAUTTAB or {}
+	if MAUTTAB["MAPVIEWMODE"] == nil then MAUTTAB["MAPVIEWMODE"] = MAUTTAB["REMEMBERMAPVIEW"] and "LOCATION" or "PLAYER" end
+
+	return MAUTTAB["MAPVIEWMODE"]
+end
+
 function MapUtils:ToggleSettings()
 	if maset == nil then return end
 	maset:Toggle()
@@ -451,7 +458,20 @@ function MapUtils:InitSetting()
 
 	local wheelZoomAvailable = MapUtils.IsWorldMapWheelZoomAvailable and MapUtils:IsWorldMapWheelZoomAvailable()
 	if wheelZoomAvailable then AddCheckbox("WORLDMAPZOOM", true, nil, nil, "2026-10-08") end
-	AddTooltip(AddCheckbox("REMEMBERMAPVIEW", false, nil, nil, "2026-11-05"), "LID_REMEMBERMAPVIEW", "LID_REMEMBERMAPVIEWDESC")
+	MapUtils:GetMapViewMode()
+	AddTooltip(
+		AddDropdown(
+			"MAPVIEWMODE",
+			"PLAYER",
+			{
+				{["value"] = "PLAYER", ["label"] = MapUtils:Trans("LID_MAPVIEWPLAYER")},
+				{["value"] = "ZOOM", ["label"] = MapUtils:Trans("LID_MAPVIEWZOOM")},
+				{["value"] = "LOCATION", ["label"] = MapUtils:Trans("LID_MAPVIEWLOCATION")}
+			}, nil, nil, "2026-11-14"
+		),
+		"LID_MAPVIEWMODE",
+		"LID_MAPVIEWMODEDESC"
+	)
 	MapUtils:IsOneMap()
 	local oneMap = AddCheckbox(
 		"ONEMAP",
