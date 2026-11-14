@@ -1568,11 +1568,22 @@ function MapUtils:GetUnitMapPosition(unit)
 	return mapID, x, y
 end
 
-function MapUtils:CenterWorldMapOnUnit(unit)
+function MapUtils:CenterWorldMapOnUnit(unit, follow)
 	local container = WheelZoom.container
 	if frame == nil or container == nil or IsLocked() then return false end
+	if follow and (SmoothZoom.anim ~= nil or SmoothZoom.center ~= nil or WheelZoom.pending ~= nil or IsMouseButtonDown("LeftButton")) then return false end
 	local mapID, x, y = MapUtils:GetUnitMapPosition(unit)
 	if mapID == nil then return false end
+	local shown = frame:GetMapID()
+	if follow and shown ~= nil and shown ~= mapID then
+		local pos = C_Map.GetPlayerMapPosition(shown, unit)
+		local px, py
+		if pos ~= nil then px, py = pos:GetXY() end
+		if px ~= nil and py ~= nil and not MapUtils:IsSecret(px) and not MapUtils:IsSecret(py) and px >= 0 and px <= 1 and py >= 0 and py <= 1 and (px ~= 0 or py ~= 0) then mapID, x, y = shown, px, py end
+	end
+
+	local instant = follow and shown == mapID
+	if instant and math.abs(container:GetNormalizedHorizontalScroll() - x) < 0.0001 and math.abs(container:GetNormalizedVerticalScroll() - y) < 0.0001 then return true end
 	SmoothZoom.anim = nil
 	SmoothZoom.center = nil
 	WheelZoom.pending = nil
@@ -1610,15 +1621,16 @@ function MapUtils:CenterWorldMapOnUnit(unit)
 		if switched then
 			center.glide = true
 			center.fromX, center.fromY = container:GetCurrentScrollX() or center.fromX, container:GetCurrentScrollY() or center.fromY
-			center.toScale = math.max(scale, container:GetScaleForMinZoom())
+			if not follow then center.toScale = math.max(scale, container:GetScaleForMinZoom()) end
 		end
 	else
 		if container.InstantPanAndZoom == nil then return false end
 		local minScale = container.GetScaleForMinZoom and container:GetScaleForMinZoom()
 		local maxScale = container.GetScaleForMaxZoom and container:GetScaleForMaxZoom()
-		if minScale ~= nil and maxScale ~= nil and scale <= minScale + SCALE_EPSILON then center.toScale = maxScale end
+		if not follow and minScale ~= nil and maxScale ~= nil and scale <= minScale + SCALE_EPSILON then center.toScale = maxScale end
 	end
 
+	if instant then center.time = SmoothZoom.centerDuration end
 	SmoothZoom.center = center
 	if not MapLevelZoom.installed then SmoothZoom.StepCenter(container, SmoothZoom.centerDuration) end
 

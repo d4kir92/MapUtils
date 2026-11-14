@@ -200,6 +200,9 @@ local Party = {
 local Player = {
 	size = 24,
 	icon = "Interface\\Minimap\\MinimapArrow",
+	glow = "Interface\\Buttons\\UI-ActionButton-Border",
+	followInterval = 0.02,
+	following = false,
 }
 
 function Widgets.CreateFrame()
@@ -1084,7 +1087,35 @@ end
 function Player.ShowTooltip(button)
 	GameTooltip:SetOwner(button, "ANCHOR_TOP")
 	GameTooltip:SetText(MapUtils:Trans("LID_CENTERONPLAYER"))
+	GameTooltip:AddLine(MapUtils:Trans("LID_FOLLOWPLAYER"), 1, 1, 1, true)
 	GameTooltip:Show()
+end
+
+function Player.SetFollowing(following)
+	Player.following = following
+	Player.button.glow:SetShown(following)
+	if following then
+		Player.button.pulse:Play()
+		Player.elapsed = Player.followInterval
+	else
+		Player.button.pulse:Stop()
+	end
+end
+
+function Player.OnClick(_, mouseButton)
+	if mouseButton == "RightButton" then
+		Player.SetFollowing(not Player.following)
+	else
+		MapUtils:CenterWorldMapOnUnit("player")
+	end
+end
+
+function Player.OnUpdate(_, delta)
+	if not Player.following or not map:IsShown() then return end
+	Player.elapsed = (Player.elapsed or 0) + delta
+	if Player.elapsed < Player.followInterval then return end
+	Player.elapsed = 0
+	MapUtils:CenterWorldMapOnUnit("player", true)
 end
 
 function Player.Layout()
@@ -1103,7 +1134,22 @@ function Player.Create()
 	button.icon:SetAllPoints(button)
 	button.icon:SetTexture(Player.icon)
 	button:SetHighlightTexture(Player.icon, "ADD")
-	button:SetScript("OnClick", function() MapUtils:CenterWorldMapOnUnit("player") end)
+	button.glow = button:CreateTexture(nil, "OVERLAY")
+	button.glow:SetPoint("CENTER", button, "CENTER", 0, 0)
+	button.glow:SetSize(Player.size * 1.5, Player.size * 1.5)
+	button.glow:SetTexture(Player.glow)
+	button.glow:SetBlendMode("ADD")
+	button.glow:SetVertexColor(1, 0.82, 0.2)
+	button.glow:Hide()
+	button.pulse = button.glow:CreateAnimationGroup()
+	button.pulse:SetLooping("BOUNCE")
+	local fade = button.pulse:CreateAnimation("Alpha")
+	fade:SetFromAlpha(1)
+	fade:SetToAlpha(0.4)
+	fade:SetDuration(0.8)
+	button:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+	button:SetScript("OnClick", Player.OnClick)
+	frame:SetScript("OnUpdate", MapUtils.Profile("widgets player OnUpdate", Player.OnUpdate))
 	button:SetScript("OnEnter", Player.ShowTooltip)
 	button:SetScript("OnLeave", function() GameTooltip:Hide() end)
 	Player.button = button
