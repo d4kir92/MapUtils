@@ -287,7 +287,7 @@ end
 
 function MapMenu.Create()
 	local border = map.BorderFrame
-	local arrow = border and border.MaximizeMinimizeFrame
+	local arrow = border and border.MaximizeMinimizeFrame or map.MaximizeMinimizeFrame
 	local parent = map
 	if map.NavBar == nil then
 		parent = arrow or border

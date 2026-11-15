@@ -627,7 +627,7 @@ function MapUtils:InitSetting()
 		AddPinEnabled("CAPITALPOIS", function() MapUtils:RefreshAreaPOIs() end, "LID_CAPITALPOIS", "2026-10-28")
 	end
 
-	if MapUtils:LibraryBookPinsAvailable() then
+	if MapUtils.LibraryBookPinsAvailable ~= nil and MapUtils:LibraryBookPinsAvailable() then
 		AddCategory("FOREVER", 2, nil, "2026-11-13")
 		AddCategory("LIBRARYBOOKS", 3, nil, "2026-11-13")
 		AddPinCategory("LIBRARYBOOKWORLDMAPPINS", function() MapUtils:RefreshLibraryBooks() end, nil, "2026-11-13")
