@@ -532,6 +532,13 @@ if MapUtils:IsSimpleMapFrameAvailable() then
 		ShrinkNavBar()
 		C_Timer.After(0, ShrinkNavBar)
 	end) end
+	local navChildren = map.NavBar:GetNumChildren()
+	map.NavBar:HookScript("OnUpdate", function(nav)
+		local count = nav:GetNumChildren()
+		if count == navChildren then return end
+		navChildren = count
+		ShrinkNavBar()
+	end)
 	QuestMapFrame:HookScript("OnShow", Layout)
 	QuestMapFrame:HookScript("OnHide", Layout)
 	local events = CreateFrame("Frame")
