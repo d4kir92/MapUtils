@@ -556,6 +556,7 @@ Addon.INSTANCEPININFO = {
 	["quests"] = {
 		[1013] = {"The Book of Ur"},
 		[1098] = {"Deathstalkers in Shadowfang"},
+		[3447] = {"Secret of the Circle"},
 		[5722] = {"Searching for the Lost Satchel"},
 		[5724] = {"Returning the Lost Satchel", {5722}},
 	},

@@ -1,5 +1,25 @@
 local _, Addon = ...
 Addon.INSTANCEMAPPINS = {
+    [220005] = {
+        {"marker", 0.400, 0.500, "Interface\\AddOns\\AzerothCompendium\\media\\serpentstatue", label = "3", tip = "Southwest"},
+        {"marker", 0.430, 0.300, "Interface\\AddOns\\AzerothCompendium\\media\\serpentstatue", label = "5", tip = "Northwest"},
+        {"marker", 0.491, 0.634, "Interface\\AddOns\\AzerothCompendium\\media\\serpentstatue", label = "1", tip = "South"},
+        {"marker", 0.555, 0.245, "Interface\\AddOns\\AzerothCompendium\\media\\serpentstatue", label = "2", tip = "North"},
+        {"marker", 0.622, 0.579, "Interface\\AddOns\\AzerothCompendium\\media\\serpentstatue", label = "4", tip = "Southeast"},
+        {"marker", 0.650, 0.380, "Interface\\AddOns\\AzerothCompendium\\media\\serpentstatue", label = "6", tip = "Northeast"},
+    },
+    [220004] = {
+        {"boss", 0.609, 0.722, 8580}, -- Atal'alarion <Guardian of the Idol>
+        {"questend", 0.610, 0.660, 3447}, -- Secret of the Circle
+    },
+    [220003] = {
+        {"boss", 0.361, 0.535, 5714}, -- Loro
+        {"boss", 0.431, 0.355, 5713}, -- Gasher
+        {"boss", 0.431, 0.715, 5716}, -- Zul'Lor
+        {"boss", 0.571, 0.355, 5715}, -- Hukku
+        {"boss", 0.571, 0.715, 5717}, -- Mijan
+        {"boss", 0.641, 0.535, 5712}, -- Zolo
+    },
     [900001] = {
         {"boss", 0.211, 0.535, 260243}, -- Min'loth the Serpent
         {"boss", 0.349, 0.538, 260202}, -- Deathless Marrow
@@ -130,6 +150,7 @@ Addon.INSTANCEMAPPINS = {
         {"level", 0.526, 0.872, 312},
         {"boss", 0.544, 0.537, 4274}, -- Fenrus the Devourer
         {"questend", 0.624, 0.436, 1013}, -- The Book of Ur
+        {"boss", 0.500, 0.480, 4627}, -- Arugal's Voidwalker
     },
     [315] = { -- Shadowfang Keep 6
         {"level", 0.420, 0.842, 314},
@@ -270,21 +291,14 @@ Addon.INSTANCEMAPPINS = {
         {"boss", 0.188, 0.837, 10813},
     },
     [220] = { -- The Temple of Atal'Hakkar
-        {"entrance", 0.500, 0.110},
-        {"boss", 0.525, 0.450, 5721},
-        {"boss", 0.470, 0.450, 5720},
-        {"boss", 0.451, 0.585, 5713},
-        {"boss", 0.451, 0.585, 5714},
-        {"boss", 0.451, 0.585, 5715},
-        {"boss", 0.451, 0.585, 5712},
-        {"boss", 0.451, 0.585, 5717},
-        {"boss", 0.451, 0.585, 5716},
-        {"boss", 0.760, 0.370, 5710},
-        {"boss", 0.767, 0.361, 5711},
+        {"entrance", 0.499, 0.107},
+        {"boss", 0.525, 0.550, 5721}, -- Dreamscythe
+        {"boss", 0.470, 0.550, 5720}, -- Weaver
+        {"boss", 0.740, 0.370, 5710}, -- Jammal'an the Prophet
+        {"boss", 0.784, 0.370, 5711}, -- Ogom the Wretched
         {"boss", 0.491, 0.845, 5719},
         {"boss", 0.448, 0.851, 5722},
-        {"boss", 0.686, 0.874, 5709},
-        {"boss", 0.501, 0.358, 8580},
+        {"boss", 0.666, 0.874, 5709}, -- Shade of Eranikus
         {"boss", 0.240, 0.457, 8443},
     },
     [242] = { -- Blackrock Depths - Detention Block
