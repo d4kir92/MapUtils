@@ -207,11 +207,14 @@ Addon.INSTANCEMAPPINS = {
         {"boss", 0.325, 0.660, 6490},
         {"boss", 0.400, 0.460, 6488},
         {"boss", 0.400, 0.660, 6489},
+        {"queststart", 0.722, 0.570, 1051}, -- Vorrel's Revenge
     },
     [303] = { -- Scarlet Monastery - Library
         {"entrance", 0.130, 0.248},
         {"boss", 0.300, 0.850, 3974},
         {"boss", 0.835, 0.740, 6487},
+        {"questend", 0.452, 0.317, 1160}, -- Test of Lore
+        {"questend", 0.820, 0.150, 1049}, -- Compendium of the Fallen
     },
     [304] = { -- Scarlet Monastery - Armory
         {"entrance", 0.610, 0.955},
@@ -233,6 +236,8 @@ Addon.INSTANCEMAPPINS = {
         {"boss", 0.110, 0.303, 4425},
         {"boss", 0.080, 0.690, 4421},
         {"boss", 0.494, 0.471, 4842},
+        {"queststart", 0.370, 0.308, 1142}, -- Mortality Wanes
+        {"queststart", 0.370, 0.332, 1144}, -- Willix the Importer
     },
     [300] = { -- Razorfen Downs
         {"entrance", 0.237, 0.190},
@@ -242,6 +247,10 @@ Addon.INSTANCEMAPPINS = {
         {"boss", 0.529, 0.672, 7354},
         {"boss", 0.443, 0.596, 7358},
         {"boss", 0.590, 0.339, 7355},
+        {"questend", 0.490, 0.210, 3525}, -- Extinguishing the Idol
+        {"questend", 0.780, 0.170, 3523}, -- Scourge of the Downs
+        {"queststart", 0.780, 0.170, 3523}, -- Scourge of the Downs
+        {"queststart", 0.780, 0.170, 3525}, -- Extinguishing the Idol
     },
     [280] = { -- Maraudon - Caverns of Maraudon
         {"entrance", 0.768, 0.657},
@@ -262,6 +271,11 @@ Addon.INSTANCEMAPPINS = {
         {"boss", 0.258, 0.360, 7291},
         {"boss", 0.212, 0.248, 4854},
         {"boss", 0.360, 0.730, 7228},
+        {"boss", 0.474, 0.407, 4857}, -- Stone Keeper
+        {"questend", 0.237, 0.271, 2339}, -- Find the Gems and Power Source
+        {"questend", 0.533, 0.640, 2284}, -- Necklace Recovery, Take 2
+        {"questend", 0.604, 0.939, 2339}, -- Find the Gems and Power Source
+        {"queststart", 0.533, 0.640, 2318}, -- Translating the Journal
     },
     [219] = { -- Zul'Farrak
         {"entrance", 0.566, 0.901},
@@ -455,6 +469,10 @@ Addon.INSTANCEMAPPINS = {
         {"level", 0.640, 0.580, 226, true},
         {"boss", 0.755, 0.450, 7079},
         {"boss", 0.242, 0.678, 6235},
+        {"questend", 0.620, 0.630, 2945}, -- Grime-Encrusted Ring
+        {"queststart", 0.660, 0.620, 2951}, -- The Sparklematic 5200!
+        {"queststart", 0.670, 0.690, 2949}, -- Return of the Ring
+        {"queststart", 0.840, 0.790, 2904}, -- A Fine Mess
     },
     [228] = { -- Gnomeregan - Launch Bay
         {"entrance", 0.870, 0.480},
@@ -472,6 +490,8 @@ Addon.INSTANCEMAPPINS = {
     [231] = { -- Uldaman - Khaz'Goroth's Seat
         {"level", 0.645, 0.410, 230, true},
         {"boss", 0.554, 0.506, 2748},
+        {"questend", 0.500, 0.340, 2278}, -- The Platinum Discs
+        {"queststart", 0.500, 0.340, 2278}, -- The Platinum Discs
     },
     [281] = { -- Maraudon - Zaetar's Grave
         {"level", 0.295, 0.040, 280, true},
