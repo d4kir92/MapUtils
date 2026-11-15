@@ -438,12 +438,12 @@ function MapUtils:InitSetting()
 
 	if MapUtils.RefreshQuestTurnIns then AddPinCategory("QUESTTURNINWORLDMAPPINS", function() MapUtils:RefreshQuestTurnIns() end, "LID_QUESTTURNINWORLDMAPPINS", "2026-10-07") end
 	AddCategory("MAPWINDOW", 2, nil, ADDED_0927)
-	local byMoveAny = MapUtils:IsWorldMapByMoveAny()
+	local mover = MapUtils:GetWorldMapMover()
 	for _, key in ipairs({"WORLDMAPMOVE", "WORLDMAPSCALE"}) do
 		local label = nil
-		if byMoveAny then label = MapUtils:Trans("LID_" .. key) .. " |cffff8000(" .. MapUtils:Trans("LID_HANDLEDBYMOVEANY") .. ")|r" end
+		if mover then label = MapUtils:Trans("LID_" .. key) .. " |cffff8000(" .. MapUtils:Trans("LID_HANDLEDBYADDON", nil, mover) .. ")|r" end
 		local checkbox = AddCheckbox(key, true, function() MapUtils:RefreshWorldMapFrame() end, label, ADDED_0927)
-		if byMoveAny then maset:AddDependency(checkbox, function() return false end, 0) end
+		if mover then maset:AddDependency(checkbox, function() return false end, 0) end
 	end
 	if MapUtils.IsSimpleMapFrameAvailable and MapUtils:IsSimpleMapFrameAvailable() then
 		local byLeatrix = MapUtils:IsSimpleMapFrameByLeatrix()

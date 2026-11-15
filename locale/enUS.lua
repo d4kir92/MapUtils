@@ -82,7 +82,7 @@ MapUtils:AddTrans("enUS", "LID_GUILDMEMBERSHARE", "Share my position with the gu
 MapUtils:AddTrans("enUS", "LID_GUILDMEMBERSHAREDESC", "Sends your map position to your guild only, at most every 5 seconds while moving and every 30 seconds while standing still. Nothing is sent inside instances.")
 MapUtils:AddTrans("enUS", "LID_GUILDMEMBERZONES", "Guild members by zone without addon tracking")
 MapUtils:AddTrans("enUS", "LID_GUILDMEMBERZONESDESC", "Groups online guild members without a shared position in their reported zone.")
-MapUtils:AddTrans("enUS", "LID_HANDLEDBYMOVEANY", "handled by MoveAny")
+MapUtils:AddTrans("enUS", "LID_HANDLEDBYADDON", "handled by %s")
 MapUtils:AddTrans("enUS", "LID_HIDEBOSSPINS", "Hide boss pins")
 MapUtils:AddTrans("enUS", "LID_HIDEENTRANCEPINS", "Hide entrance pins")
 MapUtils:AddTrans("enUS", "LID_HIDELEVELPINS", "Hide level transition pins")

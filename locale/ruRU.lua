@@ -82,7 +82,7 @@ MapUtils:AddTrans("ruRU", "LID_GUILDMEMBERSHARE", "Делиться своей �
 MapUtils:AddTrans("ruRU", "LID_GUILDMEMBERSHAREDESC", "Отправляет вашу позицию на карте только гильдии: не чаще раза в 5 секунд в движении и раз в 30 секунд на месте. В подземельях ничего не отправляется.")
 MapUtils:AddTrans("ruRU", "LID_GUILDMEMBERZONES", "Согильдийцы по зонам без отслеживания аддоном")
 MapUtils:AddTrans("ruRU", "LID_GUILDMEMBERZONESDESC", "Группирует в указанной зоне участников гильдии, которые в сети и не делятся координатами.")
-MapUtils:AddTrans("ruRU", "LID_HANDLEDBYMOVEANY", "управляется MoveAny")
+MapUtils:AddTrans("ruRU", "LID_HANDLEDBYADDON", "управляется %s")
 MapUtils:AddTrans("ruRU", "LID_HIDEBOSSPINS", "Скрыть метки боссов")
 MapUtils:AddTrans("ruRU", "LID_HIDEENTRANCEPINS", "Скрыть метки входов")
 MapUtils:AddTrans("ruRU", "LID_HIDELEVELPINS", "Скрыть метки переходов между уровнями")

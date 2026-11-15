@@ -82,7 +82,7 @@ MapUtils:AddTrans("ptBR", "LID_GUILDMEMBERSHARE", "Compartilhar minha posição 
 MapUtils:AddTrans("ptBR", "LID_GUILDMEMBERSHAREDESC", "Envia sua posição no mapa apenas para sua guilda, no máximo a cada 5 segundos em movimento e a cada 30 segundos parado. Nada é enviado dentro de instâncias.")
 MapUtils:AddTrans("ptBR", "LID_GUILDMEMBERZONES", "Membros por zona sem rastreamento por addon")
 MapUtils:AddTrans("ptBR", "LID_GUILDMEMBERZONESDESC", "Agrupa na zona informada os membros conectados que não compartilham sua posição.")
-MapUtils:AddTrans("ptBR", "LID_HANDLEDBYMOVEANY", "controlado pelo MoveAny")
+MapUtils:AddTrans("ptBR", "LID_HANDLEDBYADDON", "controlado pelo %s")
 MapUtils:AddTrans("ptBR", "LID_HIDEBOSSPINS", "Ocultar marcadores de chefes")
 MapUtils:AddTrans("ptBR", "LID_HIDEENTRANCEPINS", "Ocultar marcadores de entradas")
 MapUtils:AddTrans("ptBR", "LID_HIDELEVELPINS", "Ocultar marcadores de troca de nível")

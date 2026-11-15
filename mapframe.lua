@@ -30,11 +30,11 @@ local function IsEnabled(key)
 end
 
 local function MoveEnabled()
-	return not foreignMove and IsEnabled("WORLDMAPMOVE")
+	return not foreignMove and not MapUtils:IsWorldMapByOneForAll() and IsEnabled("WORLDMAPMOVE")
 end
 
 local function ScaleEnabled()
-	return IsEnabled("WORLDMAPSCALE")
+	return not MapUtils:IsWorldMapByOneForAll() and IsEnabled("WORLDMAPSCALE")
 end
 
 local function IsMaximized()
@@ -370,6 +370,17 @@ end
 
 function MapUtils:IsWorldMapByMoveAny()
 	return MapUtils:IsAddOnActive("MoveAny")
+end
+
+function MapUtils:IsWorldMapByOneForAll()
+	return frame ~= nil and frame.ofaMovable == true
+end
+
+function MapUtils:GetWorldMapMover()
+	if MapUtils:IsWorldMapByMoveAny() then return "MoveAny" end
+	if MapUtils:IsAddOnActive("OneForAll") then return "OneForAll" end
+
+	return nil
 end
 
 function MapUtils:RefreshWorldMapFrame()
