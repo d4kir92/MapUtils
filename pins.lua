@@ -3057,12 +3057,21 @@ end
 
 local function GetMinimapYards()
 	if Minimap == nil or Minimap.GetZoom == nil then return nil end
+	if C_Minimap ~= nil and C_Minimap.GetViewRadius ~= nil then
+		local radius = C_Minimap.GetViewRadius()
+		if type(radius) == "number" and (issecretvalue == nil or not issecretvalue(radius)) and radius > 0 then return radius * 2 end
+	end
+
 	local zoom = Minimap:GetZoom()
 	if zoom == nil then return nil end
 	local list = MINIMAP_YARDS["outdoor"]
-	local inside = tonumber(MapUtils:GetCVar("minimapInsideZoom") or "")
-	local outside = tonumber(MapUtils:GetCVar("minimapZoom") or "")
-	if inside == zoom and outside ~= zoom then list = MINIMAP_YARDS["indoor"] end
+	if IsIndoors ~= nil then
+		if IsIndoors() then list = MINIMAP_YARDS["indoor"] end
+	else
+		local inside = tonumber(MapUtils:GetCVar("minimapInsideZoom") or "")
+		local outside = tonumber(MapUtils:GetCVar("minimapZoom") or "")
+		if inside == zoom and outside ~= zoom then list = MINIMAP_YARDS["indoor"] end
+	end
 
 	return list[zoom] or list[0]
 end
