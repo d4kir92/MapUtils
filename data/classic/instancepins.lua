@@ -9,6 +9,8 @@ pins["213"] = {
 	{"boss", 0.406, 0.574, 11520, "Taragaman the Hungerer", 16, 7970, 1},
 	{"boss", 0.338, 0.840, 11518, "Jergosh the Invoker", 16, 11429, 1},
 	{"boss", 0.422, 0.857, 11519, "Bazzalan", 16, 2007, 1},
+	{"questend", 0.578, 0.378, 5722, "Searching for the Lost Satchel"},
+	{"queststart", 0.578, 0.378, 5724, "Returning the Lost Satchel", {5722}},
 }
 pins["291"] = {
 	{"entrance", 0.297, 0.133},

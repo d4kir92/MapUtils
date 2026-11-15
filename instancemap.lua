@@ -105,6 +105,8 @@ local instanceMap = MapUtils:CreateInstanceMap(
 		["getLevelHint"] = function() return format("|cffffd100%s|r  %s", MapUtils:Trans("LID_LEFTCLICK"), MapUtils:Trans("LID_SHOWDESTMAP")) end,
 		["getCredit"] = function(level) return level.source and format(MapUtils:Trans("LID_MAPSOURCE"), level.source) or nil end,
 		["getEntranceText"] = function(row) return MapUtils:Trans(row[4] == "raid" and "LID_RAIDENTRANCE" or "LID_DUNGEONENTRANCE") end,
+		["isQuestPinVisible"] = function(row) return MapUtils:IsDebug() or MapUtils:IsInstanceQuestPinVisible(row) end,
+		["getQuestKindText"] = function(row) return MapUtils:Trans(row[1] == "queststart" and "LID_MAPPINQUESTSTART" or "LID_MAPPINQUESTEND") end,
 		["isPinEnabled"] = function(kind) return MapUtils:IsDebug() or MapUtils:GetConfig("INSTANCEPINS_" .. strupper(kind), true) ~= false end,
 		["setPinEnabled"] = function(kind, enabled) MapUtils:SetSharedOption("INSTANCEPINS_" .. strupper(kind), enabled) end,
 		["getBossScale"] = function() return tonumber(MapUtils:GetConfig("INSTANCEPINS_BOSSSCALE", 1)) or 1 end,

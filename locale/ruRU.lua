@@ -108,6 +108,8 @@ MapUtils:AddTrans("ruRU", "LID_MAPFADE", "Прозрачность при дви
 MapUtils:AddTrans("ruRU", "LID_MAPICONS", "Значки на карте")
 MapUtils:AddTrans("ruRU", "LID_MAPLABELS", "Подписи на карте")
 MapUtils:AddTrans("ruRU", "LID_MAPMENU", "Меню карты")
+MapUtils:AddTrans("ruRU", "LID_MAPPINQUESTEND", "Сдать задание")
+MapUtils:AddTrans("ruRU", "LID_MAPPINQUESTSTART", "Взять задание")
 MapUtils:AddTrans("ruRU", "LID_MAPSOURCE", "Карта: %s")
 MapUtils:AddTrans("ruRU", "LID_MAPSTYLEDESC", "Карта = нарисованные карты зон Blizzard. Местность = вид мини-карты игры с деревьями, скалами и зданиями. В режиме только местности при сильном отдалении всё равно показывается карта, иначе пришлось бы загружать слишком много фрагментов мини-карты.")
 MapUtils:AddTrans("ruRU", "LID_MAPSTYLEMAP", "Только карта")
