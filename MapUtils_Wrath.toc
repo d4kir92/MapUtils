@@ -67,7 +67,9 @@ questgivers.lua
 guildmembers.lua
 custommarkers.lua
 zonelevels.lua
-data\classic\instancepins.lua
+shared\InstancePins\instance_map_pins.lua
+shared\InstancePins\instance_pin_info.lua
+instancepinrows.lua
 instancemap.lua
 mapframe.lua
 editmode.lua
