@@ -16,7 +16,6 @@ ignore:
   - data/era/questgivers.lua
   - data/era/revealdata.lua
   - data/era/zonemasks.lua
-  - data/forever/instancepins.lua
   - data/forever/instances.lua
   - data/forever/librarybooks.lua
   - data/forever/minimapcoarse.lua

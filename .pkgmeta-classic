@@ -10,7 +10,6 @@ ignore:
   - convergences_wowhead.lua
   - data/cata/instances.lua
   - data/cata/questgivers.lua
-  - data/forever/instancepins.lua
   - data/forever/instances.lua
   - data/forever/librarybooks.lua
   - data/forever/minimapcoarse.lua
