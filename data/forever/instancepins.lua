@@ -49,6 +49,15 @@ pins["3065"] = {
 	{"boss", 0.509, 0.516, 261311, "Plunder", 16, 142840, 1},
 	{"boss", 0.510, 0.167, 261319, "Durgen Dirgehammer", 16, 142837, 1},
 }
+pins["900001"] = {
+	{"boss", 0.211, 0.535, 260243, "Min'loth the Serpent", false, 142286, 1},
+	{"boss", 0.349, 0.538, 260202, "Deathless Marrow", false, 142245, 1},
+	{"boss", 0.516, 0.700, 258924, "Var'Taka", false, 144487, 1},
+	{"boss", 0.558, 0.340, 260042, "Captain Dreadrise", false, 142144, 1},
+	{"boss", 0.605, 0.640, 263886, "Primeval Elemental", false, 143898, 1},
+	{"boss", 0.700, 0.541, 258905, "Zul'Alai", false, 144475, 1},
+	{"entrance", 0.845, 0.522},
+}
 pins["900002"] = {
 	{"entrance", 0.205, 0.807},
 }
