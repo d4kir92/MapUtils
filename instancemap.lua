@@ -2,7 +2,8 @@ local _, MapUtils = ...
 local MEDIA_PATH = "Interface\\AddOns\\MapUtils\\media\\"
 local PIN_TOGGLE_KEYS = {
 	["boss"] = "BOSSPINS",
-	["item"] = "QUESTPINS",
+	["item"] = "QUESTITEMPINS",
+	["quest"] = "QUESTPINS",
 	["entrance"] = "ENTRANCEPINS",
 	["level"] = "LEVELPINS",
 }

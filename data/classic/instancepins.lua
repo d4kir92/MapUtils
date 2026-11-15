@@ -5,7 +5,7 @@ local pins = MapUtils.INSTANCEPINS
 local heights = MapUtils.INSTANCEARTHEIGHTS
 pins["213"] = {
 	{"entrance", 0.611, 0.072},
-	{"boss", 0.564, 0.372, 11517, "Oggleflint <Ragefire Chieftain>", 16, 11611, 1},
+	{"boss", 0.557, 0.380, 11517, "Oggleflint <Ragefire Chieftain>", 16, 11611, 1},
 	{"boss", 0.406, 0.574, 11520, "Taragaman the Hungerer", 16, 7970, 1},
 	{"boss", 0.338, 0.840, 11518, "Jergosh the Invoker", 16, 11429, 1},
 	{"boss", 0.422, 0.857, 11519, "Bazzalan", 16, 2007, 1},
