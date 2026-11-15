@@ -546,5 +546,7 @@ Addon.INSTANCEPININFO = {
 		[3447] = {"Secret of the Circle"},
 		[5722] = {"Searching for the Lost Satchel"},
 		[5724] = {"Returning the Lost Satchel", {5722}},
+		[6561] = {"Blackfathom Villainy"},
+		[6921] = {"Amongst the Ruins"},
 	},
 }
