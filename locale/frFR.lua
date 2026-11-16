@@ -1,5 +1,6 @@
 -- frFR French
 local _, MapUtils = ...
+MapUtils:AddTrans("frFR", "LID_ADDONCOMPARTMENT", "Afficher dans le menu des extensions de la minicarte")
 MapUtils:AddTrans("frFR", "LID_ALIGNAUTO", "Auto")
 MapUtils:AddTrans("frFR", "LID_ALIGNCENTER", "Centré")
 MapUtils:AddTrans("frFR", "LID_ALIGNLEFT", "Gauche")

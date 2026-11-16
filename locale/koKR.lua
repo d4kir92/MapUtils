@@ -1,5 +1,6 @@
 -- koKR Korean
 local _, MapUtils = ...
+MapUtils:AddTrans("koKR", "LID_ADDONCOMPARTMENT", "미니맵 애드온 메뉴에 표시")
 MapUtils:AddTrans("koKR", "LID_ALIGNAUTO", "자동")
 MapUtils:AddTrans("koKR", "LID_ALIGNCENTER", "가운데")
 MapUtils:AddTrans("koKR", "LID_ALIGNLEFT", "왼쪽")

@@ -1,5 +1,6 @@
 -- esMX Mexican Spanish
 local _, MapUtils = ...
+MapUtils:AddTrans("esMX", "LID_ADDONCOMPARTMENT", "Mostrar en el menú de complementos del minimapa")
 MapUtils:AddTrans("esMX", "LID_ALIGNAUTO", "Automática")
 MapUtils:AddTrans("esMX", "LID_ALIGNCENTER", "Centrado")
 MapUtils:AddTrans("esMX", "LID_ALIGNLEFT", "Izquierda")

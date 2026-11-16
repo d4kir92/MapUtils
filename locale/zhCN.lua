@@ -1,5 +1,6 @@
 -- zhCN Simplified Chinese
 local _, MapUtils = ...
+MapUtils:AddTrans("zhCN", "LID_ADDONCOMPARTMENT", "在小地图插件菜单中显示")
 MapUtils:AddTrans("zhCN", "LID_ALIGNAUTO", "自动")
 MapUtils:AddTrans("zhCN", "LID_ALIGNCENTER", "居中")
 MapUtils:AddTrans("zhCN", "LID_ALIGNLEFT", "左对齐")

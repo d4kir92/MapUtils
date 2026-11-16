@@ -1,5 +1,6 @@
 -- enUS English
 local _, MapUtils = ...
+MapUtils:AddTrans("enUS", "LID_ADDONCOMPARTMENT", "Show in the minimap addon menu")
 MapUtils:AddTrans("enUS", "LID_ALIGNAUTO", "Auto")
 MapUtils:AddTrans("enUS", "LID_ALIGNCENTER", "Centered")
 MapUtils:AddTrans("enUS", "LID_ALIGNLEFT", "Left")

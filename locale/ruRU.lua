@@ -1,5 +1,6 @@
 -- ruRU Russian
 local _, MapUtils = ...
+MapUtils:AddTrans("ruRU", "LID_ADDONCOMPARTMENT", "Показывать в меню аддонов на миникарте")
 MapUtils:AddTrans("ruRU", "LID_ALIGNAUTO", "Авто")
 MapUtils:AddTrans("ruRU", "LID_ALIGNCENTER", "По центру")
 MapUtils:AddTrans("ruRU", "LID_ALIGNLEFT", "По левому краю")

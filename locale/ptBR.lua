@@ -1,5 +1,6 @@
 -- ptBR Brazilian Portuguese
 local _, MapUtils = ...
+MapUtils:AddTrans("ptBR", "LID_ADDONCOMPARTMENT", "Mostrar no menu de addons do minimapa")
 MapUtils:AddTrans("ptBR", "LID_ALIGNAUTO", "Automático")
 MapUtils:AddTrans("ptBR", "LID_ALIGNCENTER", "Centralizado")
 MapUtils:AddTrans("ptBR", "LID_ALIGNLEFT", "Esquerda")

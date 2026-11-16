@@ -1,5 +1,6 @@
 -- deDE German Deutsch
 local _, MapUtils = ...
+MapUtils:AddTrans("deDE", "LID_ADDONCOMPARTMENT", "Im Addon-Menü der Minikarte anzeigen")
 MapUtils:AddTrans("deDE", "LID_ALIGNAUTO", "Auto")
 MapUtils:AddTrans("deDE", "LID_ALIGNCENTER", "Zentriert")
 MapUtils:AddTrans("deDE", "LID_ALIGNLEFT", "Linksbündig")

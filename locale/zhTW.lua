@@ -1,5 +1,6 @@
 -- zhTW Traditional Chinese
 local _, MapUtils = ...
+MapUtils:AddTrans("zhTW", "LID_ADDONCOMPARTMENT", "在小地圖插件選單中顯示")
 MapUtils:AddTrans("zhTW", "LID_ALIGNAUTO", "自動")
 MapUtils:AddTrans("zhTW", "LID_ALIGNCENTER", "置中")
 MapUtils:AddTrans("zhTW", "LID_ALIGNLEFT", "靠左")

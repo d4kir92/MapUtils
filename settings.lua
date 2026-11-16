@@ -408,6 +408,12 @@ function MapUtils:InitSetting()
 		end
 	end)
 
+	if AddonCompartmentFrame and AddonCompartmentFrame.RegisterAddon and MapUtils.SetAddonCompartmentEnabled then
+		AddCheckbox("ADDONCOMPARTMENT", true, function()
+			MapUtils:SetAddonCompartmentEnabled("MapUtils", MapUtils:GetConfig("ADDONCOMPARTMENT", true))
+		end, nil, "2026-11-16")
+	end
+
 	MapUtils.WhatsNew:AddSettingsCheckbox(maset, "2026-11-13")
 	if MapUtils.RefreshCommChannel then AddTooltip(AddCheckbox("COMMCHANNEL", true, function() MapUtils:RefreshCommChannel() end, nil, "2026-10-28"), "LID_COMMCHANNEL", "LID_COMMCHANNELDESC") end
 	AddCategory("WORLDMAP", nil, nil, ADDED_0927)
@@ -650,6 +656,7 @@ function MapUtils:InitSetting()
 			MapUtils:INFO("Minimap Button is now hidden.")
 			MapUtils:HideMMBtn("MapUtils")
 		end,
+		["addoncompEnabled"] = MapUtils:GetConfig("ADDONCOMPARTMENT", true),
 		["dbkey"] = "MMBTN"
 	})
 

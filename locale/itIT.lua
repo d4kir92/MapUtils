@@ -1,5 +1,6 @@
 -- itIT Italien
 local _, MapUtils = ...
+MapUtils:AddTrans("itIT", "LID_ADDONCOMPARTMENT", "Mostra nel menu degli addon della minimappa")
 MapUtils:AddTrans("itIT", "LID_ALIGNAUTO", "Automatico")
 MapUtils:AddTrans("itIT", "LID_ALIGNCENTER", "Centrato")
 MapUtils:AddTrans("itIT", "LID_ALIGNLEFT", "Sinistra")

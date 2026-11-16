@@ -1,5 +1,6 @@
 -- esES Spanish
 local _, MapUtils = ...
+MapUtils:AddTrans("esES", "LID_ADDONCOMPARTMENT", "Mostrar en el menú de complementos del minimapa")
 MapUtils:AddTrans("esES", "LID_ALIGNAUTO", "Automática")
 MapUtils:AddTrans("esES", "LID_ALIGNCENTER", "Centrado")
 MapUtils:AddTrans("esES", "LID_ALIGNLEFT", "Izquierda")
