@@ -1102,11 +1102,13 @@ function SmoothZoom.Glide(container, toScale, toX, toY, onDone)
 		["glide"] = true,
 		["onDone"] = onDone,
 	}
+	if not MapUtils:GetConfig("ONEMAPTRANSITIONS", false) then SmoothZoom.StepCenter(container, SmoothZoom.centerDuration) end
 
 	return true
 end
 
 function SmoothZoom.GlideInto(container, target)
+	if not MapUtils:GetConfig("ONEMAPTRANSITIONS", false) then return false end
 	if container == nil or not SmoothZoom.CanSwitch(container) then return false end
 	local hostLeft, hostRight, hostTop, hostBottom = MapUtils:GetZoneDetailSpaceRect(container.mapID)
 	local space = MapUtils:GetZoneDetailSpace(container.mapID)
@@ -1591,7 +1593,7 @@ function MapUtils:CenterWorldMapOnUnit(unit, follow)
 
 	if instant then center.time = SmoothZoom.centerDuration end
 	SmoothZoom.center = center
-	if not MapLevelZoom.installed then SmoothZoom.StepCenter(container, SmoothZoom.centerDuration) end
+	if not MapLevelZoom.installed or (switched and not MapUtils:GetConfig("ONEMAPTRANSITIONS", false)) then SmoothZoom.StepCenter(container, SmoothZoom.centerDuration) end
 
 	return true
 end

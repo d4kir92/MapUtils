@@ -429,8 +429,9 @@ function MapUtils:InitSetting()
 	if MapUtils:IsForever() or MapUtils.RefreshQuestTurnIns or MapUtils.RefreshQuestGivers then AddCategory("QUESTS", 2, nil, ADDED_1104) end
 	if MapUtils.RefreshQuestGivers then
 		AddTooltip(AddPinCategory("QUESTGIVERWORLDMAPPINS", function() MapUtils:RefreshQuestGivers() end, "LID_QUESTGIVERWORLDMAPPINS", ADDED_1104), "LID_QUESTGIVERWORLDMAPPINS", "LID_QUESTGIVERWORLDMAPPINSDESC")
-		for _, key in ipairs({"QUESTGIVEREVENT", "QUESTGIVERDAILY", "QUESTGIVERREP"}) do
-			Requires(AddCheckbox(key, false, function() MapUtils:RefreshQuestGivers() end, nil, ADDED_1104), "QUESTGIVERWORLDMAPPINS_ENABLED")
+		for _, key in ipairs({"QUESTGIVEREVENT", "QUESTGIVERDAILY", "QUESTGIVERREP", "QUESTGIVERPVP"}) do
+			local added = (key == "QUESTGIVERREP" or key == "QUESTGIVERPVP") and "2026-11-16" or ADDED_1104
+			Requires(AddCheckbox(key, false, function() MapUtils:RefreshQuestGivers() end, nil, added), "QUESTGIVERWORLDMAPPINS_ENABLED")
 		end
 
 		if MapUtils:GetQuestTurnInDefault() then AddTooltip(AddCheckbox("QUESTGIVERTURNIN", true, function() MapUtils:RefreshQuestGivers() end, nil, ADDED_1104), "LID_QUESTGIVERTURNIN", "LID_QUESTGIVERTURNINDESC") end
@@ -484,6 +485,7 @@ function MapUtils:InitSetting()
 	)
 	if wheelZoomAvailable then Requires(oneMap, "WORLDMAPZOOM") end
 	AddTooltip(oneMap, "LID_ONEMAP", "LID_ONEMAPDESC")
+	Requires(AddCheckbox("ONEMAPTRANSITIONS", false, nil, nil, "2026-11-16"), "ONEMAP")
 	local mapStyles = {}
 	for _, key in ipairs({"MIXED", "MAP", "TERRAIN"}) do
 		tinsert(
