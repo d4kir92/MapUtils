@@ -196,11 +196,7 @@ local Notify = {
 }
 
 local Style = {
-	groupGap = 8,
-	icons = {
-		["MAP"] = "Interface\\Icons\\INV_Misc_Map02",
-		["TERRAIN"] = "Interface\\Icons\\Spell_Nature_Earthquake",
-	},
+	icon = "Interface\\Icons\\Spell_Nature_Earthquake",
 }
 
 local Party = {
@@ -672,54 +668,76 @@ function Toggles.Refresh()
 end
 
 function Style.IsAvailable()
-	return MapUtils.IsCityMap ~= nil and MapUtils.GetMapStyle ~= nil and MapUtils.SetMapStyle ~= nil
+	return MapUtils.GetMapStyle ~= nil and MapUtils.SetMapStyle ~= nil
 end
 
--- The button switches the style of the map being viewed: city maps use their own setting.
-function Style.IsCity()
-	return MapUtils:IsCityMap(map:GetMapID())
+-- Like the pin toggles: left-click is the zone map style, right-click the city map style.
+-- A half is lit when that style is Terrain only; the mixed style counts as Map.
+function Style.IsTerrain(city)
+	return MapUtils:GetMapStyle(city) == "TERRAIN"
 end
 
--- Only Map and Terrain are toggled; the mixed style counts as Map.
-function Style.Get()
-	return MapUtils:GetMapStyle(Style.IsCity()) == "TERRAIN" and "TERRAIN" or "MAP"
-end
-
-function Style.GetNext(style)
-	return style == "TERRAIN" and "MAP" or "TERRAIN"
+function Style.GetLabel(city)
+	return MapUtils:Trans(city and "LID_CITYMAPSTYLE" or "LID_ZONEMAPSTYLE")
 end
 
 function Style.ShowTooltip(button)
 	GameTooltip:SetOwner(button, "ANCHOR_LEFT")
-	GameTooltip:SetText(MapUtils:Trans(Style.IsCity() and "LID_CITYMAPSTYLE" or "LID_ZONEMAPSTYLE"))
-	GameTooltip:AddLine(format(MapUtils:Trans("LID_MAPSTYLESWITCH"), MapUtils:Trans("LID_MAPSTYLE" .. Style.GetNext(Style.Get()))), 1, 1, 1)
+	GameTooltip:SetText(MapUtils:Trans("LID_MAPSTYLE"))
+	for _, city in ipairs({false, true}) do
+		local click = MapUtils:Trans(city and "LID_RIGHTCLICK" or "LID_LEFTCLICK")
+		GameTooltip:AddDoubleLine(format("|cffffd100%s|r  %s", click, Style.GetLabel(city)), MapUtils:Trans("LID_MAPSTYLE" .. MapUtils:GetMapStyle(city)), 1, 1, 1, 1, 1, 1)
+	end
+
 	GameTooltip:Show()
+end
+
+function Style.Click(city)
+	local style = Style.IsTerrain(city) and "MAP" or "TERRAIN"
+	MapUtils:SetMapStyle(city, style)
+	Notify.ShowText(format("%s: %s", Style.GetLabel(city), MapUtils:Trans("LID_MAPSTYLE" .. style)))
 end
 
 function Style.Refresh()
 	local button = Style.button
 	if button == nil then return end
-	button.icon:SetTexture(Style.icons[Style.Get()])
+	local zone, city = Style.IsTerrain(false), Style.IsTerrain(true)
+	local glow = MapUtils:GetMapEditIconStyle(Toggles.element) == "GLOW"
+	button.left:SetShown(not glow)
+	button.right:SetShown(not glow)
+	button.full:SetShown(glow)
+	button.glow:SetShown(glow and city)
+	if glow then
+		Toggles.SetHalf(button.full, zone)
+	else
+		Toggles.SetHalf(button.left, zone)
+		Toggles.SetHalf(button.right, city)
+	end
+
 	if GameTooltip:GetOwner() == button then Style.ShowTooltip(button) end
 end
 
 function Style.Create()
 	local button = CreateFrame("Button", nil, Toggles.content)
 	button:SetSize(Toggles.size, Toggles.size)
-	button.icon = button:CreateTexture(nil, "ARTWORK")
-	button.icon:SetPoint("TOPLEFT", button, "TOPLEFT", Toggles.iconInset, -Toggles.iconInset)
-	button.icon:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -Toggles.iconInset, Toggles.iconInset)
+	button:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+	button.left = Toggles.CreateHalf(button, true)
+	button.right = Toggles.CreateHalf(button, false)
+	button.full = button:CreateTexture(nil, "ARTWORK")
+	button.full:SetPoint("TOPLEFT", button, "TOPLEFT", Toggles.iconInset, -Toggles.iconInset)
+	button.full:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -Toggles.iconInset, Toggles.iconInset)
+	button.left:SetTexture(Style.icon)
+	button.left:SetTexCoord(0, 0.5, 0, 1)
+	button.right:SetTexture(Style.icon)
+	button.right:SetTexCoord(0.5, 1, 0, 1)
+	button.full:SetTexture(Style.icon)
+	button.glow = Toggles.CreateGlow(button)
 	button:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD")
-	button:SetScript("OnClick", function()
-		MapUtils:SetMapStyle(Style.IsCity(), Style.GetNext(Style.Get()))
-		Style.Refresh()
-	end)
-
+	button:SetScript("OnClick", function(_, mouseButton) Style.Click(mouseButton == "RightButton") end)
 	button:SetScript("OnEnter", Style.ShowTooltip)
 	button:SetScript("OnLeave", function() GameTooltip:Hide() end)
 	Style.button = button
 	MapUtils.RefreshMapStyleButton = function() Style.Refresh() end
-	if map.OnMapChanged ~= nil then hooksecurefunc(map, "OnMapChanged", Style.Refresh) end
 	Style.Refresh()
 end
 
@@ -880,7 +898,7 @@ function Toggles.Layout()
 	local previous = nil
 	local length = 0
 	for _, button in ipairs(list) do
-		local gap = button == Style.button and Style.groupGap or Toggles.gap
+		local gap = Toggles.gap
 		button:ClearAllPoints()
 		if previous == nil then
 			button:SetPoint("TOPLEFT", Toggles.content, "TOPLEFT", pad, -pad)
