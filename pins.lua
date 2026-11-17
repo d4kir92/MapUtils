@@ -1689,10 +1689,10 @@ local function LayoutPinIcon(pin, size, x, y)
 	if used > 0 then PinCache.WatchOutline(pin) end
 end
 
-function PinCache.PlaceOutline(pin)
+function PinCache.PlaceOutline(pin, physicalHeight)
 	local used = pin.outlineUsed or 0
 	if used == 0 then return end
-	local _, physicalHeight = GetPhysicalScreenSize()
+	if physicalHeight == nil then physicalHeight = select(2, GetPhysicalScreenSize()) end
 	local effective = pin:GetEffectiveScale()
 	local step = (physicalHeight ~= nil and physicalHeight > 0 and effective > 0) and 768 / physicalHeight / effective or (pin.pixel or 1)
 	if pin.outlineStep == step then return end
@@ -1708,26 +1708,37 @@ function PinCache.PlaceOutline(pin)
 end
 
 function PinCache.WatchOutline(pin)
-	if PinCache.outlined == nil then
-		PinCache.outlined = setmetatable({}, {
-			__mode = "k"
-		})
+	if PinCache.outlineParents == nil then
+		PinCache.outlineParents = {}
 		PinCache.outlineWatcher = CreateFrame("Frame")
 		PinCache.outlineWatcher:SetScript(
 			"OnUpdate",
 			function()
-				for watched in pairs(PinCache.outlined) do
-					if (watched.outlineUsed or 0) == 0 then
-						PinCache.outlined[watched] = nil
-					elseif watched:IsVisible() then
-						PinCache.PlaceOutline(watched)
+				local _, physicalHeight = GetPhysicalScreenSize()
+				for parent, state in pairs(PinCache.outlineParents) do
+					local scale = parent:GetEffectiveScale()
+					if state.scale ~= scale or state.height ~= physicalHeight then
+						state.scale, state.height = scale, physicalHeight
+						for watched in pairs(state.pins) do
+							if watched:IsVisible() then PinCache.PlaceOutline(watched, physicalHeight) end
+						end
 					end
 				end
 			end
 		)
 	end
 
-	PinCache.outlined[pin] = true
+	local parent = pin:GetParent()
+	local state = PinCache.outlineParents[parent]
+	if state == nil then
+		state = {pins = setmetatable({}, {__mode = "k"})}
+		PinCache.outlineParents[parent] = state
+	end
+	state.pins[pin] = true
+	if not pin.outlineShowHooked then
+		pin.outlineShowHooked = true
+		pin:HookScript("OnShow", function(self) PinCache.PlaceOutline(self) end)
+	end
 end
 
 PinCache.bookBorderColors = {
@@ -2891,7 +2902,6 @@ function PinCache.CullWorldPins(child, w, h, baseLevel, layoutChanged)
 					pin:SetPoint("CENTER", child, "TOPLEFT", x, -y)
 				end
 				UpdatePinStyle(pin)
-				PinCache.PlaceOutline(pin)
 				pin:Show()
 			elseif levelChanged then
 				UpdatePinLevel(pin, IsEntryWaypoint(pin.mapID, pin.entry))
@@ -3046,6 +3056,7 @@ local function UpdateWorldPins()
 			pin:SetSize(size * factor, size * factor)
 		end
 
+		local wasRescaled = pin.rescaleFactor ~= nil and pin.rescaleFactor ~= 1
 		if MapUtils.SetCanvasPinScale ~= nil then MapUtils:SetCanvasPinScale(pin, scale) end
 		local x, y = 0, 0
 		for _, member in ipairs(cluster.items) do
@@ -3054,7 +3065,10 @@ local function UpdateWorldPins()
 		pin.worldX, pin.worldY = w * x / #cluster.items, h * y / #cluster.items
 		pin.worldRadius = math.max(pin:GetWidth(), dungeonSize) / 2 + 3 / scale
 		pin:SetPoint("CENTER", child, "TOPLEFT", pin.worldX, -pin.worldY)
-		if pin:IsShown() then UpdatePinStyle(pin) end
+		if pin:IsShown() then
+			UpdatePinStyle(pin)
+			if wasRescaled then PinCache.PlaceOutline(pin) end
+		end
 	end
 	PinCache.CullWorldPins(child, w, h, baseLevel, true)
 end

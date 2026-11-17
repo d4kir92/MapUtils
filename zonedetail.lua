@@ -425,6 +425,7 @@ local function DrawZone(continentID, continentRect, mapID, mode, width, height)
 	local layer = layers and layers[1]
 	if layer == nil or layer.layerWidth == nil or layer.layerWidth <= 0 or layer.layerHeight <= 0 then return end
 	local zone = GetZone(mapID)
+	zone.continent = base.continents[continentID]
 	local frameWidth = (right - left) * width
 	local frameHeight = (bottom - top) * height
 	zone.scaleX = frameWidth / layer.layerWidth
@@ -476,6 +477,7 @@ local function DrawZone(continentID, continentRect, mapID, mode, width, height)
 		local geometry = base.continents[continentID] and base.continents[continentID].maskGeometry
 		if geometry ~= nil then
 			local under = GetUnder(mapID)
+			under.continent = zone.continent
 			if under.mask == nil then under.mask = under.frame:CreateMaskTexture() end
 			under.mask.mapMaskGroup = WORLD
 			under.maskPath = geometry[1]
@@ -1130,11 +1132,20 @@ function base.cull.Run()
 	if container == nil then return end
 	local scroll = WorldMapFrame.ScrollContainer
 	local active = container:IsShown() and container.built ~= nil
-	local changed
+	local changed, effective
 	if active then
-		changed = base.Changed(cull.view, true, scroll:GetCanvasScale() or 0, scroll:GetCurrentScrollX() or 0, scroll:GetCurrentScrollY() or 0, container.signature)
+		local scale = scroll:GetCanvasScale() or 0
+		local width, height = scroll:GetSize()
+		local x, y = scroll:GetCurrentScrollX() or 0, scroll:GetCurrentScrollY() or 0
+		effective = container:GetEffectiveScale()
+		changed = base.Changed(cull.view, true, scale, width, height, container.signature, effective)
+		local threshold = cull.margin
+		if changed or cull.x == nil or math.abs(x - cull.x) * scroll.Child:GetWidth() * scale >= threshold or math.abs(y - cull.y) * scroll.Child:GetHeight() * scale >= threshold then
+			changed = true
+			cull.x, cull.y = x, y
+		end
 	else
-		changed = base.Changed(cull.view, false, 0, 0, 0, nil)
+		changed = base.Changed(cull.view, false, 0, 0, 0, nil, nil)
 	end
 
 	if changed then cull.version = cull.version + 1 end
@@ -1151,7 +1162,7 @@ function base.cull.Run()
 			active = false
 		else
 			local margin = math.max(cull.margin, math.max(width, height) * cull.marginShare)
-			local ratio = scroll:GetEffectiveScale() / container:GetEffectiveScale()
+			local ratio = scroll:GetEffectiveScale() / effective
 			view = {
 				left = (left - margin) * ratio,
 				right = (left + width + margin) * ratio,
@@ -1183,10 +1194,10 @@ function base.cull.Run()
 
 	local full = active and container.built == MODE_FULL
 	for index, list in ipairs({unders, zones, cities}) do
-		for mapID, art in pairs(list) do
+		for _, art in pairs(list) do
 			local wasCulled = art.frame.culled
-			local continent = full and index < 3 and art.scaleX and base.continents[GetContinent(mapID)]
-			if continent and continent.drawn and art.scaleX * art.frame:GetEffectiveScale() < cull.minZoneScale then
+			local continent = full and index < 3 and art.continent
+			if continent and continent.drawn and art.scaleX * effective < cull.minZoneScale then
 				base.cull.Set(art.frame, true)
 			else
 				Apply(art.frame)
