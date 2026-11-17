@@ -5,6 +5,9 @@ local INFO = MapUtils.QUESTINFO
 local QG = {}
 local ICON_ATLAS = "QuestNormal"
 local ICON_FILE = "Interface\\GossipFrame\\AvailableQuestIcon"
+local REPEATABLE_ATLAS = "UI-QuestPoiRecurring-QuestBang"
+local REPEATABLE_FILE = "Interface\\GossipFrame\\DailyQuestIcon"
+local REPEATABLE_COLOR = "|cff3399ff"
 local TURNIN_ATLAS = "QuestTurnin"
 local TURNIN_FILE = "Interface\\GossipFrame\\ActiveQuestIcon"
 local ICON_SIZE = 18
@@ -424,7 +427,7 @@ end
 
 function QG.GetColoredTitle(questID, quest)
 	local title = QG.GetTitle(questID, quest and quest[3] or tostring(questID))
-	if quest and QG.IsRepeatable(questID, quest) then return "|cff3399ff" .. title .. "|r" end
+	if quest and QG.IsRepeatable(questID, quest) then return REPEATABLE_COLOR .. title .. "|r", true end
 
 	return title
 end
@@ -537,16 +540,17 @@ function QG.AddQuestLines(quests)
 		local quest = INFO[questID]
 		local level = QG.GetLevel(quest)
 		local color = GetQuestDifficultyColor and GetQuestDifficultyColor(level)
-		local title = QG.GetColoredTitle(questID, quest)
+		local title, repeatable = QG.GetColoredTitle(questID, quest)
+		local levelLabel = repeatable and format("%s[|r%d%s]|r", REPEATABLE_COLOR, level, REPEATABLE_COLOR) or format("[%d]", level)
 		local tag = ""
 		if quest[22] then tag = " |cff9d9d9d(" .. MapUtils:Trans(INSTANCE_TAGS[quest[22]]) .. ")|r" end
-		local category = quest[5] or (QG.IsRepeatable(questID, quest) and 3)
+		local category = quest[5] or (repeatable and 3)
 		if category then tag = tag .. " |cff9d9d9d(" .. MapUtils:Trans(CATEGORY_TAGS[category]) .. ")|r" end
 		if details and index > 1 then GameTooltip:AddLine(" ") end
 		if color then
-			GameTooltip:AddLine(format("%s[%d] %s%s", QG.INDENT, level, title, tag), color.r, color.g, color.b, true)
+			GameTooltip:AddLine(format("%s%s %s%s", QG.INDENT, levelLabel, title, tag), color.r, color.g, color.b, true)
 		else
-			GameTooltip:AddLine(format("%s[%d] %s%s", QG.INDENT, level, title, tag), 1, 1, 1, true)
+			GameTooltip:AddLine(format("%s%s %s%s", QG.INDENT, levelLabel, title, tag), 1, 1, 1, true)
 		end
 
 		if details then QG.AddQuestDetails(questID, quest) end
@@ -750,14 +754,13 @@ function QG.CreatePin(canvas)
 	return pin
 end
 
-function QG.SetPinIcon(pin, turnin)
-	if pin.turnin == turnin then return end
-	pin.turnin = turnin
-	local atlas = turnin and TURNIN_ATLAS or ICON_ATLAS
+function QG.SetPinIcon(pin, atlas, fallback)
+	if pin.iconAtlas == atlas then return end
+	pin.iconAtlas = atlas
 	if C_Texture and C_Texture.GetAtlasInfo and C_Texture.GetAtlasInfo(atlas) then
 		pin.icon:SetAtlas(atlas)
 	else
-		pin.icon:SetTexture(turnin and TURNIN_FILE or ICON_FILE)
+		pin.icon:SetTexture(fallback)
 	end
 end
 
@@ -767,6 +770,18 @@ function QG.HasTurnIn(cluster)
 	end
 
 	return false
+end
+
+function QG.HasOnlyRepeatableStarts(cluster)
+	local hasStarts = false
+	for _, spot in ipairs(cluster.spots) do
+		for _, questID in ipairs(spot.quests or {}) do
+			if not QG.IsRepeatable(questID, INFO[questID]) then return false end
+			hasStarts = true
+		end
+	end
+
+	return hasStarts
 end
 
 function QG.HidePins()
@@ -854,7 +869,13 @@ function QG.Layout(canvas)
 		end
 
 		pin.cluster = cluster
-		QG.SetPinIcon(pin, QG.HasTurnIn(cluster))
+		if QG.HasTurnIn(cluster) then
+			QG.SetPinIcon(pin, TURNIN_ATLAS, TURNIN_FILE)
+		elseif QG.HasOnlyRepeatableStarts(cluster) then
+			QG.SetPinIcon(pin, REPEATABLE_ATLAS, REPEATABLE_FILE)
+		else
+			QG.SetPinIcon(pin, ICON_ATLAS, ICON_FILE)
+		end
 		pin:SetSize(size, size)
 		local circle = size * CIRCLE_SCALE
 		for _, texture in ipairs({pin.normal, pin.pushed, pin.highlight}) do
