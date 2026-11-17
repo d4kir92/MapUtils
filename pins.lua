@@ -1600,6 +1600,7 @@ end
 
 local function ApplyIcon(pin, icon)
 	if pin.icon == icon then return end
+	pin.outlineReady = false
 	pin.icon = icon
 	pin.splitIcon = icon == SPLIT_ICON
 	if pin.splitIcon then
@@ -1644,6 +1645,7 @@ local function LayoutPinIcon(pin, size, x, y)
 	local entry = pin.entry
 	local outlined = entry ~= nil and (entry.transport ~= nil or entry.kind == "spirithealer" or entry.kind == "flight" or entry.kind == "dungeon")
 	if not outlined and pin.outline == nil then return end
+	if outlined and pin.outlineReady then return end
 	local sources = pin.splitIcon and {pin.textureLeft, pin.textureRight} or {pin.texture}
 	pin.outline = pin.outline or {}
 	local used = 0
@@ -1681,6 +1683,7 @@ local function LayoutPinIcon(pin, size, x, y)
 	end
 
 	pin.outlineUsed = used
+	pin.outlineReady = outlined
 	pin.outlineStep = nil
 	PinCache.PlaceOutline(pin)
 	if used > 0 then PinCache.WatchOutline(pin) end
@@ -2856,6 +2859,50 @@ local worldMeetingStones = nil
 local worldCrossings = nil
 local worldSpiritHealers = nil
 local worldConvergences = nil
+PinCache.worldByItem = {}
+PinCache.worldView = {}
+
+function PinCache.CullWorldPins(child, w, h, baseLevel, layoutChanged)
+	local scroll = WorldMapFrame.ScrollContainer
+	local left, right, top, bottom
+	if scroll ~= nil and scroll.GetCurrentScrollX ~= nil and scroll.GetCurrentScrollY ~= nil then
+		local x, y = scroll:GetCurrentScrollX(), scroll:GetCurrentScrollY()
+		if x ~= nil and y ~= nil then
+			local ratio = scroll:GetEffectiveScale() / child:GetEffectiveScale()
+			local width = (scroll:GetWidth() / 2 + 32) * ratio
+			local height = (scroll:GetHeight() / 2 + 32) * ratio
+			left, right = x * w - width, x * w + width
+			top, bottom = y * h - height, y * h + height
+		end
+	end
+
+	local view = PinCache.worldView
+	if not layoutChanged and view.left == left and view.right == right and view.top == top and view.bottom == bottom and view.level == baseLevel then return end
+	view.left, view.right, view.top, view.bottom, view.level = left, right, top, bottom, baseLevel
+	for _, pin in ipairs(worldPins) do
+		local x, y, radius = pin.worldX, pin.worldY, pin.worldRadius
+		local visible = left == nil or x + radius >= left and x - radius <= right and y + radius >= top and y - radius <= bottom
+		local levelChanged = pin.baseLevel ~= baseLevel
+		pin.baseLevel = baseLevel
+		if visible then
+			if not pin:IsShown() then
+				if pin.rescaleFactor ~= nil and pin.rescaleFactor ~= 1 then
+					MapUtils:SetCanvasPinScale(pin, worldScale)
+					pin:SetPoint("CENTER", child, "TOPLEFT", x, -y)
+				end
+				UpdatePinStyle(pin)
+				PinCache.PlaceOutline(pin)
+				pin:Show()
+			elseif levelChanged then
+				UpdatePinLevel(pin, IsEntryWaypoint(pin.mapID, pin.entry))
+			end
+		elseif pin:IsShown() then
+			OnPinLeave(pin)
+			pin:Hide()
+		end
+	end
+end
+
 local function UpdateWorldPins()
 	local child = GetWorldCanvas()
 	if child == nil or worldPinPool == nil then return end
@@ -2879,10 +2926,7 @@ local function UpdateWorldPins()
 	local w, h = child:GetWidth(), child:GetHeight()
 	if scale == nil or scale <= 0 or w <= 0 or h <= 0 then return end
 	if sameState and scale == worldScale and w == PinCache.worldWidth and h == PinCache.worldHeight then
-		for _, pin in ipairs(worldPins) do
-			pin.baseLevel = baseLevel
-			UpdatePinLevel(pin, pin.entry ~= nil and IsEntryWaypoint(pin.mapID, pin.entry))
-		end
+		PinCache.CullWorldPins(child, w, h, baseLevel, false)
 
 		return
 	end
@@ -2898,9 +2942,10 @@ local function UpdateWorldPins()
 	worldSpiritHealers = spiritHealersOn
 	worldConvergences = convergencesOn
 	PinCache.worldLibraryBooks = libraryBooksOn
-	worldPinPool:ReleaseAll()
 	wipe(worldPins)
 	if not sameState then
+		worldPinPool:ReleaseAll()
+		wipe(PinCache.worldByItem)
 		local list = {}
 		for _, entry in ipairs(BuildList(mapID, piersOn, dungeonsOn, flightsOn, meetingStonesOn, crossingsOn, spiritHealersOn, convergencesOn, nil, libraryBooksOn) or {}) do
 			tinsert(list, {entry = entry, mapID = mapID, x = entry.x, y = entry.y})
@@ -2916,6 +2961,7 @@ local function UpdateWorldPins()
 	local size = ICON_SIZE / scale
 	local poiScale = GetPoiScale()
 	local dungeonSize = DUNGEON_ICON_SIZE * poiScale / scale
+	local sizeFactors = {}
 	local clusters
 	if MapUtils:IsDebug() then
 		clusters = {}
@@ -2928,33 +2974,69 @@ local function UpdateWorldPins()
 			local baseSize = (kind == "dungeon" or kind == "flight") and dungeonSize or size
 			if kind == "crossing" then baseSize = dungeonSize * 0.7 end
 			item.kind = kind or item.entry.transport or "ship"
-			item.distance = baseSize * MapUtils:GetPinKindSizeFactor(kind)
+			local key = kind or ""
+			if sizeFactors[key] == nil then sizeFactors[key] = MapUtils:GetPinKindSizeFactor(kind) end
+			item.distance = baseSize * sizeFactors[key]
 		end
 		clusters = MapUtils:ClusterMapPins(PinCache.worldEntries, w, h)
+	end
+
+	for _, cluster in ipairs(clusters) do
+		local pin = PinCache.worldByItem[cluster.items[1]]
+		if pin ~= nil then pin.keepWorldPin = true end
+	end
+	for item, pin in pairs(PinCache.worldByItem) do
+		if not pin.keepWorldPin then
+			PinCache.worldByItem[item] = nil
+			worldPinPool:Release(pin)
+		end
+		pin.keepWorldPin = nil
 	end
 
 	for i, cluster in ipairs(clusters) do
 		local item = cluster.items[1]
 		local entry, entryMapID = item.entry, item.mapID
-		local pin = worldPinPool:Acquire()
-		SetupPin(pin, child, WORLD_PIN_LEVEL, true)
-		pin.worldMap = true
+		local pin = PinCache.worldByItem[item]
+		local acquired = pin == nil
+		if acquired then
+			pin = worldPinPool:Acquire()
+			SetupPin(pin, child, WORLD_PIN_LEVEL, true)
+			PinCache.worldByItem[item] = pin
+			pin.worldMap = true
+			pin.entry = entry
+			pin.mapID = entryMapID
+		end
 		worldPins[i] = pin
+		local previous = pin.cluster
 		pin.cluster = cluster.items
+		if previous ~= nil and GameTooltip:IsOwned(pin) then
+			local changed = #previous ~= #pin.cluster
+			if not changed then
+				for index, member in ipairs(previous) do
+					if member ~= pin.cluster[index] then
+						changed = true
+						break
+					end
+				end
+			end
+			if changed then OnPinEnter(pin) end
+		end
 
-		pin.entry = entry
-		pin.mapID = entryMapID
 		pin.pixel = 1 / scale
 		pin.minCircleSize = dungeonSize
 		pin.baseLevel = baseLevel
-		local icon = GetEntryIcon(entry)
-		ApplyIcon(pin, icon)
-		ApplyEntryTint(pin, entry)
-		local factor = MapUtils:GetPinKindSizeFactor(entry.kind)
+		if acquired then
+			ApplyIcon(pin, GetEntryIcon(entry))
+			ApplyEntryTint(pin, entry)
+			pin:SetAlpha(MapUtils:GetDebugPinAlpha(entry))
+		elseif entry.kind == "librarybook" then
+			PinCache.ApplyBookBorder(pin, entry)
+		end
+		local factor = sizeFactors[entry.kind or ""] or MapUtils:GetPinKindSizeFactor(entry.kind)
 		if entry.kind == "crossing" or entry.kind == "dungeon" and entry.entrance == "path" then
 			pin:SetSize(dungeonSize * 0.7 * factor, dungeonSize * 0.7 * factor)
 		elseif entry.kind == "dungeon" then
-			local sizeIcon = icon == SPLIT_ICON and GetDungeonIcon() or icon
+			local sizeIcon = pin.icon == SPLIT_ICON and GetDungeonIcon() or pin.icon
 			local entranceSize = math.min(DUNGEON_ICON_SIZE, GetAtlasWidth(sizeIcon) or DUNGEON_ICON_SIZE) * poiScale / scale * factor
 			pin:SetSize(entranceSize, entranceSize)
 		elseif entry.kind == "flight" then
@@ -2964,12 +3046,38 @@ local function UpdateWorldPins()
 			pin:SetSize(size * factor, size * factor)
 		end
 
-		UpdatePinStyle(pin)
 		if MapUtils.SetCanvasPinScale ~= nil then MapUtils:SetCanvasPinScale(pin, scale) end
-		pin:ClearAllPoints()
-		pin:SetPoint("CENTER", child, "TOPLEFT", w * item.x, -h * item.y)
-		pin:SetAlpha(MapUtils:GetDebugPinAlpha(entry))
-		pin:Show()
+		local x, y = 0, 0
+		for _, member in ipairs(cluster.items) do
+			x, y = x + member.x, y + member.y
+		end
+		pin.worldX, pin.worldY = w * x / #cluster.items, h * y / #cluster.items
+		pin.worldRadius = math.max(pin:GetWidth(), dungeonSize) / 2 + 3 / scale
+		pin:SetPoint("CENTER", child, "TOPLEFT", pin.worldX, -pin.worldY)
+		if pin:IsShown() then UpdatePinStyle(pin) end
+	end
+	PinCache.CullWorldPins(child, w, h, baseLevel, true)
+end
+
+PinCache.updateWorldPins = MapUtils.Profile("pins UpdateWorldPins", UpdateWorldPins)
+function PinCache.PollWorldPins()
+	local child = GetWorldCanvas()
+	if child == nil then return end
+	local scroll = WorldMapFrame.ScrollContainer
+	local view = PinCache.worldView
+	local x = scroll and scroll.GetCurrentScrollX and scroll:GetCurrentScrollX()
+	local y = scroll and scroll.GetCurrentScrollY and scroll:GetCurrentScrollY()
+	local width, height = 0, 0
+	if scroll ~= nil then width, height = scroll:GetSize() end
+	local now = GetTime()
+	local moved = view.scrollX ~= x or view.scrollY ~= y or view.width ~= width or view.height ~= height
+	view.scrollX, view.scrollY, view.width, view.height = x, y, width, height
+	local w, h = child:GetSize()
+	if worldMapID ~= WorldMapFrame:GetMapID() or worldScale ~= child:GetScale() or PinCache.worldWidth ~= w or PinCache.worldHeight ~= h or view.nextPoll == nil or now >= view.nextPoll then
+		view.nextPoll = now + 0.5
+		PinCache.updateWorldPins()
+	elseif moved and view.level ~= nil then
+		PinCache.CullWorldPins(child, w, h, view.level, false)
 	end
 end
 
@@ -3136,7 +3244,7 @@ if worldCanvas ~= nil and CreateFramePool ~= nil then
 			pin.icon = nil
 		end
 	)
-	worldUpdater = CreateUpdater(WorldMapFrame, MapUtils.Profile("pins UpdateWorldPins", UpdateWorldPins))
+	worldUpdater = CreateUpdater(WorldMapFrame, PinCache.PollWorldPins)
 	MapUtils.UpdateWorldPinsNow = UpdateWorldPins
 	MapUtils.CanvasPinUpdaters = MapUtils.CanvasPinUpdaters or {}
 	tinsert(MapUtils.CanvasPinUpdaters, UpdateWorldPins)
@@ -3144,6 +3252,7 @@ if worldCanvas ~= nil and CreateFramePool ~= nil then
 		"OnHide",
 		function()
 			worldPinPool:ReleaseAll()
+			wipe(PinCache.worldByItem)
 			wipe(worldPins)
 			worldMapID = nil
 		end
@@ -3317,6 +3426,7 @@ function MapUtils:RefreshPins()
 	minimapMeetingStones = nil
 	minimapList = nil
 	if worldPinPool ~= nil then worldPinPool:ReleaseAll() end
+	wipe(PinCache.worldByItem)
 	wipe(worldPins)
 	HideAll(minimapPins)
 	MapUtils:WakeMinimapPins()
