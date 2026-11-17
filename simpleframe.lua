@@ -27,6 +27,10 @@ local function CanChange(frame)
 	return frame ~= nil and (not InCombatLockdown() or not frame:IsProtected())
 end
 
+function MapUtils:IsSimpleMapFrameActive()
+	return active
+end
+
 function MapUtils:IsSimpleMapFrameAvailable()
 	return map ~= nil and map.NavBar ~= nil and map.BorderFrame ~= nil and map.ScrollContainer ~= nil and QuestMapFrame ~= nil
 end
@@ -372,10 +376,11 @@ local function Layout()
 		for _, child in ipairs({maxButton:GetChildren()}) do
 			if CanChange(child) then
 				if child == maxButton.MapUtilsFullscreenButton then
-					Save(child)
+					Place(child, level + 1, {"RIGHT", maxButton, "LEFT", -2, 0})
 					child:SetSize(BUTTON_SIZE, BUTTON_SIZE)
+				else
+					child:SetFrameLevel(level + 1)
 				end
-				child:SetFrameLevel(level + 1)
 			end
 		end
 
@@ -502,6 +507,7 @@ local function Remove()
 		if Restore(frame, entry) then saved[frame] = nil end
 	end
 
+	if MapUtils.LayoutWorldMapFullscreenButton ~= nil then MapUtils:LayoutWorldMapFullscreenButton() end
 	if MapUtils.LayoutMapMenuButton ~= nil then MapUtils:LayoutMapMenuButton() end
 end
 

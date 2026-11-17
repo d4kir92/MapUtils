@@ -22,6 +22,46 @@ function MapUtils:UpdateVisibleQuestPins(state)
 	return changed
 end
 
+function MapUtils:ClusterMapPins(items, width, height)
+	local clusters, types, emptyCell = {}, {}, {}
+	for _, item in ipairs(items) do
+		local kind = item.kind or ""
+		local grid = types[kind]
+		if grid == nil then
+			grid = {}
+			types[kind] = grid
+		end
+
+		local distance = item.distance
+		local x, y = item.x * width / distance, item.y * height / distance
+		local col, row = math.floor(x), math.floor(y)
+		local target, nearest = nil, 1
+		for i = col - 1, col + 1 do
+			for j = row - 1, row + 1 do
+				for _, cluster in ipairs(grid[i] and grid[i][j] or emptyCell) do
+					local dx, dy = x - cluster.x, y - cluster.y
+					local squared = dx * dx + dy * dy
+					if squared < nearest then
+						target, nearest = cluster, squared
+					end
+				end
+			end
+		end
+
+		if target == nil then
+			grid[col] = grid[col] or {}
+			grid[col][row] = grid[col][row] or {}
+			target = {x = x, y = y, items = {}}
+			tinsert(grid[col][row], target)
+			tinsert(clusters, target)
+		end
+
+		tinsert(target.items, item)
+	end
+
+	return clusters
+end
+
 MapUtils.CanvasPinLists = MapUtils.CanvasPinLists or {}
 MapUtils.CanvasPinUpdaters = MapUtils.CanvasPinUpdaters or {}
 function MapUtils:SetCanvasPinScale(pin, scale)
@@ -256,8 +296,12 @@ local function CreatePin(canvas)
 	pin:SetHighlightTexture(pin.highlight, "ADD")
 	pin:SetScript("OnEnter", function(self)
 		GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-		GameTooltip:SetText(C_QuestLog.GetTitleForQuestID(self.entry.questID) or QUESTS_LABEL, 1, 0.82, 0)
-		GameTooltip:AddLine(self.entry.name or "", 1, 1, 1)
+		for index, item in ipairs(self.cluster) do
+			local entry = item.entry
+			if index > 1 then GameTooltip:AddLine(" ") end
+			GameTooltip:AddLine(C_QuestLog.GetTitleForQuestID(entry.questID) or QUESTS_LABEL, 1, 0.82, 0)
+			GameTooltip:AddLine(entry.name or "", 1, 1, 1)
+		end
 		GameTooltip:Show()
 	end)
 
@@ -309,7 +353,17 @@ local function UpdatePins()
 	end
 
 	MapUtils:UpdateVisibleQuestPins(nativeQuests)
-	for index, entry in ipairs(entries) do
+	local pinScale = scale / MapUtils:GetPinSizeFactor("QUESTTURNINWORLDMAPPINS")
+	local items = {}
+	for _, entry in ipairs(entries) do
+		if not nativeQuests.current[entry.questID] then
+			tinsert(items, {entry = entry, x = entry.x, y = entry.y, distance = 20 / pinScale})
+		end
+	end
+
+	local clusters = MapUtils:ClusterMapPins(items, width, height)
+	for index, cluster in ipairs(clusters) do
+		local entry = cluster.items[1].entry
 		local pin = pins[index]
 		if pin == nil then
 			pin = CreatePin(canvas)
@@ -317,6 +371,7 @@ local function UpdatePins()
 		end
 
 		pin.entry = entry
+		pin.cluster = cluster.items
 		local selected = C_SuperTrack and C_SuperTrack.GetSuperTrackedQuestID and C_SuperTrack.GetSuperTrackedQuestID() == entry.questID or false
 		if pin.selected ~= selected then
 			pin.selected = selected
@@ -324,7 +379,6 @@ local function UpdatePins()
 			SetPinAtlas(pin.pushed, selected and "UI-QuestPoi-QuestNumber-Pressed-SuperTracked" or "UI-QuestPoi-QuestNumber-Pressed")
 		end
 
-		local pinScale = scale / MapUtils:GetPinSizeFactor("QUESTTURNINWORLDMAPPINS")
 		pin:SetSize(20 / pinScale, 20 / pinScale)
 		for _, texture in ipairs(pin.textures) do
 			if texture.pixelWidth then texture:SetSize(texture.pixelWidth / pinScale, texture.pixelHeight / pinScale) end
@@ -334,10 +388,11 @@ local function UpdatePins()
 		MapUtils:SetCanvasPinScale(pin, scale)
 		pin:ClearAllPoints()
 		pin:SetPoint("CENTER", canvas, "TOPLEFT", width * entry.x, -height * entry.y)
-		pin:SetShown(not nativeQuests.current[entry.questID])
+		pin:Show()
+		if GameTooltip:IsOwned(pin) then pin:GetScript("OnEnter")(pin) end
 	end
 
-	for index = #entries + 1, #pins do
+	for index = #clusters + 1, #pins do
 		pins[index]:Hide()
 	end
 end

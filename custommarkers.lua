@@ -136,9 +136,13 @@ function CM.OnEnter(pin)
 	local marker = pin.marker
 	if marker == nil then return end
 	GameTooltip:SetOwner(pin, "ANCHOR_RIGHT")
-	GameTooltip:SetText((marker.name or "") ~= "" and marker.name or MapUtils:Trans("LID_CUSTOMMARKERDEFAULTNAME"), 1, 0.82, 0)
-	local info = C_Map.GetMapInfo(marker.mapID)
-	if info ~= nil and info.name ~= nil then GameTooltip:AddLine(format("%s (%.1f, %.1f)", info.name, marker.x * 100, marker.y * 100), 1, 1, 1) end
+	for index, item in ipairs(pin.cluster) do
+		local entry = item.marker
+		if index > 1 then GameTooltip:AddLine(" ") end
+		GameTooltip:AddLine((entry.name or "") ~= "" and entry.name or MapUtils:Trans("LID_CUSTOMMARKERDEFAULTNAME"), 1, 0.82, 0)
+		local info = C_Map.GetMapInfo(entry.mapID)
+		if info ~= nil and info.name ~= nil then GameTooltip:AddLine(format("%s (%.1f, %.1f)", info.name, entry.x * 100, entry.y * 100), 1, 1, 1) end
+	end
 	GameTooltip:AddLine(" ")
 	if MapUtils:HasWaypointSupport() then GameTooltip:AddLine(format("|cffffd100%s|r %s", MapUtils:Trans("LID_LEFTCLICK"), MapUtils:Trans("LID_SETWAYPOINT")), 1, 1, 1) end
 	GameTooltip:AddLine(format("|cffffd100%s|r %s", MapUtils:Trans("LID_RIGHTCLICK"), MapUtils:Trans("LID_CUSTOMMARKEREDIT")), 1, 1, 1)
@@ -197,32 +201,40 @@ function CM.UpdatePins()
 	local pinScale = scale / MapUtils:GetPinSizeFactor(CM.key)
 	local low, high = CM.GetClip(mapID)
 	local font = STANDARD_TEXT_FONT or "Fonts\\FRIZQT__.TTF"
-	local count = 0
+	local items = {}
 	for _, marker in ipairs(CM.GetList()) do
 		local x, y = CM.GetMapPos(marker, mapID)
 		if x ~= nil and x >= low and x <= high and y >= low and y <= high then
-			count = count + 1
-			local pin = CM.pins[count]
-			if pin == nil then
-				pin = CM.CreatePin(canvas)
-				CM.pins[count] = pin
-			end
-
-			pin.marker = marker
-			pin.icon:SetTexture(CM.ResolveIcon(marker.icon))
-			pin:SetSize(CM.size / pinScale, CM.size / pinScale)
-			CM.SetRoundInset(pin, 1 / scale)
-			pin.label:SetFont(font, CM.labelSize / pinScale, "OUTLINE")
-			pin.label:SetText(marker.name or "")
-			pin:SetFrameLevel(canvas:GetFrameLevel() + CM.level)
-			MapUtils:SetCanvasPinScale(pin, scale)
-			pin:ClearAllPoints()
-			pin:SetPoint("CENTER", canvas, "TOPLEFT", width * x, -height * y)
-			pin:Show()
+			tinsert(items, {marker = marker, x = x, y = y, distance = CM.size / pinScale})
 		end
 	end
 
-	for index = count + 1, #CM.pins do
+	local clusters = MapUtils:ClusterMapPins(items, width, height)
+	for index, cluster in ipairs(clusters) do
+		local item = cluster.items[1]
+		local marker = item.marker
+		local pin = CM.pins[index]
+		if pin == nil then
+			pin = CM.CreatePin(canvas)
+			CM.pins[index] = pin
+		end
+
+		pin.marker = marker
+		pin.cluster = cluster.items
+		pin.icon:SetTexture(CM.ResolveIcon(marker.icon))
+		pin:SetSize(CM.size / pinScale, CM.size / pinScale)
+		CM.SetRoundInset(pin, 1 / scale)
+		pin.label:SetFont(font, CM.labelSize / pinScale, "OUTLINE")
+		pin.label:SetText(marker.name or "")
+		pin:SetFrameLevel(canvas:GetFrameLevel() + CM.level)
+		MapUtils:SetCanvasPinScale(pin, scale)
+		pin:ClearAllPoints()
+		pin:SetPoint("CENTER", canvas, "TOPLEFT", width * item.x, -height * item.y)
+		pin:Show()
+		if GameTooltip:IsOwned(pin) then CM.OnEnter(pin) end
+	end
+
+	for index = #clusters + 1, #CM.pins do
 		CM.pins[index]:Hide()
 	end
 end
@@ -469,6 +481,11 @@ end
 
 tinsert(MapUtils.CanvasPinLists, CM.pins)
 tinsert(MapUtils.CanvasPinUpdaters, CM.UpdatePins)
+if WorldMapFrame.OnCanvasScaleChanged ~= nil then
+	hooksecurefunc(WorldMapFrame, "OnCanvasScaleChanged", function()
+		if WorldMapFrame:IsShown() then CM.UpdatePins() end
+	end)
+end
 if MapUtils.RegisterRenderLayer ~= nil then MapUtils:RegisterRenderLayer("Custom markers", function() return CM.pins end) end
 if WorldMapFrame.ScrollContainer ~= nil then WorldMapFrame.ScrollContainer:HookScript("OnMouseUp", MapUtils.Profile("custommarkers mouse up", CM.OnContainerMouseUp)) end
 WorldMapFrame:HookScript("OnShow", function() if MapUtils.QueueCanvasPinsUpdate ~= nil then MapUtils:QueueCanvasPinsUpdate() end end)

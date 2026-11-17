@@ -252,7 +252,6 @@ local PinCache = {
 	["atlas"] = {},
 	["atlasWidth"] = {},
 	["halfCoords"] = {},
-	["mergePixels"] = 16,
 	["druidFlights"] = {[62] = true, [63] = true}
 }
 
@@ -2174,17 +2173,6 @@ local function GetPierTimes(mapID, entry)
 	return MapUtils:GetTransportPierLines(rect.continentID, pos.x, pos.y, entry.transport or "ship")
 end
 
-local function GetPierParts(entry, mapID)
-	if entry.merged ~= nil then return entry.merged end
-
-	return {
-		{
-			["entry"] = entry,
-			["mapID"] = mapID
-		}
-	}
-end
-
 local function AddPierLines(lines, entry, mapID)
 	tinsert(lines, GetRouteHeader(entry))
 	for i, route in ipairs(entry.routes) do
@@ -2198,12 +2186,7 @@ end
 
 local function GetPierLabel(entry, mapID)
 	local lines = {}
-	local parts = GetPierParts(entry, mapID)
-	for i, part in ipairs(parts) do
-		if i > 1 then tinsert(lines, " ") end
-		if #parts > 1 and entry.sameName ~= true then tinsert(lines, format("|cffffffff%s|r", part.entry.name)) end
-		AddPierLines(lines, part.entry, part.mapID)
-	end
+	AddPierLines(lines, entry, mapID)
 
 	return entry.name, table.concat(lines, "\n")
 end
@@ -2287,16 +2270,7 @@ function MapUtils:HidePinHighlight(pin)
 		texture:Hide()
 	end
 end
-local function OnPinEnter(pin)
-	MapUtils:ShowPinHighlight(pin)
-	local entry = pin.entry
-	if entry == nil then return end
-	GameTooltip:SetOwner(pin, "ANCHOR_RIGHT")
-	pin.tooltipToken = (pin.tooltipToken or 0) + 1
-	if entry.kind == nil then
-		local token = pin.tooltipToken
-		C_Timer.After(1, function() if pin.tooltipToken == token and pin.entry == entry and GameTooltip:IsOwned(pin) and pin:IsVisible() then OnPinEnter(pin) end end)
-	end
+function PinCache.AddTooltipLines(entry, mapID)
 	if entry.kind == "dungeon" then
 		local name, minLevel, maxLevel, recLevel = GetDungeonInfo(entry)
 		GameTooltip:AddLine(name or entry.name, 1, 1, 1)
@@ -2335,11 +2309,32 @@ local function OnPinEnter(pin)
 		GameTooltip:AddLine(GetFlightDescription(), 0.6, 0.6, 0.6)
 		GameTooltip:AddLine(GetFlightStatus(entry))
 	else
-		local name, description = GetPierLabel(entry, pin.mapID or C_Map.GetBestMapForUnit("player"))
+		local name, description = GetPierLabel(entry, mapID or C_Map.GetBestMapForUnit("player"))
 		GameTooltip:AddLine(name, 1, 1, 1)
 		for line in (description .. "\n"):gmatch("(.-)\n") do
 			GameTooltip:AddLine(line, 0.6, 0.6, 0.6)
 		end
+	end
+end
+
+local function OnPinEnter(pin)
+	MapUtils:ShowPinHighlight(pin)
+	local entry = pin.entry
+	if entry == nil then return end
+	GameTooltip:SetOwner(pin, "ANCHOR_RIGHT")
+	pin.tooltipToken = (pin.tooltipToken or 0) + 1
+	if entry.kind == nil then
+		local token = pin.tooltipToken
+		C_Timer.After(1, function() if pin.tooltipToken == token and pin.entry == entry and GameTooltip:IsOwned(pin) and pin:IsVisible() then OnPinEnter(pin) end end)
+	end
+
+	if pin.cluster ~= nil then
+		for index, item in ipairs(pin.cluster) do
+			if index > 1 then GameTooltip:AddLine(" ") end
+			PinCache.AddTooltipLines(item.entry, item.mapID)
+		end
+	else
+		PinCache.AddTooltipLines(entry, pin.mapID)
 	end
 
 	local hints = GetClickHints(pin)
@@ -2847,98 +2842,6 @@ local function GetWorldCanvas()
 	return WorldMapFrame.ScrollContainer.Child
 end
 
-function PinCache.CreateMergedPier(parts, x, y)
-	local first = parts[1].entry
-	local merged = {
-		["transport"] = first.transport,
-		["iconStyle"] = first.iconStyle,
-		["faction"] = first.faction,
-		["x"] = x,
-		["y"] = y,
-		["routes"] = {},
-		["merged"] = parts,
-		["sameName"] = true
-	}
-
-	local names = {}
-	for _, part in ipairs(parts) do
-		if part.entry.name ~= first.name then merged.sameName = false end
-		if not tContains(names, part.entry.name) then tinsert(names, part.entry.name) end
-		for _, route in ipairs(part.entry.routes or {}) do
-			tinsert(merged.routes, route)
-		end
-	end
-
-	merged.name = table.concat(names, " / ")
-
-	return merged
-end
-
-function PinCache.MergePiers(list, ownCount, mapID, pixelWidth, pixelHeight)
-	local info = C_Map.GetMapInfo(mapID)
-	if info == nil or info.mapType == nil or info.mapType > Enum.UIMapType.Continent then return list, ownCount end
-	local items = {}
-	local clusters = {}
-	for i, listed in ipairs(list) do
-		local item = listed
-		if i <= ownCount then
-			item = {
-				["entry"] = listed,
-				["mapID"] = mapID,
-				["x"] = listed.x,
-				["y"] = listed.y
-			}
-		end
-
-		if item.entry.kind == nil then
-			local target = nil
-			for _, cluster in ipairs(clusters) do
-				local dx, dy = (cluster.x - item.x) * pixelWidth, (cluster.y - item.y) * pixelHeight
-				if dx * dx + dy * dy <= PinCache.mergePixels * PinCache.mergePixels then
-					target = cluster
-					break
-				end
-			end
-
-			if target == nil then
-				target = {
-					["x"] = item.x,
-					["y"] = item.y,
-					["parts"] = {}
-				}
-
-				tinsert(clusters, target)
-				tinsert(items, target)
-			end
-
-			tinsert(target.parts, item)
-			target.x = target.x + (item.x - target.x) / #target.parts
-			target.y = target.y + (item.y - target.y) / #target.parts
-		else
-			tinsert(items, item)
-		end
-	end
-
-	local result = {}
-	for _, item in ipairs(items) do
-		if item.parts == nil or #item.parts == 1 then
-			tinsert(result, item.parts ~= nil and item.parts[1] or item)
-		else
-			tinsert(
-				result,
-				{
-					["entry"] = PinCache.CreateMergedPier(item.parts, item.x, item.y),
-					["mapID"] = mapID,
-					["x"] = item.x,
-					["y"] = item.y
-				}
-			)
-		end
-	end
-
-	return result, 0
-end
-
 local worldPins = {}
 MapUtils.CanvasPinLists = MapUtils.CanvasPinLists or {}
 tinsert(MapUtils.CanvasPinLists, worldPins)
@@ -2973,9 +2876,9 @@ local function UpdateWorldPins()
 	end
 	local baseLevel = GetWorldPinLevel(child)
 	local sameState = mapID == worldMapID and piersOn == worldPiers and dungeonsOn == worldDungeons and flightsOn == worldFlights and meetingStonesOn == worldMeetingStones and crossingsOn == worldCrossings and spiritHealersOn == worldSpiritHealers and convergencesOn == worldConvergences and libraryBooksOn == PinCache.worldLibraryBooks
-	local zooming = sameState and scale ~= worldScale and scale ~= PinCache.seenScale and #worldPins > 0
-	PinCache.seenScale = scale
-	if sameState and (scale == worldScale or zooming) then
+	local w, h = child:GetWidth(), child:GetHeight()
+	if scale == nil or scale <= 0 or w <= 0 or h <= 0 then return end
+	if sameState and scale == worldScale and w == PinCache.worldWidth and h == PinCache.worldHeight then
 		for _, pin in ipairs(worldPins) do
 			pin.baseLevel = baseLevel
 			UpdatePinLevel(pin, pin.entry ~= nil and IsEntryWaypoint(pin.mapID, pin.entry))
@@ -2983,6 +2886,8 @@ local function UpdateWorldPins()
 
 		return
 	end
+
+	PinCache.worldWidth, PinCache.worldHeight = w, h
 	worldMapID = mapID
 	worldScale = scale
 	worldPiers = piersOn
@@ -2995,34 +2900,47 @@ local function UpdateWorldPins()
 	PinCache.worldLibraryBooks = libraryBooksOn
 	worldPinPool:ReleaseAll()
 	wipe(worldPins)
-	local list = {}
-	for _, entry in ipairs(BuildList(mapID, piersOn, dungeonsOn, flightsOn, meetingStonesOn, crossingsOn, spiritHealersOn, convergencesOn, nil, libraryBooksOn) or {}) do
-		tinsert(list, entry)
-	end
-
-	local foreign = MapUtils:GetOneMapForeignPins(mapID, piersOn, dungeonsOn, convergencesOn, libraryBooksOn, flightsOn, meetingStonesOn, crossingsOn, spiritHealersOn)
-	local ownCount = #list
-	if foreign ~= nil then
-		for _, item in ipairs(foreign) do
-			tinsert(list, item)
+	if not sameState then
+		local list = {}
+		for _, entry in ipairs(BuildList(mapID, piersOn, dungeonsOn, flightsOn, meetingStonesOn, crossingsOn, spiritHealersOn, convergencesOn, nil, libraryBooksOn) or {}) do
+			tinsert(list, {entry = entry, mapID = mapID, x = entry.x, y = entry.y})
 		end
+
+		for _, item in ipairs(MapUtils:GetOneMapForeignPins(mapID, piersOn, dungeonsOn, convergencesOn, libraryBooksOn, flightsOn, meetingStonesOn, crossingsOn, spiritHealersOn) or {}) do
+			tinsert(list, {entry = item.entry, mapID = item.mapID, x = item.x, y = item.y})
+		end
+
+		PinCache.worldEntries = list
 	end
 
-	if #list == 0 then return end
-	if scale == nil or scale <= 0 then return end
-	local w = child:GetWidth()
-	local h = child:GetHeight()
-	list, ownCount = PinCache.MergePiers(list, ownCount, mapID, w * scale, h * scale)
 	local size = ICON_SIZE / scale
 	local poiScale = GetPoiScale()
 	local dungeonSize = DUNGEON_ICON_SIZE * poiScale / scale
-	for i, listed in ipairs(list) do
-		local entry, entryMapID, entryX, entryY = listed, mapID, listed.x, listed.y
-		if i > ownCount then entry, entryMapID, entryX, entryY = listed.entry, listed.mapID, listed.x, listed.y end
+	local clusters
+	if MapUtils:IsDebug() then
+		clusters = {}
+		for _, item in ipairs(PinCache.worldEntries) do
+			tinsert(clusters, {items = {item}})
+		end
+	else
+		for _, item in ipairs(PinCache.worldEntries) do
+			local kind = item.entry.kind
+			local baseSize = (kind == "dungeon" or kind == "flight") and dungeonSize or size
+			if kind == "crossing" then baseSize = dungeonSize * 0.7 end
+			item.kind = kind or item.entry.transport or "ship"
+			item.distance = baseSize * MapUtils:GetPinKindSizeFactor(kind)
+		end
+		clusters = MapUtils:ClusterMapPins(PinCache.worldEntries, w, h)
+	end
+
+	for i, cluster in ipairs(clusters) do
+		local item = cluster.items[1]
+		local entry, entryMapID = item.entry, item.mapID
 		local pin = worldPinPool:Acquire()
 		SetupPin(pin, child, WORLD_PIN_LEVEL, true)
 		pin.worldMap = true
 		worldPins[i] = pin
+		pin.cluster = cluster.items
 
 		pin.entry = entry
 		pin.mapID = entryMapID
@@ -3049,7 +2967,7 @@ local function UpdateWorldPins()
 		UpdatePinStyle(pin)
 		if MapUtils.SetCanvasPinScale ~= nil then MapUtils:SetCanvasPinScale(pin, scale) end
 		pin:ClearAllPoints()
-		pin:SetPoint("CENTER", child, "TOPLEFT", w * entryX, -h * entryY)
+		pin:SetPoint("CENTER", child, "TOPLEFT", w * item.x, -h * item.y)
 		pin:SetAlpha(MapUtils:GetDebugPinAlpha(entry))
 		pin:Show()
 	end
@@ -3211,6 +3129,7 @@ if worldCanvas ~= nil and CreateFramePool ~= nil then
 			pin:Hide()
 			pin:ClearAllPoints()
 			pin.entry = nil
+			pin.cluster = nil
 			pin.mapID = nil
 			pin.pushed = false
 			pin.hitExtend = nil

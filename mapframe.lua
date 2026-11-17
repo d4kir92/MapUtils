@@ -392,18 +392,36 @@ function MapUtils:IsWorldMapFullscreen()
 	return fullscreenWasMaximized ~= nil and IsMaximized()
 end
 
+function MapUtils:IsClassicWorldMapSkinned()
+	return frame ~= nil and frame.BorderFrame ~= nil and frame.BorderFrame.fcui ~= nil and MapUtils:IsAddOnActive("ClassicUIForever")
+end
+
 local function CreateFullscreenButton()
 	local arrow = frame.BorderFrame and frame.BorderFrame.MaximizeMinimizeFrame
 	if not arrow or not arrow.Maximize or not arrow.Minimize or not frame.UpdateMaximizedSize or not frame.SynchronizeDisplayState then return end
 
 	local button = CreateFrame("Button", nil, arrow, "UIPanelCloseButton")
 	arrow.MapUtilsFullscreenButton = button
-	button:SetSize(arrow:GetSize())
-	button:SetPoint("RIGHT", arrow, "LEFT", -2, 0)
+	function MapUtils:LayoutWorldMapFullscreenButton()
+		if self.IsSimpleMapFrameActive ~= nil and self:IsSimpleMapFrameActive() then return end
+		local gap = self:IsClassicWorldMapSkinned() and 8 or -2
+		button:SetSize(arrow:GetSize())
+		button:ClearAllPoints()
+		button:SetPoint("RIGHT", arrow, "LEFT", gap, 0)
+	end
+
+	MapUtils:LayoutWorldMapFullscreenButton()
 	local atlas = C_Texture and C_Texture.GetAtlasInfo and C_Texture.GetAtlasInfo("RedButton-MiniCondense")
 	local pressedAtlas = C_Texture and C_Texture.GetAtlasInfo and C_Texture.GetAtlasInfo("RedButton-MiniCondense-Pressed")
 	local hasNativeDash = atlas and (atlas.file or atlas.filename)
 	local face, art, pressed
+	local classicSkin = false
+	local states = {"Normal", "Pushed", "Highlight"}
+	local defaultTextures = {}
+	for _, state in ipairs(states) do
+		local texture = button["Get" .. state .. "Texture"](button)
+		if texture ~= nil then defaultTextures[state] = {file = texture:GetTexture(), coords = {texture:GetTexCoord()}} end
+	end
 	local function LayoutFace(self, width, height)
 		if art then
 			art.top:SetHeight(height * 0.49)
@@ -497,14 +515,49 @@ local function CreateFullscreenButton()
 
 	local function RefreshArtwork()
 		local fullscreen = MapUtils:IsWorldMapFullscreen()
-		if art then
-			art.full:SetShown(fullscreen)
-			art.top:SetShown(not fullscreen)
-			art.middle:SetShown(not fullscreen)
-			art.bottom:SetShown(not fullscreen)
+		local classic = MapUtils:IsClassicWorldMapSkinned() and arrow.MaximizeButton ~= nil and arrow.MinimizeButton ~= nil
+		if classic then
+			local source = fullscreen and arrow.MinimizeButton or arrow.MaximizeButton
+			for _, state in ipairs(states) do
+				local from = source["Get" .. state .. "Texture"](source)
+				local to = button["Get" .. state .. "Texture"](button)
+				if from ~= nil and to ~= nil then
+					to:SetTexture(from:GetTexture())
+					to:SetTexCoord(from:GetTexCoord())
+					to:SetVertexColor(from:GetVertexColor())
+				end
+			end
+
+		elseif classicSkin then
+			for _, state in ipairs(states) do
+				local texture = button["Get" .. state .. "Texture"](button)
+				local default = defaultTextures[state]
+				if texture ~= nil and default ~= nil then
+					local file = default.file
+					if hasNativeDash and state ~= "Highlight" then file = nil end
+					texture:SetTexture(file)
+					texture:SetTexCoord(unpack(default.coords))
+					texture:SetVertexColor(1, 1, 1, 1)
+				end
+			end
+
 		end
-		for _, piece in ipairs(corners) do piece:SetShown(not fullscreen) end
-		if dash then dash:SetShown(fullscreen) end
+
+		if classic or classicSkin then MapUtils:LayoutWorldMapFullscreenButton() end
+		if classicSkin ~= classic then
+			classicSkin = classic
+			if MapUtils.LayoutMapMenuButton ~= nil then MapUtils:LayoutMapMenuButton() end
+		end
+
+		if face then face:SetShown(not classic) end
+		if art then
+			art.full:SetShown(not classic and fullscreen)
+			art.top:SetShown(not classic and not fullscreen)
+			art.middle:SetShown(not classic and not fullscreen)
+			art.bottom:SetShown(not classic and not fullscreen)
+		end
+		for _, piece in ipairs(corners) do piece:SetShown(not classic and not fullscreen) end
+		if dash then dash:SetShown(not classic and fullscreen) end
 		if GameTooltip:IsOwned(button) then ShowTooltip() end
 	end
 
@@ -512,7 +565,19 @@ local function CreateFullscreenButton()
 		GameTooltip:SetOwner(self, "ANCHOR_BOTTOM")
 		ShowTooltip()
 	end)
-	button:HookScript("OnShow", RefreshArtwork)
+	local artworkQueued
+	local function QueueArtwork()
+		if artworkQueued or not frame:IsShown() then return end
+		artworkQueued = true
+		C_Timer.After(0, function()
+			artworkQueued = nil
+			if frame:IsShown() then RefreshArtwork() end
+		end)
+	end
+
+	button:HookScript("OnShow", QueueArtwork)
+	hooksecurefunc(arrow, "SetPoint", QueueArtwork)
+	hooksecurefunc(arrow, "SetSize", QueueArtwork)
 	hooksecurefunc(frame, "SynchronizeDisplayState", MapUtils.Profile("mapframe RefreshArtwork", RefreshArtwork))
 	button:SetScript("OnLeave", function() GameTooltip:Hide() end)
 	button:SetScript("OnClick", function()

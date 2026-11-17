@@ -228,10 +228,22 @@ function MapUtils:ShowEntryMenu(owner, entries)
 end
 
 function MapUtils:LayoutMapMenuButton()
+	if self.IsSimpleMapFrameActive ~= nil and self:IsSimpleMapFrameActive() then return end
 	local button = MapMenu.button
 	if button == nil then return end
 	local nav = map.NavBar
 	button:ClearAllPoints()
+	if MapUtils:IsClassicWorldMapSkinned() then
+		local arrow = map.BorderFrame.MaximizeMinimizeFrame
+		local anchor = arrow and (arrow.MapUtilsFullscreenButton or arrow) or map.BorderFrame.CloseButton
+		if anchor ~= nil then
+			button:SetSize(MapMenu.navSize, MapMenu.navSize)
+			button:SetPoint("RIGHT", anchor, "LEFT", 2, 0)
+			button:SetFrameLevel(anchor:GetFrameLevel() + 1)
+
+			return
+		end
+	end
 	if nav ~= nil then
 		button:SetSize(MapMenu.navSize, MapMenu.navSize)
 		button:SetPoint("LEFT", nav, "RIGHT", MapMenu.navGap + MapMenu.buttonShift, -3)
