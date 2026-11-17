@@ -416,13 +416,15 @@ local function CreateFullscreenButton()
 	local hasNativeDash = atlas and (atlas.file or atlas.filename)
 	local face, art, pressed
 	local classicSkin = false
-	local states = {"Normal", "Pushed", "Highlight"}
-	local defaultTextures = {}
-	for _, state in ipairs(states) do
-		local texture = button["Get" .. state .. "Texture"](button)
-		if texture ~= nil then defaultTextures[state] = {file = texture:GetTexture(), coords = {texture:GetTexCoord()}} end
-	end
+	local classicFace = button:CreateTexture(nil, "ARTWORK")
+	classicFace:SetAllPoints(button)
+	classicFace:Hide()
+	local classicCenter = button:CreateTexture(nil, "ARTWORK", nil, 1)
+	classicCenter:SetPoint("CENTER", button, "CENTER", 0, 0)
+	classicCenter:SetColorTexture(0.075, 0.075, 0.075, 1)
+	classicCenter:Hide()
 	local function LayoutFace(self, width, height)
+		classicCenter:SetSize(width * 0.52, height * 0.52)
 		if art then
 			art.top:SetHeight(height * 0.49)
 			art.middle:SetHeight(height * 0.29)
@@ -466,14 +468,7 @@ local function CreateFullscreenButton()
 		art.bottom:SetPoint("BOTTOMLEFT", button, "BOTTOMLEFT", 0, 0)
 		art.bottom:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", 0, 0)
 		PaintArt()
-		button:HookScript("OnMouseDown", function()
-			pressed = true
-			PaintArt()
-		end)
-		button:HookScript("OnMouseUp", function()
-			pressed = false
-			PaintArt()
-		end)
+
 	else
 		face = button:CreateTexture(nil, "ARTWORK")
 		face:SetColorTexture(0.4, 0.06, 0.02)
@@ -484,29 +479,55 @@ local function CreateFullscreenButton()
 
 	local corners = {}
 	for _, corner in ipairs({"TOPLEFT", "TOPRIGHT", "BOTTOMLEFT", "BOTTOMRIGHT"}) do
-		local x = corner:find("LEFT") and 5 or -5
-		local y = corner:find("TOP") and -5 or 5
 		local horizontal = button:CreateTexture(nil, "OVERLAY", nil, 7)
 		horizontal:SetColorTexture(1, 0.82, 0.2)
-		horizontal:SetSize(4, 1)
-		horizontal:SetPoint(corner, x, y)
 		local vertical = button:CreateTexture(nil, "OVERLAY", nil, 7)
 		vertical:SetColorTexture(1, 0.82, 0.2)
-		vertical:SetSize(1, 4)
-		vertical:SetPoint(corner, x, y)
-		tinsert(corners, horizontal)
-		tinsert(corners, vertical)
+		corners[corner] = {horizontal, vertical}
 	end
 
-	local dash
-	if not hasNativeDash then
-		dash = button:CreateTexture(nil, "OVERLAY", nil, 7)
-		dash:SetColorTexture(1, 0.82, 0.2)
-		dash:SetSize(8, 1)
-		dash:SetPoint("BOTTOM", 0, 5)
-		dash:Hide()
+	local function LayoutCorners(classic)
+		local length = classic and 3 or 4
+		for corner, pieces in pairs(corners) do
+			local x = corner:find("LEFT") and 5 or -5
+			local y = corner:find("TOP") and -5 or 5
+			local anchor = corner
+			if classic then
+				anchor = "CENTER"
+				x, y = -x, -y
+			end
+
+			pieces[1]:SetSize(length, 1)
+			pieces[2]:SetSize(1, length)
+			for _, piece in ipairs(pieces) do
+				piece:SetPoint(corner, button, anchor, x, y)
+			end
+		end
 	end
 
+	LayoutCorners(false)
+	local dash = button:CreateTexture(nil, "OVERLAY", nil, 7)
+	dash:SetColorTexture(1, 0.82, 0.2)
+	dash:SetSize(8, 1)
+	dash:SetPoint("BOTTOM", 0, 5)
+	dash:Hide()
+
+	local function RefreshClassicFace()
+		local source = arrow.MaximizeButton
+		local texture = source and (pressed and source:GetPushedTexture() or source:GetNormalTexture())
+		local file = texture and texture:GetTexture()
+		local shown = classicSkin and file ~= nil
+		if shown then
+			classicFace:SetTexture(file)
+			classicFace:SetTexCoord(texture:GetTexCoord())
+			classicFace:SetVertexColor(texture:GetVertexColor())
+		end
+
+		classicFace:SetShown(shown)
+		classicCenter:SetShown(shown)
+
+		return shown
+	end
 	local function ShowTooltip()
 		local key = MapUtils:IsWorldMapFullscreen() and "LID_FULLSCREENEXIT" or "LID_FULLSCREENENTER"
 		GameTooltip:SetText(MapUtils:Trans(key))
@@ -515,49 +536,27 @@ local function CreateFullscreenButton()
 
 	local function RefreshArtwork()
 		local fullscreen = MapUtils:IsWorldMapFullscreen()
-		local classic = MapUtils:IsClassicWorldMapSkinned() and arrow.MaximizeButton ~= nil and arrow.MinimizeButton ~= nil
-		if classic then
-			local source = fullscreen and arrow.MinimizeButton or arrow.MaximizeButton
-			for _, state in ipairs(states) do
-				local from = source["Get" .. state .. "Texture"](source)
-				local to = button["Get" .. state .. "Texture"](button)
-				if from ~= nil and to ~= nil then
-					to:SetTexture(from:GetTexture())
-					to:SetTexCoord(from:GetTexCoord())
-					to:SetVertexColor(from:GetVertexColor())
-				end
-			end
-
-		elseif classicSkin then
-			for _, state in ipairs(states) do
-				local texture = button["Get" .. state .. "Texture"](button)
-				local default = defaultTextures[state]
-				if texture ~= nil and default ~= nil then
-					local file = default.file
-					if hasNativeDash and state ~= "Highlight" then file = nil end
-					texture:SetTexture(file)
-					texture:SetTexCoord(unpack(default.coords))
-					texture:SetVertexColor(1, 1, 1, 1)
-				end
-			end
-
-		end
-
+		local classic = MapUtils:IsClassicWorldMapSkinned()
 		if classic or classicSkin then MapUtils:LayoutWorldMapFullscreenButton() end
 		if classicSkin ~= classic then
 			classicSkin = classic
+			LayoutCorners(classic)
 			if MapUtils.LayoutMapMenuButton ~= nil then MapUtils:LayoutMapMenuButton() end
 		end
 
-		if face then face:SetShown(not classic) end
+		local classicFaceShown = RefreshClassicFace()
+		if face then face:SetShown(not classicFaceShown) end
 		if art then
-			art.full:SetShown(not classic and fullscreen)
-			art.top:SetShown(not classic and not fullscreen)
-			art.middle:SetShown(not classic and not fullscreen)
-			art.bottom:SetShown(not classic and not fullscreen)
+			art.full:SetShown(not classicFaceShown and fullscreen)
+			art.top:SetShown(not classicFaceShown and not fullscreen)
+			art.middle:SetShown(not classicFaceShown and not fullscreen)
+			art.bottom:SetShown(not classicFaceShown and not fullscreen)
 		end
-		for _, piece in ipairs(corners) do piece:SetShown(not classic and not fullscreen) end
-		if dash then dash:SetShown(not classic and fullscreen) end
+		for _, pieces in pairs(corners) do
+			pieces[1]:SetShown(not fullscreen)
+			pieces[2]:SetShown(not fullscreen)
+		end
+		dash:SetShown(fullscreen and (classicFaceShown or not hasNativeDash))
 		if GameTooltip:IsOwned(button) then ShowTooltip() end
 	end
 
@@ -575,6 +574,16 @@ local function CreateFullscreenButton()
 		end)
 	end
 
+	button:HookScript("OnMouseDown", function()
+		pressed = true
+		if art then PaintArt() end
+		RefreshClassicFace()
+	end)
+	button:HookScript("OnMouseUp", function()
+		pressed = false
+		if art then PaintArt() end
+		RefreshClassicFace()
+	end)
 	button:HookScript("OnShow", QueueArtwork)
 	hooksecurefunc(arrow, "SetPoint", QueueArtwork)
 	hooksecurefunc(arrow, "SetSize", QueueArtwork)

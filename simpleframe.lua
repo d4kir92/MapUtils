@@ -44,7 +44,7 @@ function MapUtils:IsSimpleMapFrameByLeatrix()
 end
 
 local function IsWanted()
-	return MapUtils:IsSimpleMapFrameAvailable() and not MapUtils:IsSimpleMapFrameByLeatrix() and not MapUtils:IsSimpleMapFrameByEllesmere() and type(MAUTTAB) == "table" and MAUTTAB["WORLDMAPSIMPLE"] == true
+	return MapUtils:IsSimpleMapFrameAvailable() and not MapUtils:IsAddOnActive("ClassicUIForever") and not MapUtils:IsSimpleMapFrameByLeatrix() and not MapUtils:IsSimpleMapFrameByEllesmere() and type(MAUTTAB) == "table" and MAUTTAB["WORLDMAPSIMPLE"] == true
 end
 
 local function Save(frame)
