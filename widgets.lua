@@ -196,7 +196,7 @@ local Notify = {
 }
 
 local Style = {
-	icon = "Interface\\Icons\\Spell_Nature_Earthquake",
+	icon = "Interface\\AddOns\\MapUtils\\media\\terrain",
 }
 
 local Party = {
