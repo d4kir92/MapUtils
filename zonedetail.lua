@@ -1876,23 +1876,6 @@ function MinimapLayer.GetLOD(instance)
 	return MinimapLayer.lodParsed[instance]
 end
 
-function MapUtils:AddExtraMapArt(dataFlavor, continentID, rect, texture)
-	if MapUtils.GetRevealFlavor == nil or dataFlavor ~= MapUtils:GetRevealFlavor() then return end
-	local list = base.extraData[continentID]
-	if list == nil then
-		list = {}
-		base.extraData[continentID] = list
-	end
-
-	tinsert(
-		list,
-		{
-			["rect"] = rect,
-			["texture"] = texture
-		}
-	)
-end
-
 function MapUtils:AddExtraZoneArt(dataFlavor, continentID, region, layerWidth, layerHeight, files)
 	if MapUtils.GetRevealFlavor == nil or dataFlavor ~= MapUtils:GetRevealFlavor() then return end
 	local list = base.extraData[continentID]
@@ -1924,39 +1907,8 @@ function base.DrawExtraArt(continentID)
 	local transform = source and MinimapLayer.GetTransform(source)
 	if transform == nil then return end
 	for index, art in ipairs(list) do
-		if art.texture then
-			base.DrawExtraTexture(continentID, index, art)
-		else
-			base.DrawExtraTiles(continentID, index, art, entry, transform)
-		end
+		base.DrawExtraTiles(continentID, index, art, entry, transform)
 	end
-end
-
-function base.DrawExtraTexture(continentID, index, art)
-	if container.space ~= WORLD then return end
-	local x, y, w, h = unpack(art.rect)
-	local left, top = x / 1002 * container.refWidth, y / 668 * container.refHeight
-	local width, height = w / 1002 * container.refWidth, h / 668 * container.refHeight
-	local key = continentID .. ":" .. index .. ":texture"
-	local texture = base.extra[key]
-	if texture == nil then
-		local mask = container:CreateMaskTexture()
-		mask.mapMaskGroup = continentID
-		SetMapMaskTexture(mask, MASK_PATH .. art.texture .. "_mask", "CLAMPTOBLACKADDITIVE")
-		texture = container:CreateTexture(nil, "ARTWORK")
-		texture:SetTexture(MASK_PATH .. art.texture, "CLAMP", "CLAMP", "TRILINEAR")
-		AddMapMask(texture, mask)
-		texture.extraMask = mask
-		base.extra[key] = texture
-	end
-
-	texture.extraMask:ClearAllPoints()
-	texture.extraMask:SetPoint("TOPLEFT", container, "TOPLEFT", left, -top)
-	texture.extraMask:SetSize(width, height)
-	texture:ClearAllPoints()
-	texture:SetPoint("TOPLEFT", container, "TOPLEFT", left, -top)
-	texture:SetSize(width, height)
-	texture.used = true
 end
 
 function base.DrawExtraTiles(continentID, index, art, entry, transform)
