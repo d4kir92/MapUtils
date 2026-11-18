@@ -1049,7 +1049,7 @@ base.cull = {
 	interval = 0.1,
 	hideDelay = 0.3,
 	switchWindow = 0.6,
-	minZoneScale = 0.05
+	minZonePixels = 12
 }
 
 function base.cull.Track(region)
@@ -1197,7 +1197,7 @@ function base.cull.Run()
 		for _, art in pairs(list) do
 			local wasCulled = art.frame.culled
 			local continent = full and index < 3 and art.continent
-			if continent and continent.drawn and art.scaleX * effective < cull.minZoneScale then
+			if continent and continent.drawn and art.frame:GetWidth() * effective < cull.minZonePixels then
 				base.cull.Set(art.frame, true)
 			else
 				Apply(art.frame)
