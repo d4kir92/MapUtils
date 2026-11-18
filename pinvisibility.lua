@@ -17,6 +17,12 @@ local PinVisibility = {
 	sizeDefaults = {
 		["LIBRARYBOOKWORLDMAPPINS"] = 65,
 	},
+	zoneOnly = {
+		["CROSSINGWORLDMAPPINS"] = true,
+		["SPIRITHEALERWORLDMAPPINS"] = true,
+		["MEETINGSTONEWORLDMAPPINS"] = true,
+		["CONVERGENCEWORLDMAPPINS"] = true,
+	},
 	azerothDefaults = {
 		["WORLDMAPPINS"] = true,
 		["VESSELWORLDMAPPINS"] = true,
@@ -25,13 +31,9 @@ local PinVisibility = {
 		["QUESTTURNINWORLDMAPPINS"] = true,
 		["GUILDMEMBERPINS"] = true,
 		["DUNGEONWORLDMAPPINS"] = false,
-		["SPIRITHEALERWORLDMAPPINS"] = false,
 		["TOWNPOIS"] = false,
 		["CAPITALPOIS"] = false,
-		["CROSSINGWORLDMAPPINS"] = false,
-		["CONVERGENCEWORLDMAPPINS"] = false,
 		["LIBRARYBOOKWORLDMAPPINS"] = false,
-		["MEETINGSTONEWORLDMAPPINS"] = false,
 	},
 }
 
@@ -60,7 +62,12 @@ function MapUtils:IsPinCategoryEnabled(key)
 	return PinVisibility.GetDB()[key .. "_ENABLED"] ~= false
 end
 
+function MapUtils:IsPinZoneOnly(key)
+	return PinVisibility.zoneOnly[key] == true
+end
+
 function MapUtils:GetPinScopeShown(key, default, azeroth)
+	if azeroth and MapUtils:IsPinZoneOnly(key) then return false end
 	local zone = MapUtils:GetConfig(key, default) == true
 	if not azeroth then return zone end
 	local value = PinVisibility.GetDB()[key .. "_AZEROTH"]
@@ -78,10 +85,12 @@ end
 
 function MapUtils:KeepPinAzerothState(key, default)
 	local db = PinVisibility.GetDB()
+	if MapUtils:IsPinZoneOnly(key) then return end
 	if db[key .. "_AZEROTH"] == nil then db[key .. "_AZEROTH"] = MapUtils:GetPinScopeShown(key, default, true) end
 end
 
 function MapUtils:SetPinAzerothShown(key, default, value)
+	if MapUtils:IsPinZoneOnly(key) then return end
 	MapUtils:KeepPinAzerothState(key, default)
 	MapUtils:SV(PinVisibility.GetDB(), key .. "_AZEROTH", value == true)
 end

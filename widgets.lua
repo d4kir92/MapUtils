@@ -239,10 +239,18 @@ function Toggles.IsOn(category, azeroth)
 	return MapUtils:GetPinScopeShown(category.key, category.default, azeroth)
 end
 
+function Toggles.IsZoneOnly(category)
+	return category.key ~= nil and not category.guild and MapUtils:IsPinZoneOnly(category.key)
+end
+
+function Toggles.HasScope(category, azeroth)
+	return not azeroth or not Toggles.IsZoneOnly(category)
+end
+
 function Toggles.AreAllOn(azeroth)
 	local any = false
 	for _, category in ipairs(Toggles.categories) do
-		if Toggles.IsEnabled(category) then
+		if Toggles.IsEnabled(category) and Toggles.HasScope(category, azeroth) then
 			any = true
 			if not Toggles.IsOn(category, azeroth) then return false end
 		end
@@ -301,7 +309,7 @@ end
 
 function Toggles.SetAll(azeroth, value)
 	for _, category in ipairs(Toggles.categories) do
-		if Toggles.IsEnabled(category) and Toggles.IsOn(category, azeroth) ~= value then Toggles.Apply(category, azeroth, value) end
+		if Toggles.IsEnabled(category) and Toggles.HasScope(category, azeroth) and Toggles.IsOn(category, azeroth) ~= value then Toggles.Apply(category, azeroth, value) end
 	end
 
 	Notify.Show(Toggles.GetIconMarkup(Toggles.eye) .. MapUtils:Trans(Toggles.eye.label), azeroth, value)
@@ -309,7 +317,7 @@ function Toggles.SetAll(azeroth, value)
 end
 
 function Toggles.Click(category, mouseButton)
-	local azeroth = mouseButton == "RightButton"
+	local azeroth = mouseButton == "RightButton" and not Toggles.IsZoneOnly(category)
 	if category.all then
 		Toggles.SetAll(azeroth, not Toggles.AreAllOn(azeroth))
 	else
@@ -397,6 +405,14 @@ function MapUtils:RefreshPinToggleIcons()
 end
 
 function Toggles.GetMenuEntry(category)
+	if Toggles.IsZoneOnly(category) then
+		return {
+			["text"] = Toggles.GetIconMarkup(category) .. MapUtils:Trans(category.label),
+			["checked"] = function() return Toggles.GetState(category, false) end,
+			["func"] = function() Toggles.Click(category, "LeftButton") end,
+		}
+	end
+
 	return {
 		["text"] = Toggles.GetIconMarkup(category) .. MapUtils:Trans(category.label),
 		["dual"] = true,
@@ -467,6 +483,13 @@ function Toggles.ShowTooltip(button)
 	local category = button.category
 	GameTooltip:SetOwner(button, "ANCHOR_LEFT")
 	GameTooltip:SetText(MapUtils:Trans(category.label))
+	if Toggles.IsZoneOnly(category) then
+		GameTooltip:AddDoubleLine(format("|cffffd100%s|r  %s", MapUtils:Trans("LID_LEFTCLICK"), MapUtils:Trans("LID_ZONEMAP")), Toggles.GetStateText(Toggles.GetState(category, false)), 1, 1, 1)
+		GameTooltip:Show()
+
+		return
+	end
+
 	GameTooltip:AddDoubleLine(format("|cffffd100%s|r  %s", MapUtils:Trans("LID_LEFTCLICK"), MapUtils:Trans("LID_ZONEMAP")), Toggles.GetStateText(Toggles.GetState(category, false)), 1, 1, 1)
 	GameTooltip:AddDoubleLine(format("|cffffd100%s|r  %s", MapUtils:Trans("LID_RIGHTCLICK"), MapUtils:Trans("LID_AZEROTHMAP")), Toggles.GetStateText(Toggles.GetState(category, true)), 1, 1, 1)
 	GameTooltip:Show()
@@ -610,13 +633,14 @@ function Toggles.Refresh()
 	local glow = MapUtils:GetMapEditIconStyle(Toggles.element) == "GLOW"
 	for _, button in ipairs(list) do
 		local zone, azeroth = Toggles.GetState(button.category, false), Toggles.GetState(button.category, true)
+		local whole = glow or Toggles.IsZoneOnly(button.category)
 		if button.category.poiIcon ~= nil then Toggles.ApplyIcon(button) end
-		button.left:SetShown(not glow)
-		button.right:SetShown(not glow)
-		button.full:SetShown(glow)
+		button.left:SetShown(not whole)
+		button.right:SetShown(not whole)
+		button.full:SetShown(whole)
 		button.glow:SetShown(glow and azeroth)
 		if button.badge ~= nil then Toggles.SetHalf(button.badge, zone or azeroth) end
-		if glow then
+		if whole then
 			Toggles.SetHalf(button.full, zone)
 		else
 			Toggles.SetHalf(button.left, zone)

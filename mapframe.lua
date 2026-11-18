@@ -4,7 +4,7 @@ local MAX_SCALE = 2
 local SCALE_EPSILON = 0.001
 local GRIP_SIZE = 26
 local MAP_SIZE = {
-	["minWidth"] = 400,
+	["minWidth"] = 500,
 	["minHeight"] = 300,
 	["custom"] = false,
 	["detailsInset"] = 0
@@ -774,6 +774,18 @@ if frame ~= nil then
 	frame:HookScript("OnShow", Apply)
 	frame:HookScript("OnSizeChanged", function() Apply() end)
 	if frame.OnFrameSizeChanged ~= nil then hooksecurefunc(frame, "OnFrameSizeChanged", function() MapUtils:LayoutQuestDetails() end) end
+	if frame.SidePanelToggle ~= nil then
+		for _, button in ipairs({frame.SidePanelToggle.OpenButton, frame.SidePanelToggle.CloseButton}) do
+			for _, region in ipairs({button:GetRegions()}) do
+				local atlas = region.GetAtlas and region:GetAtlas()
+				if type(atlas) == "string" and atlas:find("MapCornerShadow", 1, true) then
+					region:SetAlpha(0)
+					region:Hide()
+				end
+			end
+		end
+	end
+
 	if QuestMapFrame ~= nil then
 		QuestMapFrame:HookScript("OnShow", UpdateGrip)
 		QuestMapFrame:HookScript("OnHide", UpdateGrip)
