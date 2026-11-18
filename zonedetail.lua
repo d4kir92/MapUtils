@@ -895,7 +895,7 @@ local function Preload()
 	preload.files = {}
 	PreloadMap(WORLD)
 	for _, continentID in ipairs(CONTINENTS) do
-		PreloadMap(continentID)
+		if SPACE_OF[continentID] == continentID then PreloadMap(continentID) end
 		local children = C_Map.GetMapChildrenInfo(continentID, Enum.UIMapType.Zone, false)
 		if children ~= nil then
 			for _, child in ipairs(children) do
@@ -1019,7 +1019,7 @@ local function DrawContinent(continentID, refWidth, refHeight)
 	entry.edge:SetSize((right - left) * refWidth, (bottom - top) * refHeight)
 	entry.edge:ClearAllPoints()
 	entry.edge:SetPoint("TOPLEFT", container, "TOPLEFT", left * refWidth, -top * refHeight)
-	if not DrawTileLayer(entry.pool, continentID, left * refWidth, top * refHeight, (right - left) * refWidth / layer.layerWidth, "BORDER", highlight and entry.mask or nil, entry.edge) then return nil end
+	if own and not DrawTileLayer(entry.pool, continentID, left * refWidth, top * refHeight, (right - left) * refWidth / layer.layerWidth, "BORDER", nil, entry.edge) then return nil end
 	entry.drawn = true
 
 	return {left, right, top, bottom}
@@ -1866,6 +1866,23 @@ function MinimapLayer.GetLOD(instance)
 	return MinimapLayer.lodParsed[instance]
 end
 
+function MapUtils:AddExtraMapArt(dataFlavor, continentID, rect, texture)
+	if MapUtils.GetRevealFlavor == nil or dataFlavor ~= MapUtils:GetRevealFlavor() then return end
+	local list = base.extraData[continentID]
+	if list == nil then
+		list = {}
+		base.extraData[continentID] = list
+	end
+
+	tinsert(
+		list,
+		{
+			["rect"] = rect,
+			["texture"] = texture
+		}
+	)
+end
+
 function MapUtils:AddExtraZoneArt(dataFlavor, continentID, region, layerWidth, layerHeight, files)
 	if MapUtils.GetRevealFlavor == nil or dataFlavor ~= MapUtils:GetRevealFlavor() then return end
 	local list = base.extraData[continentID]
@@ -1897,6 +1914,43 @@ function base.DrawExtraArt(continentID)
 	local transform = source and MinimapLayer.GetTransform(source)
 	if transform == nil then return end
 	for index, art in ipairs(list) do
+		if art.texture then
+			base.DrawExtraTexture(continentID, index, art)
+		else
+			base.DrawExtraTiles(continentID, index, art, entry, transform)
+		end
+	end
+end
+
+function base.DrawExtraTexture(continentID, index, art)
+	if container.space ~= WORLD then return end
+	local x, y, w, h = unpack(art.rect)
+	local left, top = x / 1002 * container.refWidth, y / 668 * container.refHeight
+	local width, height = w / 1002 * container.refWidth, h / 668 * container.refHeight
+	local key = continentID .. ":" .. index .. ":texture"
+	local texture = base.extra[key]
+	if texture == nil then
+		local mask = container:CreateMaskTexture()
+		mask.mapMaskGroup = continentID
+		SetMapMaskTexture(mask, MASK_PATH .. art.texture .. "_mask", "CLAMPTOBLACKADDITIVE")
+		texture = container:CreateTexture(nil, "ARTWORK")
+		texture:SetTexture(MASK_PATH .. art.texture, "CLAMP", "CLAMP", "TRILINEAR")
+		AddMapMask(texture, mask)
+		texture.extraMask = mask
+		base.extra[key] = texture
+	end
+
+	texture.extraMask:ClearAllPoints()
+	texture.extraMask:SetPoint("TOPLEFT", container, "TOPLEFT", left, -top)
+	texture.extraMask:SetSize(width, height)
+	texture:ClearAllPoints()
+	texture:SetPoint("TOPLEFT", container, "TOPLEFT", left, -top)
+	texture:SetSize(width, height)
+	texture.used = true
+end
+
+function base.DrawExtraTiles(continentID, index, art, entry, transform)
+	do
 		local minX, maxX, minY, maxY = unpack(art.region)
 		local u1, v1 = MinimapLayer.ToWorld(transform, maxX, maxY)
 		local u2, v2 = MinimapLayer.ToWorld(transform, minX, minY)
