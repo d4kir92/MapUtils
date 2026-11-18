@@ -90,6 +90,7 @@ zonedetail.lua
 data\forever\minimaptiles.lua
 data\forever\minimaplod.lua
 data\forever\minimapcoarse.lua
+data\forever\extraart.lua
 debug.lua
 importexport.lua
 settings.lua
