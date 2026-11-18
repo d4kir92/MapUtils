@@ -1876,7 +1876,7 @@ function MinimapLayer.GetLOD(instance)
 	return MinimapLayer.lodParsed[instance]
 end
 
-function MapUtils:AddExtraZoneArt(dataFlavor, continentID, region, layerWidth, layerHeight, files)
+function MapUtils:AddExtraZoneArt(dataFlavor, continentID, region, layerWidth, layerHeight, files, mask)
 	if MapUtils.GetRevealFlavor == nil or dataFlavor ~= MapUtils:GetRevealFlavor() then return end
 	local list = base.extraData[continentID]
 	if list == nil then
@@ -1894,7 +1894,8 @@ function MapUtils:AddExtraZoneArt(dataFlavor, continentID, region, layerWidth, l
 				["tileWidth"] = 256,
 				["tileHeight"] = 256
 			},
-			["files"] = files
+			["files"] = files,
+			["mask"] = mask
 		}
 	)
 end
@@ -1924,7 +1925,7 @@ function base.DrawExtraTiles(continentID, index, art, entry, transform)
 		if edge == nil then
 			edge = container:CreateMaskTexture()
 			edge.mapMaskGroup = continentID
-			SetMapMaskTexture(edge, EDGE_PATH, "CLAMPTOBLACKADDITIVE")
+			SetMapMaskTexture(edge, art.mask and MASK_PATH .. art.mask or EDGE_PATH, "CLAMPTOBLACKADDITIVE")
 			base.extraEdges[edgeKey] = edge
 		end
 
@@ -1945,7 +1946,7 @@ function base.DrawExtraTiles(continentID, index, art, entry, transform)
 					local texture = base.extra[key]
 					if texture == nil then
 						texture = container:CreateTexture(nil, "ARTWORK")
-						AddMapMask(texture, entry.mask)
+						if not art.mask then AddMapMask(texture, entry.mask) end
 						AddMapMask(texture, edge)
 						base.extra[key] = texture
 					end
