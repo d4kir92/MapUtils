@@ -230,11 +230,30 @@ local function ShiftScrollBars(shifted)
 	end
 end
 
+function MAP_SIZE.LayoutToggle(gripShown)
+	local toggle = frame.SidePanelToggle
+	if toggle == nil or (InCombatLockdown() and toggle:IsProtected()) then return end
+	local raise = gripShown and frame.QuestLog ~= nil and not frame.QuestLog:IsShown()
+	if raise == (MAP_SIZE.togglePoint ~= nil) then return end
+	if raise then
+		local point, relativeTo, relativePoint, x, y = toggle:GetPoint(1)
+		if point == nil then return end
+		MAP_SIZE.togglePoint = {point, relativeTo, relativePoint, x, y}
+		toggle:ClearAllPoints()
+		toggle:SetPoint(point, relativeTo, relativePoint, x, (y or 0) + GRIP_SIZE - 4)
+	else
+		toggle:ClearAllPoints()
+		toggle:SetPoint(unpack(MAP_SIZE.togglePoint))
+		MAP_SIZE.togglePoint = nil
+	end
+end
+
 local function UpdateGrip()
 	if grip == nil then return end
 	if foreign or not ScaleEnabled() or IsMaximized() then
 		grip:Hide()
 		ShiftScrollBars(false)
+		MAP_SIZE.LayoutToggle(false)
 
 		return
 	end
@@ -242,6 +261,7 @@ local function UpdateGrip()
 	MapUtils:RaiseSizeGrip(grip, frame)
 	grip:Show()
 	ShiftScrollBars(true)
+	MAP_SIZE.LayoutToggle(true)
 end
 
 local function Apply()
@@ -449,6 +469,8 @@ end
 
 local function CreateGrip()
 	grip = MapUtils:CreateSizeGrip(frame, GRIP_SIZE)
+	grip:ClearAllPoints()
+	grip:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", 2, -2)
 	grip:SetScript("OnMouseDown", StartSizing)
 	grip:SetScript("OnHide", StopSizing)
 	grip.getScale = function() return frame:GetScale() end
@@ -752,6 +774,10 @@ if frame ~= nil then
 	frame:HookScript("OnShow", Apply)
 	frame:HookScript("OnSizeChanged", function() Apply() end)
 	if frame.OnFrameSizeChanged ~= nil then hooksecurefunc(frame, "OnFrameSizeChanged", function() MapUtils:LayoutQuestDetails() end) end
+	if QuestMapFrame ~= nil then
+		QuestMapFrame:HookScript("OnShow", UpdateGrip)
+		QuestMapFrame:HookScript("OnHide", UpdateGrip)
+	end
 	fader = MapUtils:CreateMoveFader(
 		frame,
 		{
