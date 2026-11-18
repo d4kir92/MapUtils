@@ -3,6 +3,12 @@ local MIN_SCALE = 0.5
 local MAX_SCALE = 2
 local SCALE_EPSILON = 0.001
 local GRIP_SIZE = 26
+local MAP_SIZE = {
+	["minWidth"] = 400,
+	["minHeight"] = 300,
+	["custom"] = false,
+	["detailsInset"] = 0
+}
 local frame = WorldMapFrame
 local ready = false
 local foreign = false
@@ -132,6 +138,66 @@ local function SetScale(value)
 	if math.abs(frame:GetScale() - value) > SCALE_EPSILON then frame:SetScale(value) end
 end
 
+function MAP_SIZE.CanResize()
+	return frame.minimizedWidth ~= nil and frame.minimizedHeight ~= nil and not IsMaximized()
+end
+
+function MAP_SIZE.QuestExtra()
+	if frame.QuestLog ~= nil and frame.QuestLog:IsShown() and frame.questLogWidth ~= nil then return frame.questLogWidth end
+
+	return 0
+end
+
+function MAP_SIZE.Get()
+	local size = MAUTTAB["WORLDMAPSIZE"]
+	if not ScaleEnabled() or not MAP_SIZE.CanResize() or type(size) ~= "table" or size.w == nil or size.h == nil then return nil end
+
+	return size.w, size.h
+end
+
+function MAP_SIZE.Clamp(w, h, left, top)
+	local k = ToUi()
+	local maxW = (UIParent:GetWidth() - (left or 0)) / k - MAP_SIZE.QuestExtra()
+	local maxH = (top or UIParent:GetHeight()) / k
+
+	return max(MAP_SIZE.minWidth, min(w, maxW)), max(MAP_SIZE.minHeight, min(h, maxH))
+end
+
+function MAP_SIZE.Set(w, h)
+	local width = w + MAP_SIZE.QuestExtra()
+	if math.abs(frame:GetWidth() - width) <= SCALE_EPSILON and math.abs(frame:GetHeight() - h) <= SCALE_EPSILON then return false end
+	frame:SetSize(width, h)
+	if frame.OnFrameSizeChanged then frame:OnFrameSizeChanged() end
+
+	return true
+end
+
+function MAP_SIZE.Apply()
+	if not MAP_SIZE.CanResize() then return end
+	local w, h = MAP_SIZE.Get()
+	if w ~= nil then
+		MAP_SIZE.custom = true
+		MAP_SIZE.Set(MAP_SIZE.Clamp(w, h))
+	elseif MAP_SIZE.custom then
+		MAP_SIZE.custom = false
+		MAP_SIZE.Set(frame.minimizedWidth, frame.minimizedHeight)
+	end
+
+	MapUtils:LayoutQuestDetails()
+end
+
+function MapUtils:LayoutQuestDetails(inset)
+	if inset ~= nil then MAP_SIZE.detailsInset = inset end
+	local details = QuestMapFrame and QuestMapFrame.DetailsFrame
+	if details == nil or details.ScrollFrame == nil then return end
+	if InCombatLockdown() and (details:IsProtected() or details.ScrollFrame:IsProtected()) then return end
+	if MAP_SIZE.detailsHeight == nil then MAP_SIZE.detailsHeight, MAP_SIZE.detailsScrollHeight = details:GetHeight(), details.ScrollFrame:GetHeight() end
+	local delta = -MAP_SIZE.detailsInset
+	if MAP_SIZE.custom and MAP_SIZE.CanResize() then delta = delta + frame:GetHeight() - frame.minimizedHeight end
+	details:SetHeight(max(1, MAP_SIZE.detailsHeight + delta))
+	details.ScrollFrame:SetHeight(max(1, MAP_SIZE.detailsScrollHeight + delta))
+end
+
 local function NormalizePoint(point, relativeTo, relativePoint, x, y)
 	if type(relativeTo) == "number" then return point, frame:GetParent(), point, relativeTo, relativePoint or 0 end
 
@@ -210,6 +276,7 @@ local function Apply()
 		local foreignLeft, foreignTop
 		if foreignMove then foreignLeft, foreignTop = GetPos() end
 		SetScale(scale)
+		MAP_SIZE.Apply()
 		local topGap = UpdateTopClamp()
 		local pos = MAUTTAB["WORLDMAPPOS"]
 		if foreignMove then
@@ -265,8 +332,39 @@ local function GetCursorUi()
 	return MapUtils:GetCursorUi()
 end
 
+function MAP_SIZE.ShowTooltip()
+	if not MAP_SIZE.CanResize() then
+		MapUtils:ShowScaleGripTooltip(grip)
+
+		return
+	end
+
+	local shift = MapUtils:Trans("LID_SHIFT") .. " + "
+	GameTooltip:SetOwner(grip, "ANCHOR_RIGHT")
+	GameTooltip:SetText(MapUtils:Trans("LID_WINDOWSIZE", nil, math.floor(frame:GetWidth() - MAP_SIZE.QuestExtra() + 0.5), math.floor(frame:GetHeight() + 0.5)))
+	GameTooltip:AddLine(MapUtils:Trans("LID_WIDGETSCALE", nil, math.floor(frame:GetScale() * 100 + 0.5)), 1, 1, 1)
+	GameTooltip:AddLine(format("|cffffd100%s|r  %s", MapUtils:Trans("LID_LEFTCLICK"), MapUtils:Trans("LID_DRAGTORESIZE")), 1, 1, 1)
+	GameTooltip:AddLine(format("|cffffd100%s|r  %s", shift .. MapUtils:Trans("LID_LEFTCLICK"), MapUtils:Trans("LID_DRAGTOSCALE")), 1, 1, 1)
+	GameTooltip:AddLine(format("|cffffd100%s|r  %s", MapUtils:Trans("LID_RIGHTCLICK"), MapUtils:Trans("LID_RESETSIZE")), 1, 1, 1)
+	GameTooltip:AddLine(format("|cffffd100%s|r  %s", shift .. MapUtils:Trans("LID_RIGHTCLICK"), MapUtils:Trans("LID_RESETSCALE", nil, 100)), 1, 1, 1)
+	GameTooltip:Show()
+end
+
+function MAP_SIZE.OnSizing()
+	local x, y = GetCursorUi()
+	local k = ToUi()
+	local w, h = MAP_SIZE.Clamp(sizing.width + (x - sizing.x) / k, sizing.height + (sizing.y - y) / k, sizing.left, sizing.top)
+	applying = true
+	MAP_SIZE.custom = true
+	MAP_SIZE.Set(w, h)
+	SetPos(sizing.left, sizing.top)
+	applying = false
+	MAP_SIZE.ShowTooltip()
+end
+
 local function OnSizing()
 	if sizing == nil then return end
+	if sizing.mode == "size" then return MAP_SIZE.OnSizing() end
 	local x, y = GetCursorUi()
 	local w = sizing.width + x - sizing.x
 	local h = sizing.height + sizing.y - y
@@ -277,15 +375,20 @@ local function OnSizing()
 	SetScale(ClampScale(scale, maxScale))
 	SetPos(sizing.left, sizing.top)
 	applying = false
-	MapUtils:ShowScaleGripTooltip(grip)
+	MAP_SIZE.ShowTooltip()
 end
 
 local function StopSizing()
 	if sizing == nil then return end
+	local mode = sizing.mode
 	sizing = nil
 	grip:SetScript("OnUpdate", nil)
 	grip:SetButtonState("NORMAL")
-	MapUtils:SV(MAUTTAB, "WORLDMAPSCALEVALUE", lastScale)
+	if mode == "size" then
+		MapUtils:SV(MAUTTAB, "WORLDMAPSIZE", {["w"] = frame:GetWidth() - MAP_SIZE.QuestExtra(), ["h"] = frame:GetHeight()})
+	else
+		MapUtils:SV(MAUTTAB, "WORLDMAPSCALEVALUE", lastScale)
+	end
 	if MoveEnabled() then
 		local left, top = GetPos()
 		if left ~= nil then MapUtils:SV(MAUTTAB, "WORLDMAPPOS", {["x"] = left, ["y"] = top}) end
@@ -310,6 +413,12 @@ local function StartSizing(_, button)
 		["height"] = h * s,
 		["scale"] = s
 	}
+
+	if not IsShiftKeyDown() and MAP_SIZE.CanResize() then
+		sizing.mode = "size"
+		sizing.width = frame:GetWidth() - MAP_SIZE.QuestExtra()
+		sizing.height = frame:GetHeight()
+	end
 
 	grip:SetButtonState("PUSHED", true)
 	grip:SetScript("OnUpdate", OnSizing)
@@ -341,12 +450,30 @@ end
 local function CreateGrip()
 	grip = MapUtils:CreateSizeGrip(frame, GRIP_SIZE)
 	grip:SetScript("OnMouseDown", StartSizing)
-	grip:SetScript("OnMouseUp", StopSizing)
 	grip:SetScript("OnHide", StopSizing)
-	MapUtils:SetupScaleGrip(grip, function() return frame:GetScale() end, function()
-		if IsLocked() or CheckForeign() then return end
-		MapUtils:SV(MAUTTAB, "WORLDMAPSCALEVALUE", 1)
-		Apply()
+	grip.getScale = function() return frame:GetScale() end
+	grip:SetScript("OnEnter", MAP_SIZE.ShowTooltip)
+	grip:SetScript("OnLeave", function() if sizing == nil and GameTooltip:IsOwned(grip) then GameTooltip:Hide() end end)
+	grip:SetScript("OnMouseUp", function(_, button)
+		if button == "RightButton" then
+			if not IsLocked() and not CheckForeign() then
+				if IsShiftKeyDown() or not MAP_SIZE.CanResize() then
+					MapUtils:SV(MAUTTAB, "WORLDMAPSCALEVALUE", 1)
+				else
+					MapUtils:SV(MAUTTAB, "WORLDMAPSIZE", nil)
+				end
+
+				Apply()
+			end
+		else
+			StopSizing()
+		end
+
+		if grip:IsMouseOver() then
+			MAP_SIZE.ShowTooltip()
+		elseif GameTooltip:IsOwned(grip) then
+			GameTooltip:Hide()
+		end
 	end)
 
 	grip:Hide()
@@ -368,16 +495,11 @@ function MapUtils:PrintFadeDebug()
 	if MapUtils.PrintBattlefieldFadeDebug ~= nil then MapUtils:PrintBattlefieldFadeDebug() end
 end
 
-function MapUtils:IsWorldMapByMoveAny()
-	return MapUtils:IsAddOnActive("MoveAny")
-end
-
 function MapUtils:IsWorldMapByOneForAll()
 	return frame ~= nil and frame.ofaMovable == true
 end
 
 function MapUtils:GetWorldMapMover()
-	if MapUtils:IsWorldMapByMoveAny() then return "MoveAny" end
 	if MapUtils:IsAddOnActive("OneForAll") then return "OneForAll" end
 
 	return nil
@@ -629,6 +751,7 @@ if frame ~= nil then
 	end
 	frame:HookScript("OnShow", Apply)
 	frame:HookScript("OnSizeChanged", function() Apply() end)
+	if frame.OnFrameSizeChanged ~= nil then hooksecurefunc(frame, "OnFrameSizeChanged", function() MapUtils:LayoutQuestDetails() end) end
 	fader = MapUtils:CreateMoveFader(
 		frame,
 		{
@@ -649,7 +772,6 @@ if frame ~= nil then
 		"OnEvent",
 		function()
 			MAUTTAB = MAUTTAB or {}
-			if MapUtils:IsWorldMapByMoveAny() then return end
 			HookDrag(frame)
 			for _, key in ipairs(dragRegions) do
 				HookDrag(frame[key])

@@ -452,8 +452,7 @@ local function Layout()
 			Save(details.ScrollFrame)
 			details:ClearAllPoints()
 			details:SetPoint("TOPRIGHT", details:GetParent(), "TOPRIGHT", 0, -47)
-			details:SetHeight(saved[details]["height"] - 46)
-			details.ScrollFrame:SetHeight(saved[details.ScrollFrame]["height"] - 46)
+			MapUtils:LayoutQuestDetails(46)
 			if details.Bg ~= nil then
 				Save(details.Bg)
 				details.Bg:SetPoint("BOTTOMLEFT", details, "BOTTOMLEFT", 0, 0)
@@ -506,6 +505,8 @@ local function Remove()
 	for frame, entry in pairs(saved) do
 		if Restore(frame, entry) then saved[frame] = nil end
 	end
+
+	if MapUtils.LayoutQuestDetails ~= nil then MapUtils:LayoutQuestDetails(0) end
 
 	if MapUtils.LayoutWorldMapFullscreenButton ~= nil then MapUtils:LayoutWorldMapFullscreenButton() end
 	if MapUtils.LayoutMapMenuButton ~= nil then MapUtils:LayoutMapMenuButton() end
