@@ -30,6 +30,7 @@ local PinVisibility = {
 		["QUESTGIVERWORLDMAPPINS"] = true,
 		["QUESTTURNINWORLDMAPPINS"] = true,
 		["GUILDMEMBERPINS"] = true,
+		["FRIENDMEMBERPINS"] = true,
 		["DUNGEONWORLDMAPPINS"] = false,
 		["TOWNPOIS"] = false,
 		["CAPITALPOIS"] = false,

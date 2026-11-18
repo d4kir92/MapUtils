@@ -3,8 +3,9 @@ if MapUtils.CreateGuildMap == nil then return end
 local Guild = MapUtils:CreateGuildMap({
 	owner = "MapUtils",
 	priority = 10,
-	isHidden = function(mapID)
+	isHidden = function(mapID, kind)
 		if MapUtils.IsInstanceMapShown ~= nil and MapUtils:IsInstanceMapShown() then return true end
+		if kind == "friend" then return not MapUtils:IsPinCategoryEnabled("FRIENDMEMBERPINS") or not MapUtils:GetPinScopeShown("FRIENDMEMBERPINS", true, MapUtils:IsAzerothMap(mapID)) end
 		if not MapUtils:IsPinCategoryEnabled("GUILDMEMBERPINS") then return true end
 
 		return not MapUtils:GetGuildPinScopeShown(MapUtils:IsAzerothMap(mapID))
@@ -18,6 +19,9 @@ local Guild = MapUtils:CreateGuildMap({
 		if MapUtils.IsZoneDetailMap ~= nil and MapUtils.GetZoneDetailSpace ~= nil and MapUtils:IsZoneDetailMap(mapID) then return MapUtils:GetZoneDetailSpace(mapID) end
 	end,
 	setPinScale = function(pin, scale) if MapUtils.SetCanvasPinScale ~= nil then MapUtils:SetCanvasPinScale(pin, scale) end end,
+	getFriends = function() return MapUtils.FriendMembers ~= nil and MapUtils.FriendMembers.members or nil end,
+	isFriend = function(name) return MapUtils.FriendMembers ~= nil and MapUtils.FriendMembers.online[name] ~= nil end,
+	friendLabel = function() return MapUtils:Trans("LID_FRIEND") end,
 	attach = function(guild)
 		if MapUtils.CanvasPinLists ~= nil then tinsert(MapUtils.CanvasPinLists, guild.pins) end
 		if MapUtils.RegisterRenderLayer ~= nil then MapUtils:RegisterRenderLayer("Guild pins", function() return guild.pins end) end

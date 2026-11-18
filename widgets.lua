@@ -143,6 +143,14 @@ local Toggles = {
 			available = function() return MapUtils.RefreshGuildMembers ~= nil and MapUtils.SetGuildOption ~= nil end
 		},
 		{
+			key = "FRIENDMEMBERPINS",
+			label = "LID_FRIENDMEMBERS",
+			default = true,
+			refresh = "RefreshFriendMembers",
+			file = "Interface\\FriendsFrame\\UI-Toast-FriendOnlineIcon",
+			available = function() return MapUtils.RefreshFriendMembers ~= nil end
+		},
+		{
 			key = "CUSTOMMARKERWORLDMAPPINS",
 			label = "LID_CUSTOMMARKERS",
 			default = true,

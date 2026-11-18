@@ -431,6 +431,11 @@ function MapUtils:InitSetting()
 			AddTooltip(control, "LID_" .. key, "LID_" .. key .. "DESC")
 		end
 	end
+	if MapUtils.RefreshFriendMembers then
+		local refreshFriends = function() MapUtils:RefreshFriendMembers() end
+		AddTooltip(AddPinEnabled("FRIENDMEMBERPINS", refreshFriends, "LID_FRIENDMEMBERPINS", "2026-11-18"), "LID_FRIENDMEMBERPINS", "LID_FRIENDMEMBERPINSDESC")
+		AddTooltip(AddCheckbox("FRIENDMEMBERSHARE", true, refreshFriends, nil, "2026-11-18"), "LID_FRIENDMEMBERSHARE", "LID_FRIENDMEMBERSHAREDESC")
+	end
 	if MapUtils.RefreshCustomMarkers then AddTooltip(AddPinCategory("CUSTOMMARKERWORLDMAPPINS", function() MapUtils:RefreshCustomMarkers() end, "LID_CUSTOMMARKERWORLDMAPPINS", "2026-11-13"), "LID_CUSTOMMARKERWORLDMAPPINS", "LID_CUSTOMMARKERWORLDMAPPINSDESC") end
 	if MapUtils:IsForever() or MapUtils.RefreshQuestTurnIns or MapUtils.RefreshQuestGivers then AddCategory("QUESTS", 2, nil, ADDED_1104) end
 	if MapUtils.RefreshQuestGivers then
