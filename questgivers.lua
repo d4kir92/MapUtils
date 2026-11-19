@@ -162,7 +162,24 @@ function QG.ReadSkills()
 	end
 end
 
+function QG.TracksLowLevelQuests()
+	if not C_Minimap then return false end
+	local filterID = Enum and Enum.MinimapTrackingFilter and Enum.MinimapTrackingFilter.TrivialQuests
+	if filterID and C_Minimap.IsFilteredOut then return not C_Minimap.IsFilteredOut(filterID) end
+	if not C_Minimap.GetNumTrackingTypes or not C_Minimap.GetTrackingInfo then return false end
+	for index = 1, C_Minimap.GetNumTrackingTypes() do
+		local info = C_Minimap.GetTrackingInfo(index)
+		if info and info.active then
+			local filter = filterID and C_Minimap.GetTrackingFilter and C_Minimap.GetTrackingFilter(index)
+			if (filter and filter.filterID == filterID) or info.name == MINIMAP_TRACKING_TRIVIAL_QUESTS then return true end
+		end
+	end
+
+	return false
+end
+
 function QG.ReadPlayer()
+	player.showLowLevel = QG.TracksLowLevelQuests()
 	player.level = UnitLevel("player") or 1
 	local faction = UnitFactionGroup("player")
 	player.side = faction == "Alliance" and 1 or faction == "Horde" and 2 or 0
@@ -232,8 +249,11 @@ end
 function QG.IsAvailable(questID, quest, giverSide)
 	if inLog[questID] or quest[2] > player.level then return false end
 	local level = QG.GetLevel(quest)
-	if player.level - level > player.green or level - player.level >= 10 then return false end
-	if GetQuestDifficultyColor and QuestDifficultyColors and QuestDifficultyColors.trivial and GetQuestDifficultyColor(level) == QuestDifficultyColors.trivial then return false end
+	if level - player.level >= 10 then return false end
+	if not player.showLowLevel then
+		if player.level - level > player.green then return false end
+		if GetQuestDifficultyColor and QuestDifficultyColors and QuestDifficultyColors.trivial and GetQuestDifficultyColor(level) == QuestDifficultyColors.trivial then return false end
+	end
 	if quest[6] and player.level > quest[6] then return false end
 	if player.side ~= 0 and ((quest[4] and quest[4] ~= player.side) or (giverSide and giverSide ~= player.side)) then return false end
 	if quest[5] and not enabledCategories[quest[5]] then return false end
@@ -356,7 +376,7 @@ function QG.GetAvailableCache()
 		key = key .. (enabledCategories[index] and "1" or "0")
 	end
 
-	key = key .. (QG.showPvP and "1" or "0")
+	key = key .. (QG.showPvP and "1" or "0") .. (player.showLowLevel and "1" or "0")
 	local now = GetTime()
 	if QG.available == nil or QG.stale or QG.availableKey ~= key or now - (QG.availableTime or 0) > 30 then
 		QG.available = {}
@@ -929,6 +949,7 @@ end
 updater:RegisterEvent("QUEST_LOG_UPDATE")
 updater:RegisterEvent("QUEST_TURNED_IN")
 updater:RegisterEvent("PLAYER_LEVEL_UP")
+updater:RegisterEvent("MINIMAP_UPDATE_TRACKING")
 updater:RegisterEvent("SKILL_LINES_CHANGED")
 updater:RegisterEvent("UPDATE_FACTION")
 updater:RegisterEvent("MODIFIER_STATE_CHANGED")
