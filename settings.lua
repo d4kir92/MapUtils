@@ -97,6 +97,39 @@ function MapUtils:SetGuildOption(key, value)
 	if MapUtils.RefreshGuildMembers then MapUtils:RefreshGuildMembers() end
 end
 
+-- One Map's stepless zoom and position mean nothing on the normal map, so leaving it starts
+-- again from the player's zone and centres on the player, like the Player button does.
+local function ResetOneMapView()
+	local map = WorldMapFrame
+	if MapUtils:IsOneMap() or map == nil or not map:IsShown() or InCombatLockdown() or MapUtils.CenterWorldMapOnUnit == nil then return end
+	local mapID = MapUtils:GetUnitMapPosition("player")
+	if mapID == nil then return end
+	if map:GetMapID() ~= mapID then map:SetMapID(mapID) end
+	-- Reset the zoom instantly: the centring reads the current scale right away and only zooms in
+	-- from the fully zoomed-out view, so an animated reset would leave it on One Map's old scale.
+	local container = map.ScrollContainer
+	if container ~= nil and container.InstantPanAndZoom ~= nil and container.GetScaleForMinZoom ~= nil then
+		container:InstantPanAndZoom(container:GetScaleForMinZoom(), 0.5, 0.5)
+	elseif container ~= nil and container.ResetZoom ~= nil then
+		container:ResetZoom()
+	end
+
+	MapUtils:CenterWorldMapOnUnit("player")
+end
+
+local function RefreshOneMap()
+	MapUtils:RefreshZoneDetail()
+	MapUtils.OneMapPinCache = {}
+	MapUtils:RefreshPins()
+	MapUtils:InstallCombatPins()
+	ResetOneMapView()
+	if MapUtils.RefreshOneMapButton ~= nil then MapUtils:RefreshOneMapButton() end
+end
+
+function MapUtils:SetOneMap(value)
+	MapUtils:SetMapOption("ONEMAP", value, RefreshOneMap)
+end
+
 MapUtils:RegisterSharedSettings(
 	{
 		["keys"] = SHARED_KEYS,
@@ -470,7 +503,7 @@ function MapUtils:InitSetting()
 	end
 
 	local wheelZoomAvailable = MapUtils.IsWorldMapWheelZoomAvailable and MapUtils:IsWorldMapWheelZoomAvailable()
-	if wheelZoomAvailable then AddCheckbox("WORLDMAPZOOM", true, nil, nil, "2026-10-08") end
+	if wheelZoomAvailable then AddCheckbox("WORLDMAPZOOM", true, function() if MapUtils.RefreshOneMapButton ~= nil then MapUtils:RefreshOneMapButton() end end, nil, "2026-10-08") end
 	MapUtils:GetMapViewMode()
 	AddTooltip(
 		AddDropdown(
@@ -486,16 +519,7 @@ function MapUtils:InitSetting()
 		"LID_MAPVIEWMODEDESC"
 	)
 	MapUtils:IsOneMap()
-	local oneMap = AddCheckbox(
-		"ONEMAP",
-		true,
-		function()
-			MapUtils:RefreshZoneDetail()
-			MapUtils.OneMapPinCache = {}
-			MapUtils:RefreshPins()
-			MapUtils:InstallCombatPins()
-		end, nil, ADDED_1022
-	)
+	local oneMap = AddCheckbox("ONEMAP", true, RefreshOneMap, nil, ADDED_1022)
 	if wheelZoomAvailable then Requires(oneMap, "WORLDMAPZOOM") end
 	AddTooltip(oneMap, "LID_ONEMAP", "LID_ONEMAPDESC")
 	Requires(AddCheckbox("ONEMAPTRANSITIONS", false, nil, nil, "2026-11-16"), "ONEMAP")
