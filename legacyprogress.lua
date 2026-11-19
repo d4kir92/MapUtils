@@ -85,11 +85,22 @@ local Legacy = {
 	missingIcon = "Interface\\RaidFrame\\ReadyCheck-NotReady",
 	exploreIcon = "Interface\\Icons\\INV_Misc_Map_01",
 	dungeonIcon = "Interface\\Icons\\INV_Misc_Key_14",
+	dungeonAtlases = {"questlog-questtypeicon-dungeon", "Dungeon", "DungeonSkull", "Dungeon-Normal"},
 	cache = {},
 	foundExplore = {},
 }
 
-function Legacy.Icon(texture)
+function Legacy.DungeonAtlas()
+	if C_Texture == nil or C_Texture.GetAtlasInfo == nil then return nil end
+	for _, atlas in ipairs(Legacy.dungeonAtlases) do
+		if C_Texture.GetAtlasInfo(atlas) ~= nil then return atlas end
+	end
+
+	return nil
+end
+
+function Legacy.Icon(texture, atlas)
+	if atlas ~= nil then return format("|A:%s:%d:%d|a ", atlas, Legacy.iconSize, Legacy.iconSize) end
 	if texture == nil then return "" end
 
 	return format("|T%s:%d:%d:0:0:64:64:5:59:5:59|t ", texture, Legacy.iconSize, Legacy.iconSize)
@@ -200,12 +211,12 @@ function Legacy.GetDungeonProgress(zoneID)
 	return progress
 end
 
-function Legacy.FormatLine(key, icon, done, total)
+function Legacy.FormatLine(key, icon, done, total, atlas)
 	local text = MapUtils:Trans(key, nil, done, total)
 	if done >= total then
-		text = Legacy.Icon(icon) .. "|cff20ff20" .. text .. "|r " .. Legacy.StatusIcon(true)
+		text = Legacy.Icon(icon, atlas) .. "|cff20ff20" .. text .. "|r " .. Legacy.StatusIcon(true)
 	else
-		text = Legacy.Icon(icon) .. text
+		text = Legacy.Icon(icon, atlas) .. text
 	end
 
 	return text
@@ -223,12 +234,13 @@ function Legacy.Build(zoneID)
 	local dungeons = Legacy.GetDungeonProgress(zoneID)
 	if dungeons ~= nil then
 		dungeons.key = "LID_LEGACYDUNGEONS"
-		dungeons.icon = dungeons.icon or Legacy.dungeonIcon
+		dungeons.atlas = Legacy.DungeonAtlas()
+		dungeons.icon = Legacy.dungeonIcon
 		tinsert(data.sections, dungeons)
 	end
 
 	for _, section in ipairs(data.sections) do
-		tinsert(data.lines, Legacy.FormatLine(section.key, section.icon, section.done, section.total))
+		tinsert(data.lines, Legacy.FormatLine(section.key, section.icon, section.done, section.total, section.atlas))
 	end
 
 	return data
@@ -284,7 +296,7 @@ function MapUtils:AddLegacyProgressTooltip(tooltip, zoneID)
 		tooltip:AddLine(" ")
 		local r, g, b = 1, 0.82, 0
 		if section.done >= section.total then r, g, b = 0.13, 1, 0.13 end
-		tooltip:AddLine(Legacy.Icon(section.icon) .. MapUtils:Trans(section.key, nil, section.done, section.total), r, g, b)
+		tooltip:AddLine(Legacy.Icon(section.icon, section.atlas) .. MapUtils:Trans(section.key, nil, section.done, section.total), r, g, b)
 		for _, item in ipairs(Legacy.SortItems(section.items)) do
 			if item.done then
 				tooltip:AddLine(Legacy.StatusIcon(true) .. item.name, 0.5, 0.5, 0.5)

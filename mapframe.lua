@@ -15,7 +15,6 @@ local foreign = false
 local foreignMove = false
 local applying = false
 local dragging = false
-local wasClamped = false
 local originalClampTop
 local sizing = nil
 local lastScale = 1
@@ -139,7 +138,9 @@ local function SetScale(value)
 end
 
 function MAP_SIZE.CanResize()
-	return frame.minimizedWidth ~= nil and frame.minimizedHeight ~= nil and not IsMaximized()
+	local classicUI = ClassicUIForeverAPI ~= nil and ClassicUIForeverAPI.IsOn ~= nil and ClassicUIForeverAPI.IsOn("worldMap")
+
+	return not classicUI and frame.minimizedWidth ~= nil and frame.minimizedHeight ~= nil and not IsMaximized()
 end
 
 function MAP_SIZE.QuestExtra()
@@ -325,22 +326,38 @@ local function OnBlizzardPoint(_, ...)
 	Apply()
 end
 
-local function OnDragStart()
-	if not ready or MapUtils:IsWorldMapFullscreen() or IsLocked() or CheckForeign() or not MoveEnabled() then return end
+function MAP_SIZE.OnDragging()
+	local drag = MAP_SIZE.drag
+	if drag == nil then return end
+	local x, y = MapUtils:GetCursorUi()
+	SetPos(ClampPos(drag.left + x - drag.x, drag.top + y - drag.y, drag.topGap))
+end
+
+local function OnDragStart(region)
+	local why = (not ready and "not ready") or (MapUtils:IsWorldMapFullscreen() and "fullscreen") or (IsLocked() and "combat locked") or (CheckForeign() and "foreign scale") or (not MoveEnabled() and "move disabled") or nil
+	MAP_SIZE.dragNote = (why or "started") .. " via " .. tostring(region and region.GetDebugName and region:GetDebugName())
+	if why then return end
+	local left, top = GetPos()
+	if left == nil then return end
+	local x, y = MapUtils:GetCursorUi()
+	MAP_SIZE.drag = {
+		["x"] = x,
+		["y"] = y,
+		["left"] = left,
+		["top"] = top,
+		["topGap"] = UpdateTopClamp()
+	}
+
 	dragging = true
-	wasClamped = frame:IsClampedToScreen()
-	UpdateTopClamp()
-	frame:SetMovable(true)
-	frame:SetClampedToScreen(true)
-	frame:StartMoving()
+	MAP_SIZE.dragDriver = MAP_SIZE.dragDriver or CreateFrame("Frame")
+	MAP_SIZE.dragDriver:SetScript("OnUpdate", MAP_SIZE.OnDragging)
 end
 
 local function OnDragStop()
 	if not dragging then return end
-	frame:StopMovingOrSizing()
-	frame:SetUserPlaced(false)
-	frame:SetClampedToScreen(wasClamped == true)
-	frame:SetMovable(false)
+	MAP_SIZE.OnDragging()
+	MAP_SIZE.dragDriver:SetScript("OnUpdate", nil)
+	MAP_SIZE.drag = nil
 	dragging = false
 	local left, top = GetPos()
 	local key = IsMaximized() and "WORLDMAPMAXIMIZEDPOS" or "WORLDMAPPOS"
@@ -502,17 +519,46 @@ local function CreateGrip()
 end
 
 local function HookDrag(region)
-	if region == nil or region.RegisterForDrag == nil or not region:IsMouseEnabled() then return end
+	MAP_SIZE.dragRegions = MAP_SIZE.dragRegions or {}
+	if region == nil or region.RegisterForDrag == nil then return end
+	local name = tostring(region:GetDebugName())
+	if not region:IsMouseEnabled() then
+		MAP_SIZE.dragRegions[#MAP_SIZE.dragRegions + 1] = name .. " = no mouse"
+		return
+	end
 	if region:GetScript("OnDragStart") or region:GetScript("OnDragStop") then
+		MAP_SIZE.dragRegions[#MAP_SIZE.dragRegions + 1] = name .. " = foreign drag script"
 		foreignMove = true
 		return
 	end
+	MAP_SIZE.dragRegions[#MAP_SIZE.dragRegions + 1] = name .. " = hooked"
 	region:RegisterForDrag("LeftButton")
 	region:HookScript("OnDragStart", OnDragStart)
 	region:HookScript("OnDragStop", OnDragStop)
 end
 
+function MapUtils:PrintWorldMapMoveDebug()
+	local mover = _G["WorldMapFrameMove"]
+	local moverText = mover == nil and "nil" or (mover == MapUtils.worldMapMover and "MapUtils" or "other")
+	print("|cff00ccffMapUtils move|r ready", ready, "foreign", foreign, "foreignMove", foreignMove, "dragging", dragging, "moveEnabled", MoveEnabled(), "setting", IsEnabled("WORLDMAPMOVE"), "oneForAll", MapUtils:IsWorldMapByOneForAll())
+	print("|cff00ccffMapUtils move|r movable", frame:IsMovable(), "scale", frame:GetScale(), "lastScale", lastScale, "maximized", IsMaximized(), "fullscreen", MapUtils:IsWorldMapFullscreen(), "mover", moverText, "lastDrag", MAP_SIZE.dragNote)
+	local w, h = GetUnitSize()
+	local s = frame:GetScale()
+	local left, top = GetPos()
+	print("|cff00ccffMapUtils move|r size", string.format("%.0fx%.0f", frame:GetWidth(), frame:GetHeight()), "onScreen", string.format("%.0fx%.0f", w * s, h * s), "screen", string.format("%.0fx%.0f", UIParent:GetWidth(), UIParent:GetHeight()), "pos", tostring(left), tostring(top), "clamped", frame:IsClampedToScreen(), "insets", frame:GetClampRectInsets())
+	for _, line in ipairs(MAP_SIZE.dragRegions or {}) do
+		print("|cff00ccffMapUtils move|r region", line)
+	end
+
+	local foci = GetMouseFoci and GetMouseFoci() or {GetMouseFocus and GetMouseFocus()}
+	for _, focus in ipairs(foci) do
+		local ok, name, drag = pcall(function() return tostring(focus:GetDebugName()), focus.GetScript ~= nil and focus:GetScript("OnDragStart") ~= nil end)
+		print("|cff00ccffMapUtils move|r mouse", ok and name or "?", "drag", ok and tostring(drag) or "?")
+	end
+end
+
 function MapUtils:PrintFadeDebug()
+	MapUtils:PrintWorldMapMoveDebug()
 	if fader ~= nil then fader:Debug("WorldMap") end
 	if MapUtils.PrintBattlefieldFadeDebug ~= nil then MapUtils:PrintBattlefieldFadeDebug() end
 end
@@ -1068,7 +1114,7 @@ function SmoothZoom.GetDeepestScale(container, x, y)
 	if continent == nil then continent = preferred or MapUtils:GetZoneDetailContinents(space)[1] end
 	local deepest
 	local function Raise(value)
-		if value ~= nil and value > 0 and (deepest == nil or value > deepest) then deepest = value end
+		if type(value) == "number" and value > 0 and (deepest == nil or value > deepest) then deepest = value end
 	end
 
 	local continentFit = continent and SmoothZoom.GetFitOnHost(container, continent)
@@ -1133,7 +1179,7 @@ function SmoothZoom.GetExtents(container, scale)
 	if left == nil or width == nil or width <= 0 or height == nil or height <= 0 then return minX, maxX, minY, maxY end
 	local viewWidth, viewHeight = container:GetWidth(), container:GetHeight()
 	local fit = space and SmoothZoom.GetSpaceFit(container)
-	if fit ~= nil and fit > 0 then
+	if type(fit) == "number" and fit > 0 then
 		local halfWidth, halfHeight = viewWidth / 2 / (scale * width), viewHeight / 2 / (scale * height)
 		local room = SmoothZoom.PanRoom(math.max(halfWidth * 2 / (right - left), halfHeight * 2 / (bottom - top)))
 		local lowX, highX = SmoothZoom.PanRange(left, right, halfWidth, room)
