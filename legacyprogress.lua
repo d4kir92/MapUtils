@@ -106,11 +106,11 @@ function Legacy.Icon(texture, atlas)
 		local size = 1024
 		local function Px(coord) return math.floor(coord * size + 0.5) end
 
-		return format("|T%s:%d:%d:0:0:%d:%d:%d:%d:%d:%d|t ", tostring(file), Legacy.iconSize, Legacy.iconSize, size, size, Px(info.leftTexCoord), Px(info.rightTexCoord), Px(info.topTexCoord), Px(info.bottomTexCoord))
+		return format("|T%s:%d:%d:0:-2:%d:%d:%d:%d:%d:%d|t ", tostring(file), Legacy.iconSize, Legacy.iconSize, size, size, Px(info.leftTexCoord), Px(info.rightTexCoord), Px(info.topTexCoord), Px(info.bottomTexCoord))
 	end
 	if texture == nil then return "" end
 
-	return format("|T%s:%d:%d:0:0:64:64:5:59:5:59|t ", texture, Legacy.iconSize, Legacy.iconSize)
+	return format("|T%s:%d:%d:0:-2:64:64:5:59:5:59|t ", texture, Legacy.iconSize, Legacy.iconSize)
 end
 
 function Legacy.StatusIcon(done)

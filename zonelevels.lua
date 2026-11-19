@@ -146,7 +146,7 @@ local ZoneInfo = {
 	justify = "LEFT",
 	levelCache = {},
 	state = {},
-	fishingIcon = "|TInterface\\Icons\\Trade_Fishing:14:14:0:0:64:64:5:59:5:59|t ",
+	fishingIcon = "|TInterface\\Icons\\Trade_Fishing:14:14:0:-2:64:64:5:59:5:59|t ",
 }
 
 function ZoneInfo.CreateText(frame, font)
