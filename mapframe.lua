@@ -527,7 +527,24 @@ function MapUtils:GetWorldMapMover()
 	return nil
 end
 
+function MapUtils:SyncWorldMapMover()
+	local take = MoveEnabled() and MapUtils:IsAddOnActive("ClassicUIForever")
+	local mover = MapUtils.worldMapMover
+	if take and _G["WorldMapFrameMove"] == nil then
+		if mover == nil then
+			mover = CreateFrame("Frame")
+			mover:Hide()
+			MapUtils.worldMapMover = mover
+		end
+
+		_G["WorldMapFrameMove"] = mover
+	elseif not take and mover ~= nil and _G["WorldMapFrameMove"] == mover then
+		_G["WorldMapFrameMove"] = nil
+	end
+end
+
 function MapUtils:RefreshWorldMapFrame()
+	MapUtils:SyncWorldMapMover()
 	Apply()
 	if fader ~= nil then fader:Reset() end
 end
@@ -817,6 +834,7 @@ if frame ~= nil then
 
 			if frame.BorderFrame ~= nil then HookDrag(frame.BorderFrame.TitleContainer) end
 			HookDrag(WorldMapTitleButton)
+			MapUtils:SyncWorldMapMover()
 			ready = true
 			if frame:IsShown() then Apply() end
 		end
