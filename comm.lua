@@ -61,12 +61,50 @@ function Comm.HideChannel()
 	end
 end
 
+function Comm.GetLastChannelNumber()
+	local last = 0
+	local list = {GetChannelList()}
+	for i = 1, #list, 3 do
+		local id = list[i]
+		if not Comm.IsSecret(id) and type(id) == "number" and id > last then last = id end
+	end
+
+	return last
+end
+
+function Comm.MoveLast()
+	Comm.movePending = nil
+	if GetChannelList == nil or C_ChatInfo == nil or C_ChatInfo.SwapChatChannelsByChannelIndex == nil then return end
+	if InCombatLockdown() then
+		Comm.ScheduleMoveLast(5)
+
+		return
+	end
+
+	local own = Comm.GetChannelNumber()
+	if own == nil then return end
+	local last = Comm.GetLastChannelNumber()
+	if own >= last then return end
+	for index = own, last - 1 do
+		pcall(C_ChatInfo.SwapChatChannelsByChannelIndex, index, index + 1)
+	end
+
+	C_Timer.After(0.5, Comm.HideChannel)
+end
+
+function Comm.ScheduleMoveLast(delay)
+	if Comm.movePending then return end
+	Comm.movePending = true
+	C_Timer.After(delay or 1, Comm.MoveLast)
+end
+
 function Comm.Join()
 	if not Comm.IsEnabled() or JoinTemporaryChannel == nil then return end
 	if Comm.GetChannelNumber() == nil then pcall(JoinTemporaryChannel, Comm.channel) end
 	Comm.joined = true
 	C_Timer.After(1, Comm.HideChannel)
 	C_Timer.After(5, Comm.HideChannel)
+	Comm.ScheduleMoveLast(2)
 end
 
 function Comm.HasDefaultChannels()
@@ -193,6 +231,7 @@ function Comm.OnNotice(...)
 	local baseName = select(9, ...)
 	if Comm.IsSecret(baseName) then return end
 	if type(baseName) == "string" and strlower(baseName) == strlower(Comm.channel) then C_Timer.After(0.5, Comm.HideChannel) end
+	if Comm.joined then Comm.ScheduleMoveLast(1) end
 end
 
 function Comm.OnEvent(_, event, ...)
