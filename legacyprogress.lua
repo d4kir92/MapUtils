@@ -102,7 +102,7 @@ end
 function Legacy.Icon(texture, atlas)
 	local info = atlas ~= nil and C_Texture.GetAtlasInfo(atlas)
 	local file = info and (info.file or info.filename)
-	if file ~= nil and info.leftTexCoord ~= nil then
+	if info and file and info.leftTexCoord ~= nil then
 		local size = 1024
 		local function Px(coord) return math.floor(coord * size + 0.5) end
 
