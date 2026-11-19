@@ -100,7 +100,14 @@ function Legacy.DungeonAtlas()
 end
 
 function Legacy.Icon(texture, atlas)
-	if atlas ~= nil then return format("|A:%s:%d:%d|a ", atlas, Legacy.iconSize, Legacy.iconSize) end
+	local info = atlas ~= nil and C_Texture.GetAtlasInfo(atlas)
+	local file = info and (info.file or info.filename)
+	if file ~= nil and info.leftTexCoord ~= nil then
+		local size = 1024
+		local function Px(coord) return math.floor(coord * size + 0.5) end
+
+		return format("|T%s:%d:%d:0:0:%d:%d:%d:%d:%d:%d|t ", tostring(file), Legacy.iconSize, Legacy.iconSize, size, size, Px(info.leftTexCoord), Px(info.rightTexCoord), Px(info.topTexCoord), Px(info.bottomTexCoord))
+	end
 	if texture == nil then return "" end
 
 	return format("|T%s:%d:%d:0:0:64:64:5:59:5:59|t ", texture, Legacy.iconSize, Legacy.iconSize)

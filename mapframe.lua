@@ -137,10 +137,12 @@ local function SetScale(value)
 	if math.abs(frame:GetScale() - value) > SCALE_EPSILON then frame:SetScale(value) end
 end
 
-function MAP_SIZE.CanResize()
-	local classicUI = ClassicUIForeverAPI ~= nil and ClassicUIForeverAPI.IsOn ~= nil and ClassicUIForeverAPI.IsOn("worldMap")
+function MAP_SIZE.ClassicUI()
+	return ClassicUIForeverAPI ~= nil and ClassicUIForeverAPI.IsOn ~= nil and ClassicUIForeverAPI.IsOn("worldMap") == true
+end
 
-	return not classicUI and frame.minimizedWidth ~= nil and frame.minimizedHeight ~= nil and not IsMaximized()
+function MAP_SIZE.CanResize()
+	return not MAP_SIZE.ClassicUI() and frame.minimizedWidth ~= nil and frame.minimizedHeight ~= nil and not IsMaximized()
 end
 
 function MAP_SIZE.QuestExtra()
@@ -190,7 +192,7 @@ end
 function MapUtils:LayoutQuestDetails(inset)
 	if inset ~= nil then MAP_SIZE.detailsInset = inset end
 	local details = QuestMapFrame and QuestMapFrame.DetailsFrame
-	if details == nil or details.ScrollFrame == nil then return end
+	if details == nil or details.ScrollFrame == nil or MAP_SIZE.ClassicUI() then return end
 	if InCombatLockdown() and (details:IsProtected() or details.ScrollFrame:IsProtected()) then return end
 	if MAP_SIZE.detailsHeight == nil then MAP_SIZE.detailsHeight, MAP_SIZE.detailsScrollHeight = details:GetHeight(), details.ScrollFrame:GetHeight() end
 	local delta = -MAP_SIZE.detailsInset
