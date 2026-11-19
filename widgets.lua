@@ -195,6 +195,10 @@ local Notify = {
 	minHeight = 12,
 }
 
+local OneMap = {
+	icon = "Interface\\AddOns\\MapUtils\\media\\onemap",
+}
+
 local Party = {
 	gap = 2,
 	rowGap = 12,
@@ -655,6 +659,65 @@ function Toggles.Refresh()
 			Toggles.SetHalf(button.right, azeroth)
 		end
 	end
+
+	OneMap.Refresh()
+end
+
+function OneMap.IsAvailable()
+	return MapUtils.IsOneMap ~= nil and MapUtils.SetOneMap ~= nil
+end
+
+-- One Map needs the mouse wheel zoom option wherever the settings offer it.
+function OneMap.IsBlocked()
+	return MapUtils.IsWorldMapWheelZoomAvailable ~= nil and MapUtils:IsWorldMapWheelZoomAvailable() and MapUtils:GetConfig("WORLDMAPZOOM", true) == false
+end
+
+function OneMap.IsActive()
+	return MapUtils:IsOneMap() and not OneMap.IsBlocked()
+end
+
+function OneMap.GetStateText(on)
+	if on then return "|cff20ff20" .. MapUtils:Trans("LID_STATUSON") .. "|r" end
+
+	return "|cffff4040" .. MapUtils:Trans("LID_STATUSOFF") .. "|r"
+end
+
+function OneMap.ShowTooltip(button)
+	GameTooltip:SetOwner(button, "ANCHOR_LEFT")
+	GameTooltip:SetText(MapUtils:Trans("LID_ONEMAP"))
+	GameTooltip:AddDoubleLine(format("|cffffd100%s|r", MapUtils:Trans("LID_LEFTCLICK")), OneMap.GetStateText(OneMap.IsActive()), 1, 1, 1)
+	if OneMap.IsBlocked() then GameTooltip:AddLine(format(MapUtils:Trans("LID_REQUIRESOPTION"), MapUtils:Trans("LID_WORLDMAPZOOM")), 1, 0.25, 0.25, true) end
+	GameTooltip:Show()
+end
+
+function OneMap.Click()
+	if OneMap.IsBlocked() then return end
+	local value = not MapUtils:IsOneMap()
+	MapUtils:SetOneMap(value)
+	Notify.ShowText(format("%s: %s", MapUtils:Trans("LID_ONEMAP"), MapUtils:Trans(value and "LID_STATUSON" or "LID_STATUSOFF")))
+end
+
+function OneMap.Refresh()
+	local button = OneMap.button
+	if button == nil then return end
+	Toggles.SetHalf(button.full, OneMap.IsActive())
+	if GameTooltip:GetOwner() == button then OneMap.ShowTooltip(button) end
+end
+
+function OneMap.Create()
+	local button = CreateFrame("Button", nil, Toggles.content)
+	button:SetSize(Toggles.size, Toggles.size)
+	button.full = button:CreateTexture(nil, "ARTWORK")
+	button.full:SetPoint("TOPLEFT", button, "TOPLEFT", Toggles.iconInset, -Toggles.iconInset)
+	button.full:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -Toggles.iconInset, Toggles.iconInset)
+	button.full:SetTexture(OneMap.icon)
+	button:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD")
+	button:SetScript("OnClick", OneMap.Click)
+	button:SetScript("OnEnter", OneMap.ShowTooltip)
+	button:SetScript("OnLeave", function() GameTooltip:Hide() end)
+	OneMap.button = button
+	MapUtils.RefreshOneMapButton = function() OneMap.Refresh() end
+	OneMap.Refresh()
 end
 
 function Toggles.GetStyle()
@@ -704,6 +767,11 @@ function Toggles.GetVisibleButtons()
 		local shown = expanded and Toggles.IsEnabled(button.category)
 		button:SetShown(shown)
 		if shown then tinsert(list, button) end
+	end
+
+	if OneMap.button ~= nil then
+		OneMap.button:SetShown(expanded)
+		if expanded then tinsert(list, OneMap.button) end
 	end
 
 	return list
@@ -880,6 +948,7 @@ function Toggles.Create()
 		if Toggles.IsAvailable(category) then tinsert(Toggles.buttons, Toggles.CreateButton(category)) end
 	end
 
+	if OneMap.IsAvailable() then OneMap.Create() end
 	MapUtils:RegisterMapEditElement(Toggles.element)
 end
 
