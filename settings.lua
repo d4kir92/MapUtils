@@ -560,6 +560,7 @@ function MapUtils:InitSetting()
 	AddCheckbox("ZONELEVELS", true)
 	AddCheckbox("ZONERECLEVELS", true, nil, nil, "2026-10-02")
 	AddCheckbox("FISHINGLEVELS", true)
+	if MapUtils.GetLegacyProgressLines ~= nil then AddCheckbox("LEGACYPROGRESS", true, function() if MapUtils.RefreshZoneInfo ~= nil then MapUtils:RefreshZoneInfo() end end, nil, "2026-11-19") end
 	if MapUtils:HasRevealData() then
 		AddCategory("REVEAL", 2, nil, ADDED_0928)
 		local revealLabel = nil

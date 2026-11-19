@@ -72,6 +72,7 @@ questgivers.lua
 guildmembers.lua
 friendmembers.lua
 custommarkers.lua
+legacyprogress.lua
 zonelevels.lua
 shared\InstancePins\instance_map_pins.lua
 shared\InstancePins\instance_pin_info.lua

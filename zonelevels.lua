@@ -146,6 +146,7 @@ local ZoneInfo = {
 	justify = "LEFT",
 	levelCache = {},
 	state = {},
+	fishingIcon = "|TInterface\\Icons\\Trade_Fishing:14:14:0:0:64:64:5:59:5:59|t ",
 }
 
 function ZoneInfo.CreateText(frame, font)
@@ -169,6 +170,9 @@ function ZoneInfo.Create()
 	frame:SetSize(1, 1)
 	frame:SetFrameLevel(container:GetFrameLevel() + ZoneInfo.levelOffset)
 	frame:EnableMouse(false)
+	if frame.SetPropagateMouseClicks ~= nil then frame:SetPropagateMouseClicks(true) end
+	frame:SetScript("OnEnter", ZoneInfo.OnEnter)
+	frame:SetScript("OnLeave", ZoneInfo.OnLeave)
 	frame.title = ZoneInfo.CreateText(frame, "GameFontNormalLarge")
 	frame.text = ZoneInfo.CreateText(frame, "GameFontHighlight")
 	frame:Hide()
@@ -265,7 +269,11 @@ function ZoneInfo.GetLines(zoneID, recOn, fishingOn, areaName)
 	local rec = zoneRecLevels[zoneID]
 	if recOn and rec ~= nil then tinsert(lines, MapUtils:Trans("LID_RECOMMENDEDSTARTLEVEL", nil, rec)) end
 	local fishing = zoneFishing[zoneID]
-	if fishingOn and fishing ~= nil then tinsert(lines, MapUtils:Trans("LID_FISHINGLEVEL", nil, fishing)) end
+	if fishingOn and fishing ~= nil then tinsert(lines, ZoneInfo.fishingIcon .. MapUtils:Trans("LID_FISHINGLEVEL", nil, fishing)) end
+	local legacy = MapUtils.GetLegacyProgressLines ~= nil and MapUtils:GetLegacyProgressLines(zoneID)
+	for _, line in ipairs(legacy or {}) do
+		tinsert(lines, line)
+	end
 
 	return lines
 end
@@ -280,7 +288,7 @@ function ZoneInfo.GetZoneContent()
 	local areaName = zoneID and ZoneInfo.GetAreaName(mapID, zoneID)
 	local lines = zoneID and ZoneInfo.GetLines(zoneID, recOn, fishingOn, areaName) or {}
 
-	return title, table.concat(lines, "\n")
+	return title, table.concat(lines, "\n"), zoneID
 end
 
 function ZoneInfo.Colorize(text, color)
@@ -304,7 +312,11 @@ end
 function ZoneInfo.GetSample()
 	local levels = {10, 20}
 	local title = format("%s %s(%s)|r", MapUtils:Trans("LID_ZONENAMESAMPLE"), MapUtils:GetLevelColorCode(levels[1], levels[2]), GetRangeText(levels))
-	local lines = {MapUtils:Trans("LID_RECOMMENDEDSTARTLEVEL", nil, levels[1]), MapUtils:Trans("LID_FISHINGLEVEL", nil, "75")}
+	local lines = {MapUtils:Trans("LID_RECOMMENDEDSTARTLEVEL", nil, levels[1]), ZoneInfo.fishingIcon .. MapUtils:Trans("LID_FISHINGLEVEL", nil, "75")}
+	if MapUtils.GetLegacyProgressLines ~= nil and MapUtils:GetConfig("LEGACYPROGRESS", true) == true then
+		tinsert(lines, MapUtils:Trans("LID_LEGACYEXPLORED", nil, 5, 12))
+		tinsert(lines, MapUtils:Trans("LID_LEGACYDUNGEONS", nil, 1, 1))
+	end
 
 	return title, table.concat(lines, "\n")
 end
@@ -312,6 +324,36 @@ end
 function ZoneInfo.Refresh()
 	ZoneInfo.key = nil
 	ZoneInfo.Update()
+end
+
+function ZoneInfo.OnEnter(frame)
+	local zoneID = ZoneInfo.zoneID
+	if zoneID == nil or MapUtils.AddLegacyProgressTooltip == nil then return end
+	ZoneInfo.hovered = true
+	GameTooltip:SetOwner(frame, "ANCHOR_TOP")
+	if MapUtils:AddLegacyProgressTooltip(GameTooltip, zoneID) then
+		GameTooltip:Show()
+	else
+		GameTooltip:Hide()
+	end
+end
+
+function ZoneInfo.OnLeave(frame)
+	ZoneInfo.hovered = false
+	if GameTooltip:IsOwned(frame) then GameTooltip:Hide() end
+	ZoneInfo.Refresh()
+end
+
+function ZoneInfo.UpdateMouse(frame, zoneID)
+	local editMode = MapUtils.IsMapEditMode ~= nil and MapUtils:IsMapEditMode()
+	local canHover = not editMode and zoneID ~= nil and MapUtils.HasLegacyProgress ~= nil and MapUtils:HasLegacyProgress(zoneID)
+	ZoneInfo.zoneID = canHover and zoneID or nil
+	if InCombatLockdown ~= nil and InCombatLockdown() and frame:IsProtected() then return end
+	frame:EnableMouse(canHover == true)
+end
+
+function MapUtils:RefreshZoneInfo()
+	ZoneInfo.Refresh()
 end
 
 function ZoneInfo.Changed(...)
@@ -331,15 +373,19 @@ end
 function ZoneInfo.Update()
 	local frame = ZoneInfo.Create()
 	if frame == nil then return end
+	if ZoneInfo.hovered and frame:IsShown() and frame:IsMouseOver() then return end
+	ZoneInfo.hovered = false
 	local label = ZoneInfo.label
 	local labelInfo = label and label.GetHighestPriorityLabelInfo and label:GetHighestPriorityLabelInfo()
 	local x, y = WorldMapFrame:GetNormalizedCursorPosition()
 	local container = WorldMapFrame.ScrollContainer
-	local changed = ZoneInfo.Changed(WorldMapFrame:GetMapID(), container ~= nil and container:IsMouseOver(), x, y, labelInfo or false, labelInfo and labelInfo.name or false, MapUtils.IsMapEditMode ~= nil and MapUtils:IsMapEditMode() or false, MapUtils:GetConfig("ZONELEVELS", true), MapUtils:GetConfig("ZONERECLEVELS", true), MapUtils:GetConfig("FISHINGLEVELS", true))
+	local changed = ZoneInfo.Changed(WorldMapFrame:GetMapID(), container ~= nil and container:IsMouseOver(), x, y, labelInfo or false, labelInfo and labelInfo.name or false, MapUtils.IsMapEditMode ~= nil and MapUtils:IsMapEditMode() or false, MapUtils:GetConfig("ZONELEVELS", true), MapUtils:GetConfig("ZONERECLEVELS", true), MapUtils:GetConfig("FISHINGLEVELS", true), MapUtils:GetConfig("LEGACYPROGRESS", true), MapUtils.GetLegacyProgressVersion ~= nil and MapUtils:GetLegacyProgressVersion() or 0)
 	if not changed and ZoneInfo.key ~= nil then return end
 	local title, body = ZoneInfo.GetLabelContent()
-	if title == nil then title, body = ZoneInfo.GetZoneContent() end
+	local zoneID = nil
+	if title == nil then title, body, zoneID = ZoneInfo.GetZoneContent() end
 	body = body or ""
+	ZoneInfo.UpdateMouse(frame, zoneID)
 	if MapUtils.IsMapEditElementVisible ~= nil and not MapUtils:IsMapEditElementVisible(ZoneInfo.element) then
 		ZoneInfo.key = nil
 		frame:Hide()
