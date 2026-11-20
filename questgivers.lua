@@ -920,6 +920,22 @@ function QG.Layout(canvas)
 	end
 end
 
+QG.collectMaxAge = 30
+function QG.GetLogSignature()
+	QG.ReadLog()
+	local logCount, logSum, doneCount, doneSum, nativeCount, nativeSum = 0, 0, 0, 0, 0, 0
+	for questID in pairs(inLog) do
+		logCount, logSum = logCount + 1, logSum + questID
+	end
+
+	for questID in pairs(complete) do
+		doneCount, doneSum = doneCount + 1, doneSum + questID
+		if nativeQuests.current[questID] then nativeCount, nativeSum = nativeCount + 1, nativeSum + questID end
+	end
+
+	return format("%d:%d:%d:%d:%d:%d", logCount, logSum, doneCount, doneSum, nativeCount, nativeSum)
+end
+
 function QG.Update()
 	if MapUtils:UpdateVisibleQuestPins(nativeQuests) then dirty = true end
 	local mapID = WorldMapFrame:GetMapID()
@@ -927,10 +943,15 @@ function QG.Update()
 	if mapID ~= lastMapID or (dirty and now - lastCollect >= COLLECT_DELAY) then
 		if mapID ~= lastMapID then QG.HidePins() end
 		dirty = false
-		lastMapID = mapID
 		lastCollect = now
-		layoutKey = nil
-		QG.Collect(mapID)
+		local signature = QG.GetLogSignature()
+		if mapID ~= lastMapID or QG.stale or signature ~= QG.collectSignature or now - (QG.collectTime or 0) > QG.collectMaxAge then
+			lastMapID = mapID
+			layoutKey = nil
+			QG.collectSignature = signature
+			QG.collectTime = now
+			QG.Collect(mapID)
+		end
 	end
 
 	local canvas = WorldMapFrame:GetCanvas()
