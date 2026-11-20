@@ -195,6 +195,10 @@ local Notify = {
 	minHeight = 12,
 }
 
+local Style = {
+	icon = "Interface\\AddOns\\MapUtils\\media\\terrain",
+}
+
 local Party = {
 	gap = 2,
 	rowGap = 12,
@@ -655,6 +659,82 @@ function Toggles.Refresh()
 			Toggles.SetHalf(button.right, azeroth)
 		end
 	end
+
+	Style.Refresh()
+end
+
+function Style.IsAvailable()
+	return MapUtils.GetMapStyle ~= nil and MapUtils.SetMapStyle ~= nil
+end
+
+-- Like the pin toggles: left-click is the zone map style, right-click the city map style.
+-- A half is lit when that style is Terrain only; the mixed style counts as Map.
+function Style.IsTerrain(city)
+	return MapUtils:GetMapStyle(city) == "TERRAIN"
+end
+
+function Style.GetLabel(city)
+	return MapUtils:Trans(city and "LID_CITYMAPSTYLE" or "LID_ZONEMAPSTYLE")
+end
+
+function Style.ShowTooltip(button)
+	GameTooltip:SetOwner(button, "ANCHOR_LEFT")
+	GameTooltip:SetText(MapUtils:Trans("LID_MAPSTYLE"))
+	for _, city in ipairs({false, true}) do
+		local click = MapUtils:Trans(city and "LID_RIGHTCLICK" or "LID_LEFTCLICK")
+		GameTooltip:AddDoubleLine(format("|cffffd100%s|r  %s", click, Style.GetLabel(city)), MapUtils:Trans("LID_MAPSTYLE" .. MapUtils:GetMapStyle(city)), 1, 1, 1, 1, 1, 1)
+	end
+
+	GameTooltip:Show()
+end
+
+function Style.Click(city)
+	local style = Style.IsTerrain(city) and "MAP" or "TERRAIN"
+	MapUtils:SetMapStyle(city, style)
+	Notify.ShowText(format("%s: %s", Style.GetLabel(city), MapUtils:Trans("LID_MAPSTYLE" .. style)))
+end
+
+function Style.Refresh()
+	local button = Style.button
+	if button == nil then return end
+	local zone, city = Style.IsTerrain(false), Style.IsTerrain(true)
+	local glow = MapUtils:GetMapEditIconStyle(Toggles.element) == "GLOW"
+	button.left:SetShown(not glow)
+	button.right:SetShown(not glow)
+	button.full:SetShown(glow)
+	button.glow:SetShown(glow and city)
+	if glow then
+		Toggles.SetHalf(button.full, zone)
+	else
+		Toggles.SetHalf(button.left, zone)
+		Toggles.SetHalf(button.right, city)
+	end
+
+	if GameTooltip:GetOwner() == button then Style.ShowTooltip(button) end
+end
+
+function Style.Create()
+	local button = CreateFrame("Button", nil, Toggles.content)
+	button:SetSize(Toggles.size, Toggles.size)
+	button:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+	button.left = Toggles.CreateHalf(button, true)
+	button.right = Toggles.CreateHalf(button, false)
+	button.full = button:CreateTexture(nil, "ARTWORK")
+	button.full:SetPoint("TOPLEFT", button, "TOPLEFT", Toggles.iconInset, -Toggles.iconInset)
+	button.full:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -Toggles.iconInset, Toggles.iconInset)
+	button.left:SetTexture(Style.icon)
+	button.left:SetTexCoord(0, 0.5, 0, 1)
+	button.right:SetTexture(Style.icon)
+	button.right:SetTexCoord(0.5, 1, 0, 1)
+	button.full:SetTexture(Style.icon)
+	button.glow = Toggles.CreateGlow(button)
+	button:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD")
+	button:SetScript("OnClick", function(_, mouseButton) Style.Click(mouseButton == "RightButton") end)
+	button:SetScript("OnEnter", Style.ShowTooltip)
+	button:SetScript("OnLeave", function() GameTooltip:Hide() end)
+	Style.button = button
+	MapUtils.RefreshMapStyleButton = function() Style.Refresh() end
+	Style.Refresh()
 end
 
 function Toggles.GetStyle()
@@ -704,6 +784,11 @@ function Toggles.GetVisibleButtons()
 		local shown = expanded and Toggles.IsEnabled(button.category)
 		button:SetShown(shown)
 		if shown then tinsert(list, button) end
+	end
+
+	if Style.button ~= nil then
+		Style.button:SetShown(expanded)
+		if expanded then tinsert(list, Style.button) end
 	end
 
 	return list
@@ -807,21 +892,23 @@ function Toggles.Layout()
 	local pad = sidebar and Toggles.sidebarPad or 0
 	local list = Toggles.GetVisibleButtons()
 	local previous = nil
+	local length = 0
 	for _, button in ipairs(list) do
+		local gap = Toggles.gap
 		button:ClearAllPoints()
 		if previous == nil then
 			button:SetPoint("TOPLEFT", Toggles.content, "TOPLEFT", pad, -pad)
 		elseif vertical then
-			button:SetPoint("TOP", previous, "BOTTOM", 0, -Toggles.gap)
+			button:SetPoint("TOP", previous, "BOTTOM", 0, -gap)
 		else
-			button:SetPoint("LEFT", previous, "RIGHT", Toggles.gap, 0)
+			button:SetPoint("LEFT", previous, "RIGHT", gap, 0)
 		end
 
+		length = length + Toggles.size + (previous ~= nil and gap or 0)
 		previous = button
 	end
 
-	local count = math.max(#list, 1)
-	local length = count * Toggles.size + (count - 1) * Toggles.gap + pad * 2
+	length = math.max(length, Toggles.size) + pad * 2
 	local depth = Toggles.size + pad * 2
 	if vertical then
 		frame:SetSize(depth, length)
@@ -880,6 +967,7 @@ function Toggles.Create()
 		if Toggles.IsAvailable(category) then tinsert(Toggles.buttons, Toggles.CreateButton(category)) end
 	end
 
+	if Style.IsAvailable() then Style.Create() end
 	MapUtils:RegisterMapEditElement(Toggles.element)
 end
 
