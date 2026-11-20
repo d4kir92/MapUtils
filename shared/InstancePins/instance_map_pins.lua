@@ -100,6 +100,8 @@ Addon.INSTANCEMAPPINS = {
         {"boss", 0.523, 0.510, 3586},
         {"boss", 0.493, 0.862, 642},
         {"boss", 0.607, 0.572, 1763},
+        {"boss", 0.365, 0.612, 47162}, -- Glubtok
+        {"boss", 0.502, 0.868, 47296}, -- Helix Gearbreaker
     },
     [292] = { -- The Deadmines - Ironclad Cove
         {"level", 0.123, 0.883, 291, true},
@@ -107,6 +109,10 @@ Addon.INSTANCEMAPPINS = {
         {"boss", 0.604, 0.375, 647},
         {"boss", 0.604, 0.448, 639},
         {"boss", 0.668, 0.398, 645},
+        {"boss", 0.125, 0.759, 43778}, -- Foe Reaper 5000
+        {"boss", 0.605, 0.388, 47626}, -- Admiral Ripsnarl
+        {"boss", 0.605, 0.455, 47739}, -- "Captain" Cookie
+        {"boss", 0.655, 0.403, 49429}, -- Vanessa VanCleef
     },
     [279] = { -- Wailing Caverns
         {"entrance", 0.463, 0.590},
@@ -134,6 +140,7 @@ Addon.INSTANCEMAPPINS = {
         {"boss", 0.650, 0.715, 3914}, -- Rethilgore
         {"boss", 0.278, 0.601, 4278}, -- Commander Springvale
         {"questend", 0.576, 0.573, 1098}, -- Deathstalkers in Shadowfang
+        {"boss", 0.665, 0.732, 46962}, -- Baron Ashbury
     },
     [311] = { -- Shadowfang Keep 2
         {"level", 0.593, 0.121, 310, true},
@@ -151,11 +158,13 @@ Addon.INSTANCEMAPPINS = {
         {"boss", 0.544, 0.537, 4274}, -- Fenrus the Devourer
         {"questend", 0.624, 0.436, 1013}, -- The Book of Ur
         {"boss", 0.500, 0.480, 4627}, -- Arugal's Voidwalker
+        {"boss", 0.545, 0.537, 46963}, -- Lord Walden
     },
     [315] = { -- Shadowfang Keep 6
         {"level", 0.420, 0.842, 314},
         {"boss", 0.553, 0.627, 3927}, -- Wolf Master Nandos
         {"boss", 0.639, 0.200, 4275},
+        {"boss", 0.685, 0.335, 46964}, -- Lord Godfrey
     },
     [316] = { -- Shadowfang Keep 7
         {"level", 0.239, 0.745, 310},
@@ -276,6 +285,7 @@ Addon.INSTANCEMAPPINS = {
         {"questend", 0.533, 0.640, 2284}, -- Necklace Recovery, Take 2
         {"questend", 0.604, 0.939, 2339}, -- Find the Gems and Power Source
         {"queststart", 0.533, 0.640, 2318}, -- Translating the Journal
+        {"boss", 0.289, 0.597, 7023}, -- Obsidian Sentinel
     },
     [219] = { -- Zul'Farrak
         {"entrance", 0.566, 0.901},
@@ -292,6 +302,7 @@ Addon.INSTANCEMAPPINS = {
         {"boss", 0.235, 0.183, 7796},
         {"boss", 0.334, 0.170, 7275},
         {"boss", 0.305, 0.400, 7273},
+        {"boss", 0.440, 0.160, 220076}, -- Witch Doctor Zum'rah
     },
     [317] = { -- Stratholme - Crusader's Square
         {"entrance", 0.640, 0.880},
@@ -305,6 +316,7 @@ Addon.INSTANCEMAPPINS = {
         {"boss", 0.036, 0.501, 10997},
         {"boss", 0.271, 0.751, 10811},
         {"boss", 0.188, 0.837, 10813},
+        {"boss", 0.558, 0.684, 11143}, -- Postmaster Malown
     },
     [220] = { -- The Temple of Atal'Hakkar
         {"entrance", 0.499, 0.107},
@@ -333,15 +345,6 @@ Addon.INSTANCEMAPPINS = {
     [250] = { -- Blackrock Spire - Tazz'Alor
         {"entrance", 0.050, 0.080},
         {"level", 0.125, 0.080, 251},
-        {"boss", 0.200, 0.080, 9196}, -- Highlord Omokk
-        {"boss", 0.275, 0.080, 9236}, -- Shadow Hunter Vosh'gajin
-        {"boss", 0.350, 0.080, 9237}, -- War Master Voone
-        {"boss", 0.425, 0.080, 10596}, -- Mother Smolderweb
-        {"boss", 0.500, 0.080, 10584}, -- Urok Doomhowl
-        {"boss", 0.575, 0.080, 9736}, -- Quartermaster Zigris
-        {"boss", 0.050, 0.190, 10220}, -- Halycon
-        {"boss", 0.125, 0.190, 10268}, -- Gizrul the Slavener
-        {"boss", 0.200, 0.190, 9568}, -- Overlord Wyrmthalak
         {"boss", 0.275, 0.190, 9219}, -- Spirestone Butcher
         {"boss", 0.350, 0.190, 9218}, -- Spirestone Battle Lord
         {"boss", 0.425, 0.190, 9217}, -- Spirestone Lord Magus
@@ -356,6 +359,7 @@ Addon.INSTANCEMAPPINS = {
         {"boss", 0.500, 0.300, 10339}, -- Gyth
         {"boss", 0.575, 0.300, 10430}, -- The Beast
         {"boss", 0.050, 0.410, 10363}, -- General Drakkisath
+        {"boss", 0.525, 0.545, 9237}, -- War Master Voone
     },
     [306] = { -- Scholomance - The Reliquary
         {"entrance", 0.390, 0.652},
@@ -396,14 +400,8 @@ Addon.INSTANCEMAPPINS = {
         {"entrance", 0.527, 0.836},
         {"level", 0.435, 0.300, 288, true},
         {"level", 0.360, 0.130, 288, true},
-        {"boss", 0.200, 0.080, 12435}, -- Razorgore the Untamed
-        {"boss", 0.275, 0.080, 13020}, -- Vaelastrasz the Corrupt
-        {"boss", 0.350, 0.080, 12017}, -- Broodlord Lashlayer
-        {"boss", 0.425, 0.080, 11983}, -- Firemaw
-        {"boss", 0.500, 0.080, 14601}, -- Ebonroc
-        {"boss", 0.575, 0.080, 11981}, -- Flamegor
-        {"boss", 0.050, 0.190, 14020}, -- Chromaggus
-        {"boss", 0.125, 0.190, 11583}, -- Nefarian
+        {"boss", 0.419, 0.602, 12435}, -- Razorgore the Untamed
+        {"boss", 0.333, 0.275, 13020}, -- Vaelastrasz the Corrupt
     },
     [233] = { -- Zul'Gurub
         {"entrance", 0.290, 0.490},
@@ -420,44 +418,31 @@ Addon.INSTANCEMAPPINS = {
     },
     [247] = { -- Ruins of Ahn'Qiraj
         {"entrance", 0.050, 0.080},
-        {"boss", 0.200, 0.080, 15348}, -- Kurinnaxx
-        {"boss", 0.275, 0.080, 15341}, -- General Rajaxx
-        {"boss", 0.350, 0.080, 15340}, -- Moam
-        {"boss", 0.425, 0.080, 15370}, -- Buru the Gorger
-        {"boss", 0.500, 0.080, 15369}, -- Ayamiss the Hunter
-        {"boss", 0.575, 0.080, 15339}, -- Ossirian the Unscarred
+        {"boss", 0.564, 0.357, 15348}, -- Kurinnaxx
+        {"boss", 0.584, 0.491, 15341}, -- General Rajaxx
+        {"boss", 0.329, 0.361, 15340}, -- Moam
+        {"boss", 0.698, 0.621, 15370}, -- Buru the Gorger
+        {"boss", 0.617, 0.905, 15369}, -- Ayamiss the Hunter
+        {"boss", 0.429, 0.696, 15339}, -- Ossirian the Unscarred
     },
     [319] = { -- Temple of Ahn'Qiraj - The Hive Undergrounds
         {"entrance", 0.050, 0.080},
         {"level", 0.125, 0.080, 320},
-        {"boss", 0.200, 0.080, 15263}, -- The Prophet Skeram
-        {"boss", 0.275, 0.080, 15544}, -- Vem / Lord Kri / Princess Yauj
-        {"boss", 0.350, 0.080, 15516}, -- Battleguard Sartura
-        {"boss", 0.425, 0.080, 15510}, -- Fankriss the Unyielding
-        {"boss", 0.500, 0.080, 15299}, -- Viscidus
-        {"boss", 0.575, 0.080, 15509}, -- Princess Huhuran
-        {"boss", 0.050, 0.190, 15276}, -- Emperor Vek'lor / Emperor Vek'nilash
-        {"boss", 0.125, 0.190, 15517}, -- Ouro
-        {"boss", 0.200, 0.190, 15727}, -- C'Thun
+        {"boss", 0.285, 0.497, 15544}, -- Vem / Lord Kri / Princess Yauj
+        {"boss", 0.446, 0.336, 15516}, -- Battleguard Sartura
+        {"boss", 0.623, 0.219, 15510}, -- Fankriss the Unyielding
+        {"boss", 0.721, 0.179, 15299}, -- Viscidus
+        {"boss", 0.435, 0.504, 15509}, -- Princess Huhuran
+        {"boss", 0.607, 0.697, 15276}, -- Emperor Vek'lor / Emperor Vek'nilash
+        {"boss", 0.302, 0.819, 15517}, -- Ouro
     },
     [162] = { -- Naxxramas - The Construct Quarter
         {"entrance", 0.050, 0.080},
         {"level", 0.125, 0.080, 163},
-        {"boss", 0.200, 0.080, 15956}, -- Anub'Rekhan
-        {"boss", 0.275, 0.080, 15953}, -- Grand Widow Faerlina
-        {"boss", 0.350, 0.080, 15952}, -- Maexxna
-        {"boss", 0.425, 0.080, 15954}, -- Noth the Plaguebringer
-        {"boss", 0.500, 0.080, 15936}, -- Heigan the Unclean
-        {"boss", 0.575, 0.080, 16011}, -- Loatheb
-        {"boss", 0.050, 0.190, 16061}, -- Instructor Razuvious
-        {"boss", 0.125, 0.190, 16060}, -- Gothik the Harvester
-        {"boss", 0.200, 0.190, 16064}, -- Thane Korth'azz / Lady Blaumeux / Sir Zeliek / Highlord Mograine
-        {"boss", 0.275, 0.190, 16028}, -- Patchwerk
-        {"boss", 0.350, 0.190, 15931}, -- Grobbulus
-        {"boss", 0.425, 0.190, 15932}, -- Gluth
-        {"boss", 0.500, 0.190, 15928}, -- Thaddius
-        {"boss", 0.575, 0.190, 15989}, -- Sapphiron
-        {"boss", 0.050, 0.300, 15990}, -- Kel'Thuzad
+        {"boss", 0.541, 0.417, 16028}, -- Patchwerk
+        {"boss", 0.616, 0.532, 15931}, -- Grobbulus
+        {"boss", 0.463, 0.438, 15932}, -- Gluth
+        {"boss", 0.266, 0.146, 15928}, -- Thaddius
     },
     [314] = { -- Shadowfang Keep - Upper Observatory
         {"level", 0.437, 0.743, 315, true},
@@ -518,18 +503,26 @@ Addon.INSTANCEMAPPINS = {
     },
     [251] = { -- Blackrock Spire - Skitterweb Tunnels
         {"level", 0.125, 0.080, 252},
+        {"boss", 0.553, 0.693, 9236}, -- Shadow Hunter Vosh'gajin
+        {"boss", 0.621, 0.741, 10596}, -- Mother Smolderweb
     },
     [252] = { -- Blackrock Spire - Hordemar City
         {"level", 0.125, 0.080, 253},
+        {"boss", 0.387, 0.590, 9196}, -- Highlord Omokk
     },
     [253] = { -- Blackrock Spire - Hall of Blackhand
         {"level", 0.125, 0.080, 254},
+        {"boss", 0.455, 0.557, 10584}, -- Urok Doomhowl
     },
     [254] = { -- Blackrock Spire - Halycon's Lair
         {"level", 0.125, 0.080, 255},
+        {"boss", 0.540, 0.844, 9736}, -- Quartermaster Zigris
+        {"boss", 0.380, 0.840, 10220}, -- Halycon
+        {"boss", 0.395, 0.793, 10268}, -- Gizrul the Slavener
     },
     [255] = { -- Blackrock Spire - Chamber of Battle
         {"level", 0.125, 0.080, 254},
+        {"boss", 0.575, 0.600, 9568}, -- Overlord Wyrmthalak
     },
     [288] = { -- Blackwing Lair - Halls of Strife
         {"level", 0.525, 0.320, 287},
@@ -537,9 +530,15 @@ Addon.INSTANCEMAPPINS = {
     },
     [289] = { -- Blackwing Lair - Crimson Laboratories
         {"level", 0.125, 0.080, 290},
+        {"boss", 0.506, 0.617, 12017}, -- Broodlord Lashlayer
+        {"boss", 0.464, 0.430, 11983}, -- Firemaw
+        {"boss", 0.349, 0.210, 14601}, -- Ebonroc
     },
     [290] = { -- Blackwing Lair - Nefarian's Lair
         {"level", 0.125, 0.080, 289},
+        {"boss", 0.355, 0.371, 11981}, -- Flamegor
+        {"boss", 0.394, 0.726, 14020}, -- Chromaggus
+        {"boss", 0.704, 0.725, 11583}, -- Nefarian
     },
     [235] = { -- Dire Maul - Gordok Commons
         {"entrance", 0.718, 0.926},
@@ -607,24 +606,37 @@ Addon.INSTANCEMAPPINS = {
     },
     [320] = { -- Temple of Ahn'Qiraj - The Temple Gates
         {"level", 0.125, 0.080, 321},
+        {"boss", 0.458, 0.522, 15263}, -- The Prophet Skeram
     },
     [321] = { -- Temple of Ahn'Qiraj - Vault of C'Thun
         {"level", 0.125, 0.080, 320},
+        {"boss", 0.571, 0.625, 15727}, -- C'Thun
     },
     [163] = { -- Naxxramas - The Arachnid Quarter
         {"level", 0.125, 0.080, 164},
+        {"boss", 0.307, 0.470, 15956}, -- Anub'Rekhan
+        {"boss", 0.442, 0.361, 15953}, -- Grand Widow Faerlina
+        {"boss", 0.686, 0.153, 15952}, -- Maexxna
     },
     [164] = { -- Naxxramas - The Military Quarter
         {"level", 0.125, 0.080, 165},
+        {"boss", 0.427, 0.460, 16061}, -- Instructor Razuvious
+        {"boss", 0.675, 0.596, 16060}, -- Gothik the Harvester
+        {"boss", 0.301, 0.768, 16064}, -- Thane Korth'azz / Lady Blaumeux / Sir Zeliek / Highlord Mograine
     },
     [165] = { -- Naxxramas - The Plague Quarter
         {"level", 0.125, 0.080, 166},
+        {"boss", 0.346, 0.565, 15954}, -- Noth the Plaguebringer
+        {"boss", 0.498, 0.457, 15936}, -- Heigan the Unclean
+        {"boss", 0.760, 0.284, 16011}, -- Loatheb
     },
     [166] = { -- Naxxramas - The Lower Necropolis
         {"level", 0.125, 0.080, 167},
     },
     [167] = { -- Naxxramas - The Upper Necropolis
         {"level", 0.125, 0.080, 166},
+        {"boss", 0.565, 0.675, 15989}, -- Sapphiron
+        {"boss", 0.365, 0.223, 15990}, -- Kel'Thuzad
     },
     [347] = { -- Hellfire Ramparts
         {"boss", 0.730, 0.314, 17306}, -- Watchkeeper Gargolmar
@@ -725,6 +737,9 @@ Addon.INSTANCEMAPPINS = {
     },
     [350] = { -- Karazhan - 350
         {"boss", 0.453, 0.826, 16152}, -- Attumen the Huntsman
+        {"boss", 0.551, 0.288, 16181}, -- Rokad the Ravager
+        {"boss", 0.596, 0.238, 16180}, -- Shadikith the Glider
+        {"boss", 0.641, 0.288, 16179}, -- Hyakiss the Lurker
     },
     [352] = { -- Karazhan - 352
         {"boss", 0.271, 0.635, 15687}, -- Moroes
@@ -732,6 +747,8 @@ Addon.INSTANCEMAPPINS = {
     [353] = { -- Karazhan - 353
         {"boss", 0.834, 0.500, 16457}, -- Maiden of Virtue
         {"boss", 0.181, 0.351, 17521}, -- The Big Bad Wolf
+        {"boss", 0.231, 0.351, 18168}, -- The Wizard of Oz
+        {"boss", 0.131, 0.351, 17533}, -- Romulo and Julianne
     },
     [358] = { -- Karazhan - 358
         {"boss", 0.495, 0.366, 15691}, -- The Curator
