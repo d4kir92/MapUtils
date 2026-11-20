@@ -48,6 +48,7 @@ function Profiler.Record(label, kind, total, own)
 	if Profiler.mapOpen then
 		stat.openCalls = (stat.openCalls or 0) + 1
 		stat.openSelf = (stat.openSelf or 0) + own
+		stat.openTotal = (stat.openTotal or 0) + total
 		if total > (stat.openPeak or 0) then stat.openPeak = total end
 	end
 
@@ -312,7 +313,7 @@ function Profiler.BuildReport()
 	end
 
 	tinsert(lines, "")
-	tinsert(lines, "Top functions while the map is open by self ms (calls / self / avg / peak):")
+	tinsert(lines, "Top functions while the map is open by self ms (calls / total / self / avg / peak):")
 	local open = {}
 	for _, stat in pairs(Profiler.stats) do
 		if (stat.openSelf or 0) > 0 then tinsert(open, stat) end
@@ -321,7 +322,7 @@ function Profiler.BuildReport()
 	table.sort(open, Profiler.SortOpen)
 	for i = 1, math.min(15, #open) do
 		local stat = open[i]
-		tinsert(lines, format("  %-34s %7d %9.1f %7.3f %7.2f", stat.label, stat.openCalls, stat.openSelf, stat.openSelf / stat.openCalls, stat.openPeak or 0))
+		tinsert(lines, format("  %-34s %7d %9.1f %9.1f %7.3f %7.2f", stat.label, stat.openCalls, stat.openTotal or 0, stat.openSelf, (stat.openTotal or 0) / stat.openCalls, stat.openPeak or 0))
 	end
 
 	return table.concat(lines, "\n"), lines

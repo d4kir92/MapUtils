@@ -10,6 +10,8 @@ local LibraryBooks = {
 	},
 	icon = "Interface\\Icons\\INV_Misc_Book_09",
 	cache = {},
+	states = {},
+	showDelay = 0.2,
 }
 
 MapUtils.LibraryBooks = LibraryBooks
@@ -39,8 +41,20 @@ end
 
 function MapUtils:RefreshLibraryBooks()
 	wipe(LibraryBooks.cache)
+	wipe(LibraryBooks.states)
 	LibraryBooks.signature = nil
 	MapUtils:RefreshExploredPins()
+end
+
+function LibraryBooks.GetCachedState(book)
+	local entry = LibraryBooks.states[book]
+	if entry == nil then
+		local state, seen = LibraryBooks.GetState(book)
+		entry = {state, seen}
+		LibraryBooks.states[book] = entry
+	end
+
+	return entry[1], entry[2]
 end
 
 function LibraryBooks.GetState(book)
@@ -95,11 +109,13 @@ function MapUtils:GetLibraryBookPins(mapID)
 	if cached ~= nil then return cached or nil end
 	local list = {}
 	for _, book in ipairs(MapUtils.LIBRARYBOOKS) do
-		local state, seen = LibraryBooks.GetState(book)
+		local state, seen = LibraryBooks.GetCachedState(book)
+		local icon
 		if state ~= "done" then
 			for _, point in ipairs(book.points) do
 				local x, y = LibraryBooks.Project(point, mapID)
 				if x ~= nil then
+					icon = icon or LibraryBooks.GetIcon(book)
 					tinsert(list, {
 						kind = "librarybook",
 						x = x,
@@ -110,7 +126,7 @@ function MapUtils:GetLibraryBookPins(mapID)
 							x = point[2],
 							y = point[3]
 						},
-						icon = LibraryBooks.GetIcon(book),
+						icon = icon,
 						name = book.name,
 						book = book,
 						state = state,
@@ -144,24 +160,38 @@ function MapUtils:AddLibraryBookTooltip(entry)
 end
 
 function LibraryBooks.GetSignature()
-	local parts = {}
+	local parts, states = {}, {}
 	for _, book in ipairs(MapUtils.LIBRARYBOOKS) do
 		local state, seen = LibraryBooks.GetState(book)
+		states[book] = {state, seen}
 		tinsert(parts, state .. (seen and "1" or "0"))
 	end
 
-	return table.concat(parts)
+	return table.concat(parts), states
 end
 
 function LibraryBooks.CheckChanged()
 	if not MapUtils:LibraryBookPinsEnabled(false, true) and not MapUtils:LibraryBookPinsEnabled(true) then return end
-	local signature = LibraryBooks.GetSignature()
+	local signature, states = LibraryBooks.GetSignature()
 	if LibraryBooks.signature == signature then return end
 	local first = LibraryBooks.signature == nil
 	LibraryBooks.signature = signature
+	LibraryBooks.states = states
 	if first then return end
 	wipe(LibraryBooks.cache)
 	MapUtils:RefreshExploredPins()
+end
+
+function LibraryBooks.OnMapShow()
+	if LibraryBooks.showPending then return end
+	LibraryBooks.showPending = true
+	C_Timer.After(
+		LibraryBooks.showDelay,
+		function()
+			LibraryBooks.showPending = false
+			LibraryBooks.CheckChanged()
+		end
+	)
 end
 
 MapUtils:RegisterSharedSettings({
@@ -179,5 +209,5 @@ LibraryBooks.frame = CreateFrame("Frame")
 LibraryBooks.frame:RegisterEvent("QUEST_TURNED_IN")
 LibraryBooks.frame:RegisterEvent("BAG_UPDATE_DELAYED")
 LibraryBooks.frame:SetScript("OnEvent", function() LibraryBooks.CheckChanged() end)
-if WorldMapFrame ~= nil then WorldMapFrame:HookScript("OnShow", function() LibraryBooks.CheckChanged() end) end
+if WorldMapFrame ~= nil then WorldMapFrame:HookScript("OnShow", function() LibraryBooks.OnMapShow() end) end
 MapUtils.ProfileTable("LibraryBooks", LibraryBooks)
