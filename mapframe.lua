@@ -1442,7 +1442,8 @@ function SmoothZoom.OnCanvasClick(map, button, x, y)
 	if MapUtils.IsInstanceMapShown ~= nil and MapUtils:IsInstanceMapShown() then return false end
 	local host = map:GetMapID()
 	if not SmoothZoom.IsSpace(host) then return false end
-	local target = SmoothZoom.ClickTarget(host, x, y)
+	local cursorX, cursorY = SmoothZoom.CanvasCursor(map.ScrollContainer)
+	local target = SmoothZoom.ClickTarget(host, cursorX or x, cursorY or y)
 	if target == nil or target == host then return false end
 	SmoothZoom.anim = nil
 	MapLevelZoom.lastSwitch = GetTime()
@@ -1844,6 +1845,21 @@ function SmoothZoom.ScaledCursorPosition(container)
 	if effective == nil or effective <= 0 then return x, y end
 
 	return x / effective, y / effective
+end
+
+function SmoothZoom.CanvasCursor(container)
+	local child = container and container.Child
+	local scale = container and container:GetCanvasScale()
+	local left, top = child and child:GetLeft(), child and child:GetTop()
+	local width, height = child and child:GetWidth(), child and child:GetHeight()
+	if scale == nil or scale <= 0 or left == nil or top == nil or width == nil or width <= 0 or height == nil or height <= 0 then return nil end
+	local x, y = SmoothZoom.ScaledCursorPosition(container)
+
+	return (x / scale - left) / width, (top - y / scale) / height
+end
+
+function MapUtils:GetOneMapCursor()
+	return SmoothZoom.CanvasCursor(WorldMapFrame and WorldMapFrame.ScrollContainer)
 end
 
 function SmoothZoom.InstallCursorFix()

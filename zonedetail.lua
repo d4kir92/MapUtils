@@ -2406,9 +2406,9 @@ end
 function base.UpdateHover()
 	local active = container ~= nil and container:IsShown() and container.built == MODE_FULL and container.space ~= nil and container.refWidth ~= nil
 	base.SetBlizzardHighlightHidden(active)
-	if not active or not WorldMapFrame.ScrollContainer:IsMouseOver() or MapUtils.GetOneMapTargetAt == nil or (MapUtils.IsInstanceMapShown ~= nil and MapUtils:IsInstanceMapShown()) then return base.HideHover() end
+	if not active or not WorldMapFrame.ScrollContainer:IsMouseOver() or MapUtils.GetOneMapTargetAt == nil or MapUtils.GetOneMapCursor == nil or (MapUtils.IsInstanceMapShown ~= nil and MapUtils:IsInstanceMapShown()) then return base.HideHover() end
 	local host = WorldMapFrame:GetMapID()
-	local x, y = WorldMapFrame:GetNormalizedCursorPosition()
+	local x, y = MapUtils:GetOneMapCursor()
 	if x == nil or y == nil then return base.HideHover() end
 	local hover = base.hover
 	if hover ~= nil and hover.host == host and hover.x == x and hover.y == y and hover.space == container.space then return end
