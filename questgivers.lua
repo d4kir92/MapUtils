@@ -249,7 +249,6 @@ end
 function QG.IsAvailable(questID, quest, giverSide)
 	if inLog[questID] or quest[2] > player.level then return false end
 	local level = QG.GetLevel(quest)
-	if level - player.level >= 10 then return false end
 	if not player.showLowLevel then
 		if player.level - level > player.green then return false end
 		if GetQuestDifficultyColor and QuestDifficultyColors and QuestDifficultyColors.trivial and GetQuestDifficultyColor(level) == QuestDifficultyColors.trivial then return false end
