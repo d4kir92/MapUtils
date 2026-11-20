@@ -236,7 +236,15 @@ function Profiler.TrackState(delta, lua)
 			tinsert(parts, format("%s %.1f", top[i][1], top[i][2]))
 		end
 
-		local hitch = {at = now - (Profiler.startedAt or now) + Profiler.elapsed, key = key, prev = Profiler.lastKey, ms = delta * 1000, lua = lua, gc = (collected and format("gc %.0f KB", -grown) or format("+%.0f KB", grown)) .. (afterCount and " count" or ""), top = table.concat(parts, ", ")}
+		local before = Profiler.GetHistory(0)
+		local beforeParts = {}
+		if before ~= nil then
+			for _, entry in ipairs(before.top) do
+				tinsert(beforeParts, format("%s %.1f", entry[1], entry[2]))
+			end
+		end
+
+		local hitch = {at = now - (Profiler.startedAt or now) + Profiler.elapsed, key = key, prev = Profiler.lastKey, ms = delta * 1000, lua = lua, prevLua = before and before.total or 0, prevTop = table.concat(beforeParts, ", "), gc = (collected and format("gc %.0f KB", -grown) or format("+%.0f KB", grown)) .. (afterCount and " count" or ""), top = table.concat(parts, ", ")}
 		tinsert(Profiler.hitches, hitch)
 		if #Profiler.hitches > Profiler.hitchMax then tremove(Profiler.hitches, 1) end
 		Profiler.AddLongest(hitch)
@@ -307,9 +315,10 @@ function Profiler.BuildReport()
 	end
 
 	tinsert(lines, "")
-	tinsert(lines, format("Longest frames (top %d): time, state before -> state, frame ms, MapUtils lua ms, memory change, top self ms", Profiler.longestMax))
+	tinsert(lines, format("Longest frames (top %d): time, state before -> state, frame ms, MapUtils lua ms, memory change, top self ms; next line: Lua of the frame before (work in OnUpdates that run before the profiler shows up in the next frame time)", Profiler.longestMax))
 	for _, hitch in ipairs(Profiler.longest) do
 		tinsert(lines, format("  %6.1fs %s -> %s %8.1f %6.1f %-11s %s", hitch.at, hitch.prev or "-", hitch.key, hitch.ms, hitch.lua, hitch.gc or "", hitch.top ~= "" and hitch.top or "-"))
+		tinsert(lines, format("          frame before: lua %.1f ms, %s", hitch.prevLua or 0, hitch.prevTop ~= nil and hitch.prevTop ~= "" and hitch.prevTop or "-"))
 	end
 
 	tinsert(lines, "")

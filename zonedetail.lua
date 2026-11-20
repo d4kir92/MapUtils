@@ -150,6 +150,7 @@ local base = {
 }
 
 local function NewArt(mapID)
+	base.artCount = (base.artCount or 0) + 1
 	local frame = CreateFrame("FRAME", nil, container)
 	local edge = frame:CreateMaskTexture()
 	edge.mapMaskGroup = mapID
@@ -1360,6 +1361,33 @@ Build = MapUtils.Profile("ZoneDetail.Build", Build)
 Layout = MapUtils.Profile("ZoneDetail.Layout", Layout)
 ShowBase = MapUtils.Profile("ZoneDetail.ShowBase", ShowBase)
 SyncBlizzardArt = MapUtils.Profile("ZoneDetail.SyncBlizzardArt", SyncBlizzardArt)
+function base.ApplyLevels(level, embedded)
+	if MinimapLayer.frame == nil then
+		MinimapLayer.frame = CreateFrame("FRAME", nil, container)
+		MinimapLayer.frame:SetAllPoints(container)
+		base.levelKey = nil
+	end
+
+	MinimapLayer.frame:Show()
+	local key = format("%d:%d:%s:%s", level, base.artCount or 0, tostring(embedded), tostring(container.blizzardHidden))
+	if key == base.levelKey then return end
+	base.levelKey = key
+	container:SetFrameLevel(level)
+	for _, under in pairs(unders) do
+		under.frame:SetFrameLevel(level + 1)
+	end
+
+	for _, zone in pairs(zones) do
+		zone.frame:SetFrameLevel(level + 2)
+	end
+
+	MinimapLayer.frame:SetFrameLevel(level + 4)
+	for _, city in pairs(cities) do
+		city.frame:SetFrameLevel(level + 3)
+	end
+end
+
+base.ApplyLevels = MapUtils.Profile("ZoneDetail.ApplyLevels", base.ApplyLevels)
 local function Update(force)
 	if container == nil then return end
 	local mapID = WorldMapFrame:GetMapID()
@@ -1402,24 +1430,7 @@ local function Update(force)
 		end
 	end
 
-	local level = child:GetFrameLevel() + FRAME_LEVEL_OFFSET
-	container:SetFrameLevel(level)
-	for _, under in pairs(unders) do
-		under.frame:SetFrameLevel(level + 1)
-	end
-
-	for _, zone in pairs(zones) do
-		zone.frame:SetFrameLevel(level + 2)
-	end
-
-	if MinimapLayer.frame == nil then MinimapLayer.frame = CreateFrame("FRAME", nil, container) end
-	MinimapLayer.frame:SetAllPoints(container)
-	MinimapLayer.frame:SetFrameLevel(level + 4)
-	MinimapLayer.frame:Show()
-	for _, city in pairs(cities) do
-		city.frame:SetFrameLevel(level + 3)
-	end
-
+	base.ApplyLevels(child:GetFrameLevel() + FRAME_LEVEL_OFFSET, GetEmbeddedCityStyle(mapID) ~= nil)
 	container:Show()
 	MinimapLayer.signature = nil
 	base.cull.dirty = true
