@@ -2374,6 +2374,82 @@ function MinimapLayer.DebugLine(text)
 	MapUtils:INFO(text)
 end
 
+function base.SetBlizzardHighlightHidden(hidden)
+	if base.blizzardHighlightHidden == hidden then return end
+	base.blizzardHighlightHidden = hidden
+	for pin in WorldMapFrame:EnumeratePinsByTemplate("MapHighlightPinTemplate") do
+		pin:SetAlpha(hidden and 0 or 1)
+	end
+end
+
+function base.HideHover()
+	if base.hover ~= nil then
+		base.hover.texture:Hide()
+		base.hover.key = nil
+	end
+end
+
+function base.GetHoverLevel()
+	local level = MinimapLayer.frame and MinimapLayer.frame:GetFrameLevel() or container:GetFrameLevel() + 4
+	for _, city in pairs(cities) do
+		level = math.max(level, city.frame:GetFrameLevel())
+		if city.terrain then level = math.max(level, city.terrain:GetFrameLevel()) end
+	end
+
+	for _, detail in pairs(UNDERGROUND) do
+		if type(detail) == "table" and detail.frame then level = math.max(level, detail.frame:GetFrameLevel()) end
+	end
+
+	return level + 1
+end
+
+function base.UpdateHover()
+	local active = container ~= nil and container:IsShown() and container.built == MODE_FULL and container.space ~= nil and container.refWidth ~= nil
+	base.SetBlizzardHighlightHidden(active)
+	if not active or not WorldMapFrame.ScrollContainer:IsMouseOver() or MapUtils.GetOneMapTargetAt == nil or (MapUtils.IsInstanceMapShown ~= nil and MapUtils:IsInstanceMapShown()) then return base.HideHover() end
+	local host = WorldMapFrame:GetMapID()
+	local x, y = WorldMapFrame:GetNormalizedCursorPosition()
+	if x == nil or y == nil then return base.HideHover() end
+	local hover = base.hover
+	if hover ~= nil and hover.host == host and hover.x == x and hover.y == y and hover.space == container.space then return end
+	if hover == nil then
+		hover = {}
+		hover.frame = CreateFrame("FRAME", nil, container)
+		hover.frame:SetAllPoints(container)
+		hover.texture = hover.frame:CreateTexture(nil, "ARTWORK")
+		hover.texture:SetBlendMode("ADD")
+		hover.texture:Hide()
+		base.hover = hover
+	end
+
+	hover.host, hover.x, hover.y, hover.space = host, x, y, container.space
+	local target, continent, space = MapUtils:GetOneMapTargetAt(host, x, y)
+	if target == nil or target == host or space ~= container.space then return base.HideHover() end
+	local left, right, top, bottom = MapUtils:GetZoneDetailSpaceRect(host)
+	if left == nil or right <= left or bottom <= top then return base.HideHover() end
+	local parent = target == continent and space or continent
+	local pl, pr, pt, pb = RectOn(parent, space)
+	if pl == nil or pr <= pl or pb <= pt then return base.HideHover() end
+	local u, v = (x - left) / (right - left), (y - top) / (bottom - top)
+	local fileDataID, _, texPercentageX, texPercentageY, textureX, textureY, scrollChildX, scrollChildY = C_Map.GetMapHighlightInfoAtPosition(parent, (u - pl) / (pr - pl), (v - pt) / (pb - pt))
+	if fileDataID == nil or fileDataID <= 0 or textureX == nil or textureX <= 0 or textureY <= 0 then return base.HideHover() end
+	local shift = 0
+	if target ~= continent then shift = select(5, ArtRect(target, space)) or 0 end
+	local key = format("%d:%d:%d", target, parent, fileDataID)
+	local texture = hover.texture
+	local level = base.GetHoverLevel()
+	if hover.frame:GetFrameLevel() ~= level then hover.frame:SetFrameLevel(level) end
+	if hover.key == key and texture:IsShown() then return end
+	hover.key = key
+	local refWidth, refHeight = container.refWidth, container.refHeight
+	texture:SetTexture(fileDataID, nil, nil, "TRILINEAR")
+	texture:SetTexCoord(0, texPercentageX, 0, texPercentageY)
+	texture:SetSize(textureX * (pr - pl) * refWidth, textureY * (pb - pt) * refHeight)
+	texture:ClearAllPoints()
+	texture:SetPoint("TOPLEFT", container, "TOPLEFT", (pl + scrollChildX * (pr - pl)) * refWidth, -(pt + scrollChildY * (pb - pt) + shift) * refHeight)
+	texture:Show()
+end
+
 local function Install()
 	if hooked then return true end
 	if WorldMapFrame == nil or WorldMapFrame.ScrollContainer == nil or WorldMapFrame.ScrollContainer.Child == nil then return false end
@@ -2397,6 +2473,7 @@ local function Install()
 	end
 
 	base.cull.RunProfiled = MapUtils.Profile("ZoneDetail.Cull", base.cull.Run)
+	base.UpdateHoverProfiled = MapUtils.Profile("ZoneDetail.Hover", base.UpdateHover)
 	MapUtils:RegisterRenderLayer("Zone art", function() return container end)
 	MapUtils:RegisterRenderLayer("Terrain tiles", function()
 		local frames = {MinimapLayer.frame}
@@ -2429,6 +2506,7 @@ local function Install()
 			MinimapLayer.UpdateCityDetail()
 			SyncBlizzardArt()
 			base.cull.RunProfiled()
+			base.UpdateHoverProfiled()
 		end)
 	)
 

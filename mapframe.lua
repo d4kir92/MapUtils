@@ -1425,9 +1425,15 @@ function SmoothZoom.ClickTarget(host, x, y)
 	local space = MapUtils:GetZoneDetailSpace(host)
 	local continent, zone = SmoothZoom.ContinentAt(space, (x - left) / (right - left), (y - top) / (bottom - top), MapUtils:GetZoneDetailContinent(host))
 	if continent == nil or zone == nil or zone.mapType ~= Enum.UIMapType.Zone then return nil end
-	if host == space and continent ~= space then return continent end
+	if host == space and continent ~= space then return continent, continent, space end
 
-	return zone.mapID
+	return zone.mapID, continent, space
+end
+
+function MapUtils:GetOneMapTargetAt(host, x, y)
+	if not SmoothZoom.IsSpace(host) then return nil end
+
+	return SmoothZoom.ClickTarget(host, x, y)
 end
 
 function SmoothZoom.OnCanvasClick(map, button, x, y)
