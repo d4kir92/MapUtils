@@ -45,6 +45,12 @@ function Profiler.Record(label, kind, total, own)
 	stat.calls = stat.calls + 1
 	stat.total = stat.total + total
 	stat.self = stat.self + own
+	if Profiler.mapOpen then
+		stat.openCalls = (stat.openCalls or 0) + 1
+		stat.openSelf = (stat.openSelf or 0) + own
+		if total > (stat.openPeak or 0) then stat.openPeak = total end
+	end
+
 	if total > stat.peak then stat.peak = total end
 end
 
@@ -151,10 +157,13 @@ function Profiler.OnUpdate(_, delta)
 	Profiler.TrackState(delta or 0, Profiler.frameTotal)
 	Profiler.PushHistory(Profiler.frameTotal)
 	Profiler.frameTotal = 0
+	Profiler.mapOpen = WorldMapFrame ~= nil and WorldMapFrame:IsShown()
 end
 
 Profiler.states = {}
 Profiler.hitches = {}
+Profiler.longest = {}
+Profiler.longestMax = 10
 Profiler.hitchThreshold = 0.025
 Profiler.hitchMax = 20
 Profiler.stateSampleInterval = 1
@@ -226,9 +235,13 @@ function Profiler.TrackState(delta, lua)
 			tinsert(parts, format("%s %.1f", top[i][1], top[i][2]))
 		end
 
-		tinsert(Profiler.hitches, {at = now - (Profiler.startedAt or now) + Profiler.elapsed, key = key, ms = delta * 1000, lua = lua, gc = (collected and format("gc %.0f KB", -grown) or format("+%.0f KB", grown)) .. (afterCount and " count" or ""), top = table.concat(parts, ", ")})
+		local hitch = {at = now - (Profiler.startedAt or now) + Profiler.elapsed, key = key, prev = Profiler.lastKey, ms = delta * 1000, lua = lua, gc = (collected and format("gc %.0f KB", -grown) or format("+%.0f KB", grown)) .. (afterCount and " count" or ""), top = table.concat(parts, ", ")}
+		tinsert(Profiler.hitches, hitch)
 		if #Profiler.hitches > Profiler.hitchMax then tremove(Profiler.hitches, 1) end
+		Profiler.AddLongest(hitch)
 	end
+
+	Profiler.lastKey = key
 
 	if open and Profiler.countTextures and (Profiler.lastStateSample == nil or now - Profiler.lastStateSample >= Profiler.stateSampleInterval) then
 		Profiler.lastStateSample = now
@@ -243,6 +256,22 @@ function Profiler.TrackState(delta, lua)
 		state.masks = state.masks + masks
 		state.samples = state.samples + 1
 	end
+end
+
+function Profiler.SortLongest(a, b)
+	return a.ms > b.ms
+end
+
+function Profiler.AddLongest(hitch)
+	local list = Profiler.longest
+	if #list >= Profiler.longestMax and hitch.ms <= list[#list].ms then return end
+	tinsert(list, hitch)
+	table.sort(list, Profiler.SortLongest)
+	if #list > Profiler.longestMax then list[#list] = nil end
+end
+
+function Profiler.SortOpen(a, b)
+	return (a.openSelf or 0) > (b.openSelf or 0)
 end
 
 function Profiler.BuildReport()
@@ -274,6 +303,25 @@ function Profiler.BuildReport()
 	for i = 1, math.min(15, #sorted) do
 		local stat = sorted[i]
 		tinsert(lines, format("  %-34s %7d %9.1f %9.1f %7.3f %7.2f", stat.label, stat.calls, stat.total, stat.self, stat.total / stat.calls, stat.peak))
+	end
+
+	tinsert(lines, "")
+	tinsert(lines, format("Longest frames (top %d): time, state before -> state, frame ms, MapUtils lua ms, memory change, top self ms", Profiler.longestMax))
+	for _, hitch in ipairs(Profiler.longest) do
+		tinsert(lines, format("  %6.1fs %s -> %s %8.1f %6.1f %-11s %s", hitch.at, hitch.prev or "-", hitch.key, hitch.ms, hitch.lua, hitch.gc or "", hitch.top ~= "" and hitch.top or "-"))
+	end
+
+	tinsert(lines, "")
+	tinsert(lines, "Top functions while the map is open by self ms (calls / self / avg / peak):")
+	local open = {}
+	for _, stat in pairs(Profiler.stats) do
+		if (stat.openSelf or 0) > 0 then tinsert(open, stat) end
+	end
+
+	table.sort(open, Profiler.SortOpen)
+	for i = 1, math.min(15, #open) do
+		local stat = open[i]
+		tinsert(lines, format("  %-34s %7d %9.1f %7.3f %7.2f", stat.label, stat.openCalls, stat.openSelf, stat.openSelf / stat.openCalls, stat.openPeak or 0))
 	end
 
 	return table.concat(lines, "\n"), lines
@@ -326,6 +374,8 @@ function Profiler.Reset()
 	Profiler.elapsed = 0
 	wipe(Profiler.states)
 	wipe(Profiler.hitches)
+	wipe(Profiler.longest)
+	Profiler.lastKey = nil
 	Profiler.lastView = nil
 	if Profiler.active then Profiler.startedAt = GetTime() end
 	Profiler.Refresh()
