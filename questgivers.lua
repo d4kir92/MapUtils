@@ -201,6 +201,14 @@ function QG.ReadPlayer()
 		enabledCategories[index] = MapUtils:GetConfig(key, false) == true
 	end
 	QG.showPvP = MapUtils:GetConfig("QUESTGIVERPVP", false) == true
+	QG.showCloth = MapUtils:GetConfig("QUESTGIVERCLOTH", false) == true
+end
+
+function QG.IsClothDonation(quest)
+	local title = quest and quest[3]
+	if type(title) ~= "string" then return false end
+
+	return title:find("^A Donation of ") ~= nil or title == "Additional Runecloth"
 end
 
 function QG.AllDone(list)
@@ -249,6 +257,7 @@ end
 function QG.IsAvailable(questID, quest, giverSide)
 	if inLog[questID] or quest[2] > player.level then return false end
 	local level = QG.GetLevel(quest)
+	if quest[2] <= 1 and level - player.level >= 10 then return false end
 	if not player.showLowLevel then
 		if player.level - level > player.green then return false end
 		if GetQuestDifficultyColor and QuestDifficultyColors and QuestDifficultyColors.trivial and GetQuestDifficultyColor(level) == QuestDifficultyColors.trivial then return false end
@@ -258,6 +267,7 @@ function QG.IsAvailable(questID, quest, giverSide)
 	if quest[5] and not enabledCategories[quest[5]] then return false end
 	if quest[5] ~= 2 and not enabledCategories[3] and QG.IsRepeatable(questID, quest) then return false end
 	if not QG.showPvP and QG.IsPvP(questID, quest) then return false end
+	if not QG.showCloth and QG.IsClothDonation(quest) then return false end
 	if quest[7] and player.race and not QG.HasBit(quest[7], player.race) then return false end
 	if quest[8] and player.class and not QG.HasBit(quest[8], player.class) then return false end
 	if QG.IsDone(questID) then return false end
@@ -375,7 +385,7 @@ function QG.GetAvailableCache()
 		key = key .. (enabledCategories[index] and "1" or "0")
 	end
 
-	key = key .. (QG.showPvP and "1" or "0") .. (player.showLowLevel and "1" or "0")
+	key = key .. (QG.showPvP and "1" or "0") .. (QG.showCloth and "1" or "0") .. (player.showLowLevel and "1" or "0")
 	local now = GetTime()
 	if QG.available == nil or QG.stale or QG.availableKey ~= key or now - (QG.availableTime or 0) > 30 then
 		QG.available = {}
