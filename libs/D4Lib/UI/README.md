@@ -359,6 +359,11 @@ a search is active and does not pull its category into the search results. Use i
 content that depends on runtime state, e.g. entries that only apply to one mode; the
 window re-lays out immediately unless the layout is suspended.
 
+`win:SetLeftShift(px)` moves the inset, header, footer and scroll area `px` to the right
+and keeps the frame art where it is, e.g. to leave room for another frame's side tabs
+drawn over the window's left edge. With `resizable = "width"`, `minWidth` / `maxWidth`
+then apply to the width without the shift; `onResize` still gets the full width.
+
 ## Resizing
 
 The window is resizable by default (pass `resizable = false` to turn it off) via a
