@@ -276,13 +276,15 @@ function D4:CreateInstanceMap(provider)
             local info = shownLevels ~= nil and shownLevels[shownIndex] or nil
             local mapID = provider.getReturnMapID(info)
             if mapID ~= nil and WorldMapFrame.SetMapID ~= nil then
-                hiddenFor = shownInstance
+                hiddenFor = shownInstance or select(2, GetInstanceArt())
                 ClearForced()
                 overlay:Hide()
                 levelButton:Hide()
+                mapPinKey = nil
                 if mapPinSet ~= nil then mapPinSet:Hide() end
                 WorldMapFrame:SetMapID(mapID)
                 Refresh()
+                if provider.onReturn ~= nil then provider.onReturn(info) end
                 return
             end
         end
@@ -296,6 +298,7 @@ function D4:CreateInstanceMap(provider)
         local levels, instanceMapID = GetInstanceArt()
         if levels == nil then return end
         if hiddenFor == instanceMapID then
+            if provider.keepShown ~= nil and provider.keepShown() then return end
             hiddenFor = nil
         else
             hiddenFor = instanceMapID
@@ -559,13 +562,14 @@ function D4:CreateInstanceMap(provider)
     local function GetVisibleLevels()
         if WorldMapFrame == nil or WorldMapFrame.GetMapID == nil then return nil end
         if forced ~= nil then
-            if WorldMapFrame:GetMapID() == forcedMapID then return forced, forcedIndex, nil end
+            if WorldMapFrame:GetMapID() == forcedMapID or provider.keepShown ~= nil and provider.keepShown() then return forced, forcedIndex, nil end
             ClearForced()
         end
 
         local levels, instanceMapID = GetInstanceArt()
         if levels == nil then return nil end
         if hiddenFor == instanceMapID then return nil end
+        if provider.keepShown ~= nil and provider.keepShown() then return levels, selected[instanceMapID] or 1, instanceMapID end
         local playerMapID = GetPlayerMapID()
         if playerMapID ~= nil and WorldMapFrame:GetMapID() ~= playerMapID then return nil end
         return levels, selected[instanceMapID] or 1, instanceMapID
