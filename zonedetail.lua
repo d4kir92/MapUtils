@@ -149,9 +149,18 @@ local base = {
 	["extraData"] = {}
 }
 
+base.fade = {
+	["detail"] = 1,
+	["continent"] = 0,
+	["continentRange"] = {1.4, 2.2},
+	["detailRange"] = {1.6, 2.6},
+	["round"] = 50
+}
+
 local function NewArt(mapID)
 	base.artCount = (base.artCount or 0) + 1
 	local frame = CreateFrame("FRAME", nil, container)
+	frame:SetAlpha(base.fade.detail)
 	local edge = frame:CreateMaskTexture()
 	edge.mapMaskGroup = mapID
 	SetMapMaskTexture(edge, EDGE_PATH, "CLAMPTOBLACKADDITIVE")
@@ -926,7 +935,8 @@ local function Preload()
 	end)
 end
 
-local function DrawTileLayer(pool, mapID, offsetX, offsetY, scale, drawLayer, mask, edge)
+local function DrawTileLayer(pool, mapID, offsetX, offsetY, scale, drawLayer, mask, edge, scaleY)
+	scaleY = scaleY or scale
 	local layers = C_Map.GetMapArtLayers(mapID)
 	local layer = layers and layers[1]
 	local files = C_Map.GetMapArtLayerTextures(mapID, 1)
@@ -960,9 +970,9 @@ local function DrawTileLayer(pool, mapID, offsetX, offsetY, scale, drawLayer, ma
 
 				texture:SetTexture(fileID, nil, nil, "TRILINEAR")
 				texture:SetTexCoord(0, pixelWidth / fileWidth, 0, pixelHeight / fileHeight)
-				texture:SetSize(pixelWidth * scale, pixelHeight * scale)
+				texture:SetSize(pixelWidth * scale, pixelHeight * scaleY)
 				texture:ClearAllPoints()
-				texture:SetPoint("TOPLEFT", container, "TOPLEFT", offsetX + layer.tileWidth * (col - 1) * scale, -(offsetY + layer.tileHeight * (row - 1) * scale))
+				texture:SetPoint("TOPLEFT", container, "TOPLEFT", offsetX + layer.tileWidth * (col - 1) * scale, -(offsetY + layer.tileHeight * (row - 1) * scaleY))
 				texture.used = true
 			end
 		end
@@ -1031,15 +1041,18 @@ local function DrawContinent(continentID, refWidth, refHeight)
 	entry.edge:ClearAllPoints()
 	entry.edge:SetPoint("TOPLEFT", container, "TOPLEFT", left * refWidth, -top * refHeight)
 	if own and not DrawTileLayer(entry.pool, continentID, left * refWidth, top * refHeight, (right - left) * refWidth / layer.layerWidth, "BORDER", nil, entry.edge) then return nil end
+	if not own and layer.layerHeight ~= nil and layer.layerHeight > 0 then DrawTileLayer(entry.pool, continentID, left * refWidth, top * refHeight, (right - left) * refWidth / layer.layerWidth, "BORDER", nil, entry.edge, (bottom - top) * refHeight / layer.layerHeight) end
 	entry.drawn = true
 
 	return {left, right, top, bottom}
 end
 
 local function ShowBase(shown)
-	for _, entry in pairs(base.continents) do
+	base.shown = shown
+	for continentID, entry in pairs(base.continents) do
+		local visible = shown and entry.drawn and (continentID == container.space or base.fade.continent > 0)
 		for _, texture in pairs(entry.pool) do
-			base.cull.SetWanted(texture, shown and entry.drawn and texture.used == true)
+			base.cull.SetWanted(texture, visible and texture.used == true)
 		end
 	end
 
@@ -1388,6 +1401,87 @@ function base.ApplyLevels(level, embedded)
 end
 
 base.ApplyLevels = MapUtils.Profile("ZoneDetail.ApplyLevels", base.ApplyLevels)
+function base.fade.Smooth(value, range)
+	local t = math.max(0, math.min(1, (value - range[1]) / (range[2] - range[1])))
+
+	return t * t * (3 - 2 * t)
+end
+
+function base.fade.Fill(space, mapID, hostLeft, hostRight, hostTop, hostBottom, viewWidth, viewHeight)
+	local left, right, top, bottom = RectOn(mapID, space)
+	if left == nil or right <= left or bottom <= top then return nil end
+
+	return math.min((right - left) * (hostRight - hostLeft) / viewWidth, (bottom - top) * (hostBottom - hostTop) / viewHeight)
+end
+
+function base.fade.Targets()
+	if container == nil or not container:IsShown() or container.built ~= MODE_FULL or container.cityMode then return 1, 0 end
+	local host = WorldMapFrame:GetMapID()
+	local hostLeft, hostRight, hostTop, hostBottom = GetSpaceRect(host)
+	local scroll = WorldMapFrame.ScrollContainer
+	local scale = scroll:GetCanvasScale()
+	local width, height = scroll.Child:GetSize()
+	local x, y = scroll:GetCurrentScrollX(), scroll:GetCurrentScrollY()
+	if hostLeft == nil or hostRight <= hostLeft or hostBottom <= hostTop or x == nil or y == nil or scale == nil or scale <= 0 or width == nil or width <= 0 or height == nil or height <= 0 then return 1, 0 end
+	local viewWidth, viewHeight = scroll:GetWidth() / (scale * width), scroll:GetHeight() / (scale * height)
+	if viewWidth <= 0 or viewHeight <= 0 then return 1, 0 end
+	local space = container.space
+	local u, v = (x - hostLeft) / (hostRight - hostLeft), (y - hostTop) / (hostBottom - hostTop)
+	local continentID = GetContinent(host)
+	for _, id in ipairs(CONTINENTS) do
+		local entry = base.continents[id]
+		local left, right, top, bottom = RectOn(id, space)
+		if SPACE_OF[id] == space and entry and entry.drawn and left ~= nil and u >= left and u <= right and v >= top and v <= bottom then
+			continentID = id
+			break
+		end
+	end
+
+	local fade = base.fade
+	local spaceFill = fade.Fill(space, space, hostLeft, hostRight, hostTop, hostBottom, viewWidth, viewHeight) or 1
+	local continentFill = continentID and fade.Fill(space, continentID, hostLeft, hostRight, hostTop, hostBottom, viewWidth, viewHeight) or spaceFill
+	local continent = space == WORLD and fade.Smooth(spaceFill, fade.continentRange) or 1
+	local detail = fade.Smooth(continentFill, fade.detailRange)
+
+	return math.floor(detail * fade.round + 0.5) / fade.round, math.floor(continent * fade.round + 0.5) / fade.round
+end
+
+function base.fade.Apply()
+	local fade = base.fade
+	if container == nil or fade.appliedDetail == fade.detail and fade.appliedContinent == fade.continent then return end
+	local continentShown = (fade.appliedContinent or 0) > 0
+	fade.appliedDetail, fade.appliedContinent = fade.detail, fade.continent
+	for _, list in ipairs({unders, zones, cities}) do
+		for _, art in pairs(list) do
+			art.frame:SetAlpha(fade.detail)
+		end
+	end
+
+	for _, texture in pairs(base.extra) do
+		texture:SetAlpha(fade.detail)
+	end
+
+	if MinimapLayer.frame ~= nil and MinimapLayer.alpha ~= nil then MinimapLayer.frame:SetAlpha(MinimapLayer.alpha * fade.detail) end
+	for _, city in pairs(MinimapLayer.cityOverlays or {}) do
+		if city.terrain then city.terrain:SetAlpha((MinimapLayer.cityAlpha or 1) * fade.detail) end
+	end
+
+	for continentID, entry in pairs(base.continents) do
+		if continentID ~= container.space then
+			for _, texture in pairs(entry.pool) do
+				texture:SetAlpha(fade.continent)
+			end
+		end
+	end
+
+	if continentShown ~= (fade.continent > 0) and base.shown ~= nil then ShowBase(base.shown) end
+end
+
+function base.fade.Update()
+	base.fade.detail, base.fade.continent = base.fade.Targets()
+	base.fade.Apply()
+end
+
 local function Update(force)
 	if container == nil then return end
 	local mapID = WorldMapFrame:GetMapID()
@@ -1405,6 +1499,7 @@ local function Update(force)
 	if force or container.built ~= mode or container.space ~= space then
 		container.signature = nil
 		if not Build(mode, space) then return end
+		base.fade.appliedDetail = nil
 		MinimapLayer.explorationSignature = nil
 		MinimapLayer.HideAll()
 	end
@@ -1432,6 +1527,7 @@ local function Update(force)
 
 	base.ApplyLevels(child:GetFrameLevel() + FRAME_LEVEL_OFFSET, GetEmbeddedCityStyle(mapID) ~= nil)
 	container:Show()
+	base.fade.Update()
 	MinimapLayer.signature = nil
 	base.cull.dirty = true
 	base.cull.switchUntil = GetTime() + base.cull.switchWindow
@@ -1448,6 +1544,7 @@ end
 
 function MapUtils:UpdateZoneDetailView()
 	if container == nil or MinimapLayer.frame == nil then return end
+	base.fade.Update()
 	MinimapLayer.Update()
 	MinimapLayer.UpdateCityDetail(true)
 	base.cull.Run()
@@ -2278,9 +2375,10 @@ function MinimapLayer.Update()
 		MinimapLayer.signature = nil
 	end
 
-	MinimapLayer.frame:SetAlpha(alpha)
+	MinimapLayer.alpha, MinimapLayer.cityAlpha = alpha, cityAlpha
+	MinimapLayer.frame:SetAlpha(alpha * base.fade.detail)
 	for _, city in pairs(MinimapLayer.cityOverlays) do
-		city.terrain:SetAlpha(cityAlpha)
+		city.terrain:SetAlpha(cityAlpha * base.fade.detail)
 	end
 end
 
@@ -2502,6 +2600,7 @@ local function Install()
 	WorldMapFrame.ScrollContainer:HookScript(
 		"OnUpdate",
 		MapUtils.Profile("zonedetail OnUpdate", function()
+			base.fade.Update()
 			MinimapLayer.Update()
 			MinimapLayer.UpdateCityDetail()
 			SyncBlizzardArt()
