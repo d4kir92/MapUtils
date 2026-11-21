@@ -1526,7 +1526,7 @@ function D4:GetInspectILvl(unit)
     for _, slotId in ipairs(slots) do
         local itemLink = GetInventoryItemLink(unit, slotId)
         if itemLink then
-            local _, _, _, itemLevel = GetItemInfo(itemLink)
+            local _, _, _, itemLevel = D4:GetItemInfo(itemLink)
             if itemLevel and itemLevel > 0 then
                 totalLevel = totalLevel + itemLevel
                 itemCount = itemCount + 1
