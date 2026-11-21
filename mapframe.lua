@@ -1728,6 +1728,10 @@ local CombatPins = {
 	}),
 }
 
+function CombatPins.IsGamepad()
+	return InputUtil ~= nil and InputUtil.IsGamepadUIEnabled ~= nil and InputUtil.IsGamepadUIEnabled() == true
+end
+
 function CombatPins.Wait(pin, key, ...)
 	local entry = CombatPins.waiting[pin] or {}
 	CombatPins.waiting[pin] = entry
@@ -1769,6 +1773,7 @@ function CombatPins.Point(value)
 end
 
 function CombatPins.PointPool(pool)
+	if CombatPins.IsGamepad() then return end
 	for _, enumerate in ipairs({"EnumerateActive", "EnumerateInactive"}) do
 		if type(pool[enumerate]) == "function" then
 			local ok, iterator, state, start = pcall(pool[enumerate], pool)
@@ -1782,6 +1787,7 @@ function CombatPins.PointPool(pool)
 end
 
 function CombatPins.ScanPools()
+	if CombatPins.IsGamepad() then return end
 	for _, pool in pairs(frame.pinPools or {}) do
 		if not CombatPins.seen[pool] then
 			CombatPins.seen[pool] = true
@@ -1792,6 +1798,7 @@ end
 
 function CombatPins.Sweep()
 	CombatPins.sweepSoon = false
+	if CombatPins.IsGamepad() then return end
 	for _, value in pairs(_G) do
 		CombatPins.Point(value)
 	end
@@ -1864,7 +1871,7 @@ end
 
 function SmoothZoom.InstallCursorFix()
 	local container = WheelZoom.container
-	if container == nil or type(container.GetCursorPosition) ~= "function" then return end
+	if container == nil or type(container.GetCursorPosition) ~= "function" or MapUtils:IsForever() then return end
 	container.GetCursorPosition = SmoothZoom.ScaledCursorPosition
 end
 

@@ -117,6 +117,14 @@ local function Init()
 	if frame ~= nil then return true end
 	if BattlefieldMapFrame == nil then return false end
 	frame = BattlefieldMapFrame
+	local container = frame.ScrollContainer
+	if container ~= nil and type(container.CheckForEdgePan) == "function" and container.SetGamepadFocus ~= nil then
+		local checkForEdgePan = container.CheckForEdgePan
+		container.CheckForEdgePan = function(sel)
+			if sel.edgePanDistance ~= nil then return checkForEdgePan(sel) end
+		end
+	end
+
 	grip = MapUtils:CreateSizeGrip(frame, GRIP_SIZE)
 	grip:SetScript("OnMouseDown", StartSizing)
 	grip:SetScript("OnMouseUp", StopSizing)
