@@ -1554,6 +1554,14 @@ local function IsDesaturatedEntry(entry)
 	return entry.kind == "dungeon" and entry.entrance == "path" and entry.icon == nil and GetPathIcon() == nil
 end
 
+local SIMPLE_SPIRITHEALER_ICON = "Vehicle-TempleofKotmogu-GreenBall"
+local function GetSpiritHealerIcon()
+	local style = MapUtils:GetConfig("SPIRITHEALERSTYLE", "NORMAL")
+	if style == "SIMPLE" and IsAtlas(SIMPLE_SPIRITHEALER_ICON) then return SIMPLE_SPIRITHEALER_ICON end
+
+	return "Interface\\AddOns\\MapUtils\\media\\" .. (style == "CHIBI" and "spirithealer_chibi" or "spirithealer")
+end
+
 local SPLIT_ICON = {"dungeon", "raid"}
 local function GetEntryIcon(entry)
 	if entry.icon ~= nil then return entry.icon end
@@ -1562,7 +1570,7 @@ local function GetEntryIcon(entry)
 	if entry.kind == "dungeon" and entry.entrance == "both" then return SPLIT_ICON end
 	if entry.kind == "dungeon" then return GetDungeonIcon() end
 	if entry.kind == "meetingstone" then return MEETING_STONE_ICON end
-	if entry.kind == "spirithealer" then return "Interface\\AddOns\\MapUtils\\media\\" .. (MapUtils:GetConfig("SPIRITHEALERSTYLE", "NORMAL") == "CHIBI" and "spirithealer_chibi" or "spirithealer") end
+	if entry.kind == "spirithealer" then return GetSpiritHealerIcon() end
 	if entry.kind == "crossing" then return GetCrossingIcon(entry.up) end
 	if entry.kind == nil and MapUtils:GetConfig("PIERICONSTYLE", "NEW") == "PORTALS" then return GetIcon(entry.faction) end
 	if entry.kind == nil and (MAUTTAB == nil or MAUTTAB["icon"] == nil or MAUTTAB["icon"] == "") then
