@@ -1318,7 +1318,7 @@ local SmoothZoom = {
 	speed = 13,
 	snapLog = 0.002,
 	settleEpsilon = 0.0005,
-	centerDuration = 1.4,
+	centerDuration = 0.6,
 }
 
 function MapUtils:IsOneMap()

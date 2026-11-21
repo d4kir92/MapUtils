@@ -2636,8 +2636,12 @@ local function PiersEnabled(worldMap)
 	return MapUtils:GetConfig("MINIMAPPINS", true) == true
 end
 
+function PinCache.IsOpenMapStitched()
+	return OpenMapAPI ~= nil and OpenMapAPI.IsStitched ~= nil and OpenMapAPI.IsStitched() == true
+end
+
 local function DungeonsEnabled(worldMap)
-	if worldMap then return MapUtils:IsPinShownOnMap("DUNGEONWORLDMAPPINS", true) end
+	if worldMap then return not PinCache.IsOpenMapStitched() and MapUtils:IsPinShownOnMap("DUNGEONWORLDMAPPINS", true) end
 
 	return MapUtils:GetConfig("DUNGEONMINIMAPPINS", true) == true
 end
@@ -2649,7 +2653,7 @@ local function FlightsEnabled(worldMap)
 end
 
 local function MeetingStonesEnabled(worldMap)
-	if worldMap then return MapUtils:IsPinShownOnMap("MEETINGSTONEWORLDMAPPINS", true) end
+	if worldMap then return not PinCache.IsOpenMapStitched() and MapUtils:IsPinShownOnMap("MEETINGSTONEWORLDMAPPINS", true) end
 
 	return MapUtils:GetConfig("MEETINGSTONEMINIMAPPINS", true) == true
 end
