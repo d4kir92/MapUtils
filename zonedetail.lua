@@ -941,16 +941,6 @@ local function DrawTileLayer(pool, mapID, offsetX, offsetY, scale, drawLayer, ma
 	local layer = layers and layers[1]
 	local files = C_Map.GetMapArtLayerTextures(mapID, 1)
 	if layer == nil or files == nil then return false end
-	local edits = mapID == WORLD and MapUtils.WORLDARTEDITS
-	if edits then
-		local edited = {}
-		for index, fileID in pairs(files) do
-			edited[index] = edits[fileID] and "Interface\\AddOns\\MapUtils\\media\\worldart\\" .. edits[fileID] or fileID
-		end
-
-		files = edited
-	end
-
 	local cols = math.ceil(layer.layerWidth / layer.tileWidth)
 	local rows = math.ceil(layer.layerHeight / layer.tileHeight)
 	for row = 1, rows do
@@ -1041,7 +1031,7 @@ local function DrawContinent(continentID, refWidth, refHeight)
 	entry.edge:ClearAllPoints()
 	entry.edge:SetPoint("TOPLEFT", container, "TOPLEFT", left * refWidth, -top * refHeight)
 	if own and not DrawTileLayer(entry.pool, continentID, left * refWidth, top * refHeight, (right - left) * refWidth / layer.layerWidth, "BORDER", nil, entry.edge) then return nil end
-	if not own and layer.layerHeight ~= nil and layer.layerHeight > 0 then DrawTileLayer(entry.pool, continentID, left * refWidth, top * refHeight, (right - left) * refWidth / layer.layerWidth, "BORDER", nil, entry.edge, (bottom - top) * refHeight / layer.layerHeight) end
+	if not own and layer.layerHeight ~= nil and layer.layerHeight > 0 then DrawTileLayer(entry.pool, continentID, left * refWidth, top * refHeight, (right - left) * refWidth / layer.layerWidth, "BORDER", entry.mask, entry.edge, (bottom - top) * refHeight / layer.layerHeight) end
 	entry.drawn = true
 
 	return {left, right, top, bottom}
