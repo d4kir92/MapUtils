@@ -1729,7 +1729,7 @@ local CombatPins = {
 }
 
 function CombatPins.IsGamepad()
-	return InputUtil ~= nil and InputUtil.IsGamepadUIEnabled ~= nil and InputUtil.IsGamepadUIEnabled() == true
+	return C_InputInterfaceStyle ~= nil or InputUtil ~= nil and InputUtil.IsGamepadUIEnabled ~= nil and InputUtil.IsGamepadUIEnabled() == true
 end
 
 function CombatPins.Wait(pin, key, ...)
@@ -1820,7 +1820,7 @@ function CombatPins.Flush()
 end
 
 function MapUtils:InstallCombatPins()
-	if CombatPins.installed or frame == nil then return end
+	if CombatPins.installed or frame == nil or CombatPins.IsGamepad() then return end
 	CombatPins.passthrough = MapCanvasPinMixin and MapCanvasPinMixin.CheckMouseButtonPassthrough
 	if type(CombatPins.passthrough) ~= "function" then return end
 	local propagation = SuperTrackablePinMixin and SuperTrackablePinMixin.UpdateMousePropagation
