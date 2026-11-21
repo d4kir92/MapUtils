@@ -152,7 +152,7 @@ local base = {
 base.fade = {
 	["detail"] = 1,
 	["continent"] = 0,
-	["continentRange"] = {1.4, 2.2},
+	["continentRange"] = {1.05, 1.1},
 	["detailRange"] = {1.6, 2.6},
 	["round"] = 50
 }
