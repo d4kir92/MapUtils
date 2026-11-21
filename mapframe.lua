@@ -197,13 +197,11 @@ function MAP_SIZE.CreateBorder()
 	local border = CreateFrame("Frame", nil, frame)
 	border:SetAllPoints(frame)
 	border.back = CreateFrame("Frame", nil, border)
-	border.back:SetAllPoints(frame)
+	border.back:SetAllPoints(frame.ScrollContainer or frame)
 	border.bg = border.back:CreateTexture(nil, "BACKGROUND")
-	border.bg:SetPoint("TOPLEFT", 4, -4)
-	border.bg:SetPoint("BOTTOMRIGHT", -4, 4)
+	border.bg:SetAllPoints(border.back)
 	border.bg:SetColorTexture(0.05, 0.05, 0.05, 0.95)
 	NineSliceUtil.ApplyLayoutByName(border, "ButtonFrameTemplateNoPortrait")
-	MAP_SIZE.TrimBottom(border)
 	MAP_SIZE.border = border
 
 	return border
@@ -216,21 +214,6 @@ function MAP_SIZE.LevelBorder(border)
 	border:SetFrameLevel(containerLevel + MAP_SIZE.borderLift)
 	border.back:SetFrameStrata(strata)
 	border.back:SetFrameLevel(max(0, min(frame:GetFrameLevel(), containerLevel - 1)))
-end
-
-function MAP_SIZE.TrimBottom(border)
-	local rim = border.LeftEdge and border.LeftEdge:GetWidth()
-	if rim == nil or rim <= 0 then return end
-	for _, key in ipairs({"BottomEdge", "BottomLeftCorner", "BottomRightCorner"}) do
-		local piece = border[key]
-		local height = piece and piece:GetHeight()
-		if height ~= nil and height > rim then
-			local left, top, _, bottom, right = piece:GetTexCoord()
-			local share = rim / height
-			piece:SetHeight(rim)
-			piece:SetTexCoord(left, right, bottom - (bottom - top) * share, bottom)
-		end
-	end
 end
 
 function MAP_SIZE.RaiseButtons(custom)
@@ -278,9 +261,12 @@ function MAP_SIZE.LayoutFooter(custom)
 	if container == nil or (InCombatLockdown() and container:IsProtected()) then return end
 	MAP_SIZE.footerPoints = MAP_SIZE.footerPoints or {}
 	local inset = MAP_SIZE.footerInset
+	local border = MAP_SIZE.border
+	local left = border and border.LeftEdge and border.LeftEdge:GetWidth() or inset
+	local bottom = border and border.BottomEdge and border.BottomEdge:GetHeight() or inset
 	local targets = {
-		["TOPLEFT"] = function(_, y) return inset, y end,
-		["BOTTOMRIGHT"] = function() return -inset, inset end
+		["TOPLEFT"] = function(_, y) return max(inset, left), y end,
+		["BOTTOMRIGHT"] = function() return -inset, max(inset, bottom) end
 	}
 	local changed = false
 	for i = 1, container:GetNumPoints() do
