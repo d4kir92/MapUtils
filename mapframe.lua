@@ -203,6 +203,18 @@ function MAP_SIZE.CreateBorder()
 	border.bg = border.back:CreateTexture(nil, "BACKGROUND")
 	border.bg:SetAllPoints(border.back)
 	border.bg:SetColorTexture(0.05, 0.05, 0.05, 0.95)
+	if frame.ScrollContainer ~= nil then
+		border.headerBg = border.back:CreateTexture(nil, "BACKGROUND")
+		border.headerBg:SetPoint("BOTTOMLEFT", frame.ScrollContainer, "TOPLEFT", 0, 0)
+		border.headerBg:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -2, -2)
+		border.headerBg:SetColorTexture(0.05, 0.05, 0.05, 0.95)
+	end
+	if border.headerBg ~= nil and C_Texture.GetAtlasInfo("_UI-Frame-TitleTileBg") ~= nil then
+		border.titleBg = border.back:CreateTexture(nil, "BACKGROUND", nil, 1)
+		border.titleBg:SetAtlas("_UI-Frame-TitleTileBg", true)
+		border.titleBg:SetPoint("TOPLEFT", border.headerBg, "TOPLEFT", 0, -1)
+		border.titleBg:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -25, -3)
+	end
 	NineSliceUtil.ApplyLayoutByName(border, "ButtonFrameTemplateNoPortrait")
 	MAP_SIZE.border = border
 
@@ -218,10 +230,21 @@ function MAP_SIZE.LevelBorder(border)
 	border.back:SetFrameLevel(max(0, min(frame:GetFrameLevel(), containerLevel - 1)))
 end
 
+function MAP_SIZE.ResolveLayout()
+	local close = WorldMapFrameCloseButton
+	if close == nil or not frame:IsShown() or IsLocked() or applying or dragging or sizing ~= nil then return end
+	local left, top = GetPos()
+	if left == nil then return end
+	applying = true
+	SetPos(left, top)
+	applying = false
+end
+
 function MAP_SIZE.RaiseButtons(custom)
 	local border = MAP_SIZE.border
-	if not custom or border == nil then return end
-	local level = border:GetFrameLevel() + 2
+	local cover = custom and border or frame.BorderFrame
+	if cover == nil then return end
+	local level = cover:GetFrameLevel() + 2
 	local arrow = frame.MaximizeMinimizeFrame
 	local buttons = {WorldMapFrameCloseButton, arrow}
 	if arrow ~= nil then
@@ -284,9 +307,12 @@ function MAP_SIZE.LayoutFooter(custom)
 					changed = true
 				end
 			elseif saved ~= nil then
-				container:SetPoint(unpack(saved))
+				local tx, ty = target(x, saved[5])
+				if x == tx and y == ty then
+					container:SetPoint(unpack(saved))
+					changed = true
+				end
 				MAP_SIZE.footerPoints[point] = nil
-				changed = true
 			end
 		end
 	end
@@ -305,8 +331,11 @@ function MAP_SIZE.LayoutCloseButton(custom)
 		close:ClearAllPoints()
 		close:SetPoint("TOPRIGHT", frame, "TOPRIGHT", 4, 5)
 	elseif MAP_SIZE.closePoint ~= nil then
-		close:ClearAllPoints()
-		close:SetPoint(unpack(MAP_SIZE.closePoint))
+		local point, relativeTo, _, x, y = close:GetPoint(1)
+		if point == "TOPRIGHT" and relativeTo == frame and x == 4 and y == 5 then
+			close:ClearAllPoints()
+			close:SetPoint(unpack(MAP_SIZE.closePoint))
+		end
 		MAP_SIZE.closePoint = nil
 	end
 end
@@ -1052,6 +1081,11 @@ if frame ~= nil then
 			end
 			Apply()
 			MAP_SIZE.LayoutBorder()
+			C_Timer.After(0, function()
+				MAP_SIZE.LayoutBorder()
+				MAP_SIZE.ResolveLayout()
+			end)
+			C_Timer.After(0.1, MAP_SIZE.ResolveLayout)
 		end)
 	end
 	frame:HookScript("OnShow", function()
@@ -1059,6 +1093,8 @@ if frame ~= nil then
 		MAP_SIZE.LayoutBorder()
 		MAP_SIZE.CheckCanvas()
 		if MAP_SIZE.canvasPending then C_Timer.After(0, MAP_SIZE.CheckCanvas) end
+		C_Timer.After(0, MAP_SIZE.ResolveLayout)
+		C_Timer.After(0.1, MAP_SIZE.ResolveLayout)
 	end)
 	if frame.ScrollContainer ~= nil then frame.ScrollContainer:HookScript("OnSizeChanged", MAP_SIZE.CheckCanvas) end
 	frame:HookScript("OnSizeChanged", function() Apply() end)
