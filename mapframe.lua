@@ -236,8 +236,14 @@ function MAP_SIZE.ResolveLayout()
 	local left, top = GetPos()
 	if left == nil then return end
 	applying = true
-	SetPos(left, top)
+	SetPos(left + 1, top)
 	applying = false
+	C_Timer.After(0.5, function()
+		if dragging or sizing ~= nil or IsLocked() then return end
+		applying = true
+		SetPos(left, top)
+		applying = false
+	end)
 end
 
 function MAP_SIZE.RaiseButtons(custom)
