@@ -7,6 +7,9 @@ local MAP_SIZE = {
 	["minWidth"] = 500,
 	["minHeight"] = 300,
 	["custom"] = false,
+	["buttonInner"] = 0.6,
+	["footerInset"] = 2,
+	["borderLift"] = 500,
 	["detailsInset"] = 0
 }
 local frame = WorldMapFrame
@@ -170,9 +173,210 @@ function MAP_SIZE.Set(w, h)
 	local width = w + MAP_SIZE.QuestExtra()
 	if math.abs(frame:GetWidth() - width) <= SCALE_EPSILON and math.abs(frame:GetHeight() - h) <= SCALE_EPSILON then return false end
 	frame:SetSize(width, h)
-	if frame.OnFrameSizeChanged then frame:OnFrameSizeChanged() end
+	MAP_SIZE.LayoutBorder()
+	MAP_SIZE.SyncCanvas()
 
 	return true
+end
+
+function MAP_SIZE.BorderParts()
+	if MAP_SIZE.borderParts ~= nil then return MAP_SIZE.borderParts end
+	local parts = {}
+	for _, region in ipairs({frame.BorderFrame:GetRegions()}) do
+		if region:GetObjectType() == "Texture" then tinsert(parts, region) end
+	end
+	if MiniBorderLeft ~= nil then tinsert(parts, MiniBorderLeft) end
+	if MiniBorderRight ~= nil then tinsert(parts, MiniBorderRight) end
+	MAP_SIZE.borderParts = parts
+
+	return parts
+end
+
+function MAP_SIZE.CreateBorder()
+	if MAP_SIZE.border ~= nil then return MAP_SIZE.border end
+	local border = CreateFrame("Frame", nil, frame)
+	border:SetAllPoints(frame)
+	border.back = CreateFrame("Frame", nil, border)
+	border.back:SetAllPoints(frame)
+	border.bg = border.back:CreateTexture(nil, "BACKGROUND")
+	border.bg:SetPoint("TOPLEFT", 4, -4)
+	border.bg:SetPoint("BOTTOMRIGHT", -4, 4)
+	border.bg:SetColorTexture(0.05, 0.05, 0.05, 0.95)
+	NineSliceUtil.ApplyLayoutByName(border, "ButtonFrameTemplateNoPortrait")
+	MAP_SIZE.TrimBottom(border)
+	MAP_SIZE.border = border
+
+	return border
+end
+
+function MAP_SIZE.LevelBorder(border)
+	local containerLevel = frame.ScrollContainer and frame.ScrollContainer:GetFrameLevel() or frame:GetFrameLevel()
+	local strata = frame:GetFrameStrata()
+	border:SetFrameStrata(strata)
+	border:SetFrameLevel(containerLevel + MAP_SIZE.borderLift)
+	border.back:SetFrameStrata(strata)
+	border.back:SetFrameLevel(max(0, min(frame:GetFrameLevel(), containerLevel - 1)))
+end
+
+function MAP_SIZE.TrimBottom(border)
+	local rim = border.LeftEdge and border.LeftEdge:GetWidth()
+	if rim == nil or rim <= 0 then return end
+	for _, key in ipairs({"BottomEdge", "BottomLeftCorner", "BottomRightCorner"}) do
+		local piece = border[key]
+		local height = piece and piece:GetHeight()
+		if height ~= nil and height > rim then
+			local left, top, _, bottom, right = piece:GetTexCoord()
+			local share = rim / height
+			piece:SetHeight(rim)
+			piece:SetTexCoord(left, right, bottom - (bottom - top) * share, bottom)
+		end
+	end
+end
+
+function MAP_SIZE.RaiseButtons(custom)
+	local border = MAP_SIZE.border
+	if not custom or border == nil then return end
+	local level = border:GetFrameLevel() + 2
+	local arrow = frame.MaximizeMinimizeFrame
+	local buttons = {WorldMapFrameCloseButton, arrow}
+	if arrow ~= nil then
+		tinsert(buttons, arrow.MaximizeButton)
+		tinsert(buttons, arrow.MinimizeButton)
+		tinsert(buttons, arrow.MapUtilsFullscreenButton)
+	end
+	for _, button in pairs(buttons) do
+		if button ~= nil and button:GetFrameLevel() < level and not (InCombatLockdown() and button:IsProtected()) then button:SetFrameLevel(level) end
+	end
+	if MapUtils.LayoutMapMenuButton ~= nil then MapUtils:LayoutMapMenuButton() end
+end
+
+function MAP_SIZE.LayoutBorder()
+	if frame.MiniBorderFrame == nil or frame.BorderFrame == nil or NineSliceUtil == nil or NineSliceUtil.GetLayout == nil or NineSliceUtil.GetLayout("ButtonFrameTemplateNoPortrait") == nil then return end
+	local custom = MAP_SIZE.CanResize() or MapUtils:IsWorldMapFullscreen()
+	if not custom and MAP_SIZE.border == nil then return end
+	for _, region in ipairs(MAP_SIZE.BorderParts()) do
+		region:SetAlpha(custom and 0 or 1)
+	end
+	local border = MAP_SIZE.CreateBorder()
+	border:SetShown(custom)
+	if custom then MAP_SIZE.LevelBorder(border) end
+	MAP_SIZE.LayoutCloseButton(custom)
+	MAP_SIZE.LayoutFooter(custom)
+	MAP_SIZE.RaiseButtons(custom)
+	if grip ~= nil then
+		grip:ClearAllPoints()
+		if custom then
+			grip:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", 0, 4)
+		else
+			grip:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", 2, -2)
+		end
+	end
+end
+
+function MAP_SIZE.LayoutFooter(custom)
+	local container = frame.ScrollContainer
+	if container == nil or (InCombatLockdown() and container:IsProtected()) then return end
+	MAP_SIZE.footerPoints = MAP_SIZE.footerPoints or {}
+	local inset = MAP_SIZE.footerInset
+	local targets = {
+		["TOPLEFT"] = function(_, y) return inset, y end,
+		["BOTTOMRIGHT"] = function() return -inset, inset end
+	}
+	local changed = false
+	for i = 1, container:GetNumPoints() do
+		local point, relativeTo, relativePoint, x, y = container:GetPoint(i)
+		local target = targets[point]
+		if target ~= nil then
+			local saved = MAP_SIZE.footerPoints[point]
+			if custom then
+				local tx, ty = target(x, saved and saved[5] or y)
+				if saved == nil or x ~= tx or y ~= ty then MAP_SIZE.footerPoints[point] = {point, relativeTo, relativePoint, x, y} end
+				if x ~= tx or y ~= ty then
+					container:SetPoint(point, relativeTo, relativePoint, tx, ty)
+					changed = true
+				end
+			elseif saved ~= nil then
+				container:SetPoint(unpack(saved))
+				MAP_SIZE.footerPoints[point] = nil
+				changed = true
+			end
+		end
+	end
+	if changed then MAP_SIZE.SyncCanvas() end
+end
+
+function MAP_SIZE.LayoutCloseButton(custom)
+	local close = WorldMapFrameCloseButton
+	if close == nil or (InCombatLockdown() and close:IsProtected()) then return end
+	if custom then
+		if MAP_SIZE.closePoint == nil then
+			local point, relativeTo, relativePoint, x, y = close:GetPoint(1)
+			if point == nil then return end
+			MAP_SIZE.closePoint = {point, relativeTo, relativePoint, x, y}
+		end
+		close:ClearAllPoints()
+		close:SetPoint("TOPRIGHT", frame, "TOPRIGHT", 4, 5)
+	elseif MAP_SIZE.closePoint ~= nil then
+		close:ClearAllPoints()
+		close:SetPoint(unpack(MAP_SIZE.closePoint))
+		MAP_SIZE.closePoint = nil
+	end
+end
+
+function MAP_SIZE.SyncCanvas()
+	if frame.OnFrameSizeChanged == nil then return end
+	MAP_SIZE.canvasPending = true
+	if not frame:IsVisible() then return end
+	local container = frame.ScrollContainer
+	if container ~= nil then
+		local w, h = container:GetSize()
+		if w == nil or h == nil or w <= 0 or h <= 0 then return end
+	end
+
+	MAP_SIZE.canvasPending = false
+	frame:OnFrameSizeChanged()
+end
+
+function MAP_SIZE.AnchoredSize(container)
+	local left, top, right, bottom
+	for i = 1, container:GetNumPoints() do
+		local point, relativeTo, relativePoint, x, y = container:GetPoint(i)
+		if relativeTo == frame and point == relativePoint then
+			if point == "TOPLEFT" then left, top = x, y end
+			if point == "BOTTOMRIGHT" then right, bottom = x, y end
+		end
+	end
+	if left == nil or right == nil then return 0, 0 end
+
+	return frame:GetWidth() - left + right, frame:GetHeight() + top - bottom
+end
+
+function MAP_SIZE.InstallSizeFallback()
+	local container = frame.ScrollContainer
+	if container == nil or frame.MiniBorderFrame == nil or MAP_SIZE.nativeWidth ~= nil then return end
+	MAP_SIZE.nativeWidth, MAP_SIZE.nativeHeight = container.GetWidth, container.GetHeight
+	container.GetWidth = function(self)
+		local width = MAP_SIZE.nativeWidth(self)
+		if width > 0 then return width end
+		local anchored = MAP_SIZE.AnchoredSize(self)
+
+		return max(0, anchored)
+	end
+
+	container.GetHeight = function(self)
+		local height = MAP_SIZE.nativeHeight(self)
+		if height > 0 then return height end
+		local _, anchored = MAP_SIZE.AnchoredSize(self)
+
+		return max(0, anchored)
+	end
+end
+
+function MAP_SIZE.CheckCanvas()
+	local container = frame.ScrollContainer
+	local base = container and container.baseScale
+	if base ~= nil and not (base > 0 and base < math.huge) then MAP_SIZE.canvasPending = true end
+	if MAP_SIZE.canvasPending then MAP_SIZE.SyncCanvas() end
 end
 
 function MAP_SIZE.Apply()
@@ -184,6 +388,7 @@ function MAP_SIZE.Apply()
 	elseif MAP_SIZE.custom then
 		MAP_SIZE.custom = false
 		MAP_SIZE.Set(frame.minimizedWidth, frame.minimizedHeight)
+		MAP_SIZE.LayoutBorder()
 	end
 
 	MapUtils:LayoutQuestDetails()
@@ -278,7 +483,7 @@ local function Apply()
 		local sizeChanged = math.abs(frame:GetWidth() - width) > SCALE_EPSILON or math.abs(frame:GetHeight() - height) > SCALE_EPSILON
 		if sizeChanged then frame:SetSize(width, height) end
 		SetPos(0, UIParent:GetHeight())
-		if sizeChanged and frame.OnFrameSizeChanged then frame:OnFrameSizeChanged() end
+		if sizeChanged then MAP_SIZE.SyncCanvas() end
 		applying = false
 		UpdateGrip()
 		return
@@ -528,7 +733,8 @@ local function HookDrag(region)
 		MAP_SIZE.dragRegions[#MAP_SIZE.dragRegions + 1] = name .. " = no mouse"
 		return
 	end
-	if region:GetScript("OnDragStart") or region:GetScript("OnDragStop") then
+	local blizzard = region == WorldMapTitleButton and region:GetScript("OnDragStart") == WorldMapTitleButton_OnDragStart
+	if not blizzard and (region:GetScript("OnDragStart") or region:GetScript("OnDragStop")) then
 		MAP_SIZE.dragRegions[#MAP_SIZE.dragRegions + 1] = name .. " = foreign drag script"
 		foreignMove = true
 		return
@@ -606,17 +812,32 @@ function MapUtils:IsClassicWorldMapSkinned()
 end
 
 local function CreateFullscreenButton()
-	local arrow = frame.BorderFrame and frame.BorderFrame.MaximizeMinimizeFrame
-	if not arrow or not arrow.Maximize or not arrow.Minimize or not frame.UpdateMaximizedSize or not frame.SynchronizeDisplayState then return end
+	local arrow = frame.BorderFrame and frame.BorderFrame.MaximizeMinimizeFrame or frame.MaximizeMinimizeFrame
+	if not arrow or not arrow.Maximize or not arrow.Minimize or not frame.SynchronizeDisplayState then return end
 
 	local button = CreateFrame("Button", nil, arrow, "UIPanelCloseButton")
 	arrow.MapUtilsFullscreenButton = button
 	function MapUtils:LayoutWorldMapFullscreenButton()
 		if self.IsSimpleMapFrameActive ~= nil and self:IsSimpleMapFrameActive() then return end
 		local gap = self:IsClassicWorldMapSkinned() and 8 or -2
+		local anchor = arrow
 		button:SetSize(arrow:GetSize())
+		if frame.MiniBorderFrame ~= nil then
+			local visible = arrow.MaximizeButton
+			if visible == nil or not visible:IsShown() then visible = arrow.MinimizeButton or visible end
+			local close = WorldMapFrameCloseButton
+			if visible ~= nil and close ~= nil then
+				local w, h = close:GetSize()
+				local pad = w * (1 - MAP_SIZE.buttonInner) / 2
+				local spacing = 4
+				if close:GetLeft() ~= nil and visible:GetRight() ~= nil then spacing = max(0, close:GetLeft() - visible:GetRight() + pad * 2) end
+				anchor = visible
+				button:SetSize(w * MAP_SIZE.buttonInner, h * MAP_SIZE.buttonInner)
+				gap = pad - spacing
+			end
+		end
 		button:ClearAllPoints()
-		button:SetPoint("RIGHT", arrow, "LEFT", gap, 0)
+		button:SetPoint("RIGHT", anchor, "LEFT", gap, 0)
 	end
 
 	MapUtils:LayoutWorldMapFullscreenButton()
@@ -746,7 +967,7 @@ local function CreateFullscreenButton()
 	local function RefreshArtwork()
 		local fullscreen = MapUtils:IsWorldMapFullscreen()
 		local classic = MapUtils:IsClassicWorldMapSkinned()
-		if classic or classicSkin then MapUtils:LayoutWorldMapFullscreenButton() end
+		if classic or classicSkin or frame.MiniBorderFrame ~= nil then MapUtils:LayoutWorldMapFullscreenButton() end
 		if classicSkin ~= classic then
 			classicSkin = classic
 			LayoutCorners(classic)
@@ -804,7 +1025,11 @@ local function CreateFullscreenButton()
 			local wasMaximized = fullscreenWasMaximized
 			fullscreenWasMaximized = nil
 			if wasMaximized then
-				frame:UpdateMaximizedSize()
+				if frame.UpdateMaximizedSize ~= nil then
+					frame:UpdateMaximizedSize()
+				else
+					frame:SynchronizeDisplayState()
+				end
 			else
 				arrow:Minimize()
 			end
@@ -813,11 +1038,14 @@ local function CreateFullscreenButton()
 			if not fullscreenWasMaximized then arrow:Maximize() end
 		end
 		Apply()
+		MAP_SIZE.LayoutBorder()
 		RefreshArtwork()
 	end)
-	hooksecurefunc(frame, "UpdateMaximizedSize", function()
-		if fullscreenWasMaximized ~= nil then Apply() end
-	end)
+	if frame.UpdateMaximizedSize ~= nil then
+		hooksecurefunc(frame, "UpdateMaximizedSize", function()
+			if fullscreenWasMaximized ~= nil then Apply() end
+		end)
+	end
 end
 
 if frame ~= nil then
@@ -826,6 +1054,7 @@ if frame ~= nil then
 		frame.BlackoutFrame:EnableMouse(false)
 	end
 	CreateGrip()
+	MAP_SIZE.InstallSizeFallback()
 	hooksecurefunc(frame, "SetPoint", OnBlizzardPoint)
 	CreateFullscreenButton()
 	if frame.SynchronizeDisplayState ~= nil then
@@ -834,9 +1063,16 @@ if frame ~= nil then
 				fullscreenWasMaximized = nil
 			end
 			Apply()
+			MAP_SIZE.LayoutBorder()
 		end)
 	end
-	frame:HookScript("OnShow", Apply)
+	frame:HookScript("OnShow", function()
+		Apply()
+		MAP_SIZE.LayoutBorder()
+		MAP_SIZE.CheckCanvas()
+		if MAP_SIZE.canvasPending then C_Timer.After(0, MAP_SIZE.CheckCanvas) end
+	end)
+	if frame.ScrollContainer ~= nil then frame.ScrollContainer:HookScript("OnSizeChanged", MAP_SIZE.CheckCanvas) end
 	frame:HookScript("OnSizeChanged", function() Apply() end)
 	if frame.OnFrameSizeChanged ~= nil then hooksecurefunc(frame, "OnFrameSizeChanged", function() MapUtils:LayoutQuestDetails() end) end
 	if frame.SidePanelToggle ~= nil then
@@ -2040,7 +2276,7 @@ end
 
 local MapView = {}
 function MapView.ReleaseMap()
-	if C_InputInterfaceStyle == nil or frame == nil or frame.mapID == nil or MapUtil == nil or MapUtil.GetDisplayableMapForPlayer == nil then return end
+	if C_InputInterfaceStyle == nil or not MapUtils:IsForever() or frame == nil or frame.mapID == nil or MapUtil == nil or MapUtil.GetDisplayableMapForPlayer == nil then return end
 	local released = MapUtil.GetDisplayableMapForPlayer() == 947 and 1414 or 947
 	if frame:GetMapID() == released then return end
 	frame.mapID = released

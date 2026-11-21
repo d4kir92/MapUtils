@@ -192,10 +192,19 @@ function ZoneInfo.Create()
 	return frame
 end
 
+function ZoneInfo.CursorPosition()
+	local container = WorldMapFrame.ScrollContainer
+	if container == nil or WorldMapFrame.GetNormalizedCursorPosition == nil or container.GetCanvasScale == nil or container.Child == nil then return nil end
+	local scale = container:GetCanvasScale()
+	if scale == nil or scale <= 0 or container.Child:GetLeft() == nil or container.Child:GetTop() == nil then return nil end
+
+	return WorldMapFrame:GetNormalizedCursorPosition()
+end
+
 function ZoneInfo.GetZoneID(mapID)
 	local container = WorldMapFrame.ScrollContainer
 	if container == nil or not container:IsMouseOver() or WorldMapFrame.GetNormalizedCursorPosition == nil or C_Map.GetMapInfoAtPosition == nil then return mapID end
-	local x, y = WorldMapFrame:GetNormalizedCursorPosition()
+	local x, y = ZoneInfo.CursorPosition()
 	if x == nil or y == nil then return mapID end
 	local info = C_Map.GetMapInfoAtPosition(mapID, x, y)
 	if info == nil or info.mapID == nil then return mapID end
@@ -230,7 +239,7 @@ function ZoneInfo.FindAreaName(mapID, zoneID)
 	if C_MapExplorationInfo == nil or C_MapExplorationInfo.GetExploredAreaIDsAtPosition == nil or C_Map.GetAreaInfo == nil or CreateVector2D == nil then return nil end
 	local container = WorldMapFrame.ScrollContainer
 	if container == nil or not container:IsMouseOver() or WorldMapFrame.GetNormalizedCursorPosition == nil then return nil end
-	local x, y = WorldMapFrame:GetNormalizedCursorPosition()
+	local x, y = ZoneInfo.CursorPosition()
 	if x == nil or y == nil then return nil end
 	if zoneID ~= mapID then
 		if C_Map.GetMapRectOnMap == nil then return nil end
@@ -253,7 +262,7 @@ end
 
 function ZoneInfo.GetAreaName(mapID, zoneID)
 	if mapID == nil or zoneID == nil then return nil end
-	local x, y = WorldMapFrame:GetNormalizedCursorPosition()
+	local x, y = ZoneInfo.CursorPosition()
 	local key = format("%s|%s|%s|%s", mapID, zoneID, tostring(x), tostring(y))
 	if ZoneInfo.areaKey ~= key then
 		ZoneInfo.areaKey = key
@@ -377,8 +386,8 @@ function ZoneInfo.Update()
 	ZoneInfo.hovered = false
 	local label = ZoneInfo.label
 	local labelInfo = label and label.GetHighestPriorityLabelInfo and label:GetHighestPriorityLabelInfo()
-	local x, y = WorldMapFrame:GetNormalizedCursorPosition()
 	local container = WorldMapFrame.ScrollContainer
+	local x, y = ZoneInfo.CursorPosition()
 	local changed = ZoneInfo.Changed(WorldMapFrame:GetMapID(), container ~= nil and container:IsMouseOver(), x, y, labelInfo or false, labelInfo and labelInfo.name or false, MapUtils.IsMapEditMode ~= nil and MapUtils:IsMapEditMode() or false, MapUtils:GetConfig("ZONELEVELS", true), MapUtils:GetConfig("ZONERECLEVELS", true), MapUtils:GetConfig("FISHINGLEVELS", true), MapUtils:GetConfig("LEGACYPROGRESS", true), MapUtils.GetLegacyProgressVersion ~= nil and MapUtils:GetLegacyProgressVersion() or 0)
 	if not changed and ZoneInfo.key ~= nil then return end
 	local title, body = ZoneInfo.GetLabelContent()
