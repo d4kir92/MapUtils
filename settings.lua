@@ -336,6 +336,8 @@ local function HandleSlash(args)
 		MapUtils:PrintTransports()
 	elseif sub == "shiplog" and MapUtils.ToggleTransportLog ~= nil then
 		MapUtils:ToggleTransportLog()
+	elseif sub == "taint" and MapUtils.PrintTaintReport ~= nil then
+		MapUtils:PrintTaintReport()
 	else
 		MapUtils:ToggleSettings()
 	end

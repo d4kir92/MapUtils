@@ -1039,3 +1039,118 @@ function MapUtils:PrintDebugHelp()
 	self:INFO("Gefilterte Symbol-Diagnosen und Datenabfragen werden gespeichert; /reload oder Ausloggen schreibt sie in SavedVariables/MapUtils.lua.")
 	self:INFO("/mapdocks unterstützt dieselben Befehle wie /mappins.")
 end
+
+function MapUtils:PrintTaintReport()
+	if type(issecurevariable) ~= "function" then return end
+	local counts, seen, others = {}, {}, {}
+	local function Add(line)
+		counts[line] = (counts[line] or 0) + 1
+	end
+
+	local function Check(label, tab)
+		if type(tab) ~= "table" or seen[tab] then return end
+		seen[tab] = true
+		for key, value in pairs(tab) do
+			if type(key) == "string" then
+				local ok, secure, owner = pcall(issecurevariable, tab, key)
+				if ok and not secure then
+					if owner == "MapUtils" then
+						Add(label .. "." .. key .. " (" .. type(value) .. ")")
+					elseif owner ~= nil then
+						others[owner] = (others[owner] or 0) + 1
+					end
+				end
+			end
+		end
+	end
+
+	local map = WorldMapFrame
+	if map ~= nil then
+		Check("WorldMapFrame", map)
+		Check("WorldMapFrame.ScrollContainer", map.ScrollContainer)
+		Check("WorldMapFrame.ScrollContainer.Child", map.ScrollContainer and map.ScrollContainer.Child)
+		Check("WorldMapFrame.BorderFrame", map.BorderFrame)
+		Check("WorldMapFrame.CloseButton", map.CloseButton)
+		Check("WorldMapFrame.currentPoIPins", map.currentPoIPins)
+		for provider in pairs(map.dataProviders or {}) do
+			Check("dataProvider", provider)
+		end
+
+		for index, overlay in ipairs(map.overlayFrames or {}) do
+			Check("overlayFrame " .. index, overlay)
+		end
+
+		for template, pool in pairs(map.pinPools or {}) do
+			Check("pool " .. tostring(template), pool)
+			if pool.EnumerateActive ~= nil then
+				for pin in pool:EnumerateActive() do
+					Check("pin " .. tostring(template), pin)
+				end
+			end
+		end
+	end
+
+	for name, value in pairs(_G) do
+		if type(name) == "string" then
+			local ok, secure, owner = pcall(issecurevariable, name)
+			if ok and not secure and owner == "MapUtils" and strfind(name, "^MapUtils") == nil and strfind(name, "^MAUT") == nil and strfind(name, "^LID_") == nil and strfind(name, "^BINDING_") == nil and strfind(name, "^SLASH_") == nil then Add("_G." .. name .. " (" .. type(value) .. ")") end
+			if type(value) == "table" and (strfind(name, "Mixin$") ~= nil or strfind(name, "Gamepad") ~= nil or strfind(name, "SmartNav") ~= nil or strfind(name, "^QuestMap") ~= nil) then Check(name, value) end
+		end
+	end
+
+	Check("UIPanelWindows.WorldMapFrame", UIPanelWindows and UIPanelWindows["WorldMapFrame"])
+	local lines = {}
+	for line, count in pairs(counts) do
+		tinsert(lines, count > 1 and format("%s x%d", line, count) or line)
+	end
+
+	table.sort(lines)
+	local gamepad = InputUtil ~= nil and InputUtil.IsGamepadUIEnabled ~= nil and InputUtil.IsGamepadUIEnabled()
+	local header = {format("MapUtils %s taint report, %s", tostring(MapUtils:GetAddonVersion()), date("%Y-%m-%d %H:%M:%S")), format("build %s | gamepad UI %s | one map %s | map shown %s", tostring(select(4, GetBuildInfo())), tostring(gamepad), tostring(MapUtils.IsOneMap ~= nil and MapUtils:IsOneMap()), tostring(WorldMapFrame ~= nil and WorldMapFrame:IsShown())), format("%d different values tainted by MapUtils", #lines), ""}
+	for _, line in ipairs(lines) do
+		tinsert(header, line)
+	end
+
+	tinsert(header, "")
+	for owner, count in pairs(others) do
+		tinsert(header, format("other: %s %d", owner, count))
+	end
+
+	self:INFO(format("Taint report: %d values tainted by MapUtils", #lines))
+	self:ShowCopyWindow("MapUtils taint report", table.concat(header, "\n"))
+end
+
+function MapUtils:ShowCopyWindow(title, text)
+	local win = MapUtils.copyWindow
+	if win == nil then
+		win = CreateFrame("Frame", "MapUtilsCopyWindow", UIParent, "BasicFrameTemplateWithInset")
+		win:SetSize(560, 420)
+		win:SetPoint("CENTER")
+		win:SetFrameStrata("DIALOG")
+		win:SetToplevel(true)
+		win:SetMovable(true)
+		win:EnableMouse(true)
+		win:RegisterForDrag("LeftButton")
+		win:SetScript("OnDragStart", win.StartMoving)
+		win:SetScript("OnDragStop", win.StopMovingOrSizing)
+		win.SF = CreateFrame("ScrollFrame", "MapUtilsCopyWindowScroll", win, "UIPanelScrollFrameTemplate")
+		win.SF:SetPoint("TOPLEFT", win, "TOPLEFT", 14, -30)
+		win.SF:SetPoint("BOTTOMRIGHT", win, "BOTTOMRIGHT", -34, 14)
+		win.EditBox = CreateFrame("EditBox", "MapUtilsCopyWindowEditBox", win.SF)
+		win.EditBox:SetMultiLine(true)
+		win.EditBox:SetAutoFocus(false)
+		win.EditBox:SetMaxLetters(0)
+		win.EditBox:SetFontObject(ChatFontNormal)
+		win.EditBox:SetSize(500, 370)
+		win.EditBox:SetScript("OnEscapePressed", function(sel) sel:ClearFocus() end)
+		win.SF:SetScrollChild(win.EditBox)
+		win.SF:SetScript("OnMouseDown", function() win.EditBox:SetFocus() end)
+		MapUtils.copyWindow = win
+	end
+
+	if win.TitleText ~= nil then win.TitleText:SetText(title) end
+	win.EditBox:SetText(text)
+	win:Show()
+	win.EditBox:SetFocus()
+	win.EditBox:HighlightText()
+end
