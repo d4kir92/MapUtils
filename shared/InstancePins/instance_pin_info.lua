@@ -139,6 +139,7 @@ Addon.INSTANCEPININFO = {
 		[900005] = "900005",
 		[2959002] = "2959_2",
 		[900001002] = "900001_2",
+		[900003002] = "900003_2",
 	},
 	["raids"] = {
 		[162] = true,
@@ -552,6 +553,7 @@ Addon.INSTANCEPININFO = {
 		[2284] = {"Necklace Recovery, Take 2"},
 		[2318] = {"Translating the Journal", {2284}},
 		[2339] = {"Find the Gems and Power Source"},
+		[2841] = {"Rig Wars"},
 		[2904] = {"A Fine Mess"},
 		[2945] = {"Grime-Encrusted Ring"},
 		[2949] = {"Return of the Ring", {2945}},

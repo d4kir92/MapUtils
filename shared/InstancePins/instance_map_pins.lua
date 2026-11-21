@@ -1,5 +1,21 @@
 local _, Addon = ...
 Addon.INSTANCEMAPPINS = {
+    [900003002] = {
+        {"boss", 0.391, 0.716, 257016}, -- Katerina the Cleaner
+        {"boss", 0.662, 0.715, 255702}, -- Blazeroar
+        {"level", 0.248, 0.502, 900003, true},
+    },
+    [900003] = {
+        {"boss", 0.245, 0.180, 256236}, -- The Questioner
+        {"boss", 0.354, 0.711, 255997}, -- Tidemistress Ca'zass
+        {"boss", 0.644, 0.337, 255391}, -- Overseer Wrex
+        {"entrance", 0.354, 0.163},
+        {"level", 0.250, 0.522, 900003002, true},
+    },
+    [900001002] = {
+        {"level", 0.300, 0.770, 900001, true},
+        {"level", 0.680, 0.130, 900001, true},
+    },
     [220005] = {
         {"marker", 0.400, 0.500, "Interface\\AddOns\\AzerothCompendium\\media\\serpentstatue", label = "3", tip = "Southwest"},
         {"marker", 0.430, 0.300, "Interface\\AddOns\\AzerothCompendium\\media\\serpentstatue", label = "5", tip = "Northwest"},
@@ -28,6 +44,10 @@ Addon.INSTANCEMAPPINS = {
         {"boss", 0.605, 0.640, 263886}, -- Primeval Elemental
         {"boss", 0.700, 0.541, 258905}, -- Zul'Alai
         {"entrance", 0.845, 0.522},
+        {"boss", 0.435, 0.530, 264177}, -- Gill
+        {"boss", 0.544, 0.810, 264172}, -- Umbra
+        {"level", 0.565, 0.580, 900001002},
+        {"level", 0.580, 0.830, 900001002},
     },
     [900002] = {
         {"entrance", 0.205, 0.807},
@@ -365,19 +385,8 @@ Addon.INSTANCEMAPPINS = {
         {"entrance", 0.390, 0.652},
         {"level", 0.125, 0.080, 307},
         {"boss", 0.200, 0.080, 14861}, -- Blood Steward of Kirtonos
-        {"boss", 0.275, 0.080, 10506}, -- Kirtonos the Herald
         {"boss", 0.350, 0.080, 10503}, -- Jandice Barov
-        {"boss", 0.425, 0.080, 11622}, -- Rattlegore
         {"boss", 0.500, 0.080, 14516}, -- Death Knight Darkreaver
-        {"boss", 0.575, 0.080, 10433}, -- Marduk Blackpool
-        {"boss", 0.050, 0.190, 10432}, -- Vectus
-        {"boss", 0.200, 0.190, 10505}, -- Instructor Malicia
-        {"boss", 0.275, 0.190, 11261}, -- Doctor Theolen Krastinov
-        {"boss", 0.350, 0.190, 10901}, -- Lorekeeper Polkelt
-        {"boss", 0.425, 0.190, 10507}, -- The Ravenian
-        {"boss", 0.500, 0.190, 10504}, -- Lord Alexei Barov
-        {"boss", 0.575, 0.190, 10502}, -- Lady Illucia Barov
-        {"boss", 0.050, 0.300, 1853}, -- Darkmaster Gandling
     },
     [232] = { -- Molten Core
         {"entrance", 0.264, 0.226},
@@ -471,6 +480,7 @@ Addon.INSTANCEMAPPINS = {
         {"level", 0.710, 0.773, 228, true},
         {"boss", 0.465, 0.640, 6228},
         {"boss", 0.313, 0.300, 7800},
+        {"questend", 0.350, 0.180, 2841}, -- Rig Wars
     },
     [231] = { -- Uldaman - Khaz'Goroth's Seat
         {"level", 0.645, 0.410, 230, true},
@@ -483,7 +493,7 @@ Addon.INSTANCEMAPPINS = {
         {"boss", 0.245, 0.144, 12225},
         {"boss", 0.406, 0.482, 12203},
         {"boss", 0.484, 0.686, 13601},
-        {"boss", 0.333, 0.771, 13596},
+        {"boss", 0.413, 0.811, 13596}, -- Rotgrip
         {"boss", 0.242, 0.784, 12201},
     },
     [243] = { -- Blackrock Depths - Shadowforge City
@@ -585,13 +595,24 @@ Addon.INSTANCEMAPPINS = {
     },
     [307] = { -- Scholomance - Chamber of Summoning
         {"level", 0.125, 0.080, 308},
+        {"boss", 0.445, 0.650, 10433}, -- Marduk Blackpool
+        {"boss", 0.490, 0.650, 10432}, -- Vectus
+        {"boss", 0.495, 0.100, 10506}, -- Kirtonos the Herald
     },
     [308] = { -- Scholomance - The Upper Study
         {"level", 0.125, 0.080, 309},
+        {"boss", 0.315, 0.650, 11622}, -- Rattlegore
+        {"boss", 0.722, 0.220, 10901}, -- Lorekeeper Polkelt
+        {"boss", 0.727, 0.700, 10505}, -- Instructor Malicia
+        {"boss", 0.885, 0.460, 11261}, -- Doctor Theolen Krastinov <The Butcher>
     },
     [309] = { -- Scholomance - Headmaster's Study
         {"level", 0.125, 0.080, 308},
         {"boss", 0.406, 0.884, 10508},
+        {"boss", 0.670, 0.300, 1853}, -- Darkmaster Gandling
+        {"boss", 0.675, 0.140, 10502}, -- Lady Illucia Barov
+        {"boss", 0.675, 0.480, 10507}, -- The Ravenian
+        {"boss", 0.800, 0.294, 10504}, -- Lord Alexei Barov
     },
     [318] = { -- Stratholme - The Gauntlet
         {"level", 0.355, 0.390, 317},
