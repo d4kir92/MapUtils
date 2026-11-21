@@ -11,6 +11,7 @@ local MAP_SIZE = {
 	["footerInset"] = 2,
 	["borderLift"] = 500,
 	["rimShare"] = 0.65,
+	["leftRimShare"] = 0.4,
 	["detailsInset"] = 0
 }
 local frame = WorldMapFrame
@@ -263,7 +264,7 @@ function MAP_SIZE.LayoutFooter(custom)
 	MAP_SIZE.footerPoints = MAP_SIZE.footerPoints or {}
 	local inset = MAP_SIZE.footerInset
 	local border = MAP_SIZE.border
-	local left = border and border.LeftEdge and border.LeftEdge:GetWidth() * MAP_SIZE.rimShare or inset
+	local left = border and border.LeftEdge and border.LeftEdge:GetWidth() * MAP_SIZE.leftRimShare or inset
 	local bottom = border and border.BottomEdge and border.BottomEdge:GetHeight() * MAP_SIZE.rimShare or inset
 	local targets = {
 		["TOPLEFT"] = function(_, y) return max(inset, left), y end,
