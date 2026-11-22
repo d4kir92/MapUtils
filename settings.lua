@@ -525,21 +525,22 @@ function MapUtils:InitSetting()
 	if wheelZoomAvailable then Requires(oneMap, "WORLDMAPZOOM") end
 	AddTooltip(oneMap, "LID_ONEMAP", "LID_ONEMAPDESC")
 	Requires(AddCheckbox("ONEMAPTRANSITIONS", false, nil, nil, "2026-11-16"), "ONEMAP")
-	AddCheckbox("ZONEHIGHLIGHT", true, function() MapUtils:RefreshOneMapHover() end, nil, "2026-11-22")
+	Requires(AddCheckbox("ONEMAPHOVER", false, function() MapUtils:RefreshOneMapHover() end, nil, "2026-11-22"), "ONEMAP")
 	maset:AddDependency(
 		maset:AddColorPicker(
 			{
-				["label"] = "LID_ZONEHIGHLIGHTCOLOR",
-				["search"] = "ZONEHIGHLIGHTCOLOR",
+				["label"] = "LID_ONEMAPHOVERCOLOR",
+				["search"] = "ONEMAPHOVERCOLOR",
 				["added"] = "2026-11-22",
 				["value"] = {MapUtils:GetOneMapHoverColor()},
 				["func"] = function(r, g, b, a)
-					MapUtils:SV(MAUTTAB, "ZONEHIGHLIGHTCOLOR", {["r"] = r, ["g"] = g, ["b"] = b, ["a"] = a})
+					MapUtils:SV(MAUTTAB, "ONEMAPHOVERCOLOR", {["r"] = r, ["g"] = g, ["b"] = b, ["a"] = a})
 					MapUtils:RefreshOneMapHover()
 				end
 			}
 		),
-		function() return MapUtils:IsZoneHighlightShown() end
+		function() return type(MAUTTAB) == "table" and MAUTTAB["ONEMAP"] == true and MAUTTAB["ONEMAPHOVER"] == true end,
+		2
 	)
 	local mapStyles = {}
 	for _, key in ipairs({"MIXED", "MAP", "TERRAIN"}) do
