@@ -1324,6 +1324,8 @@ local SmoothZoom = {
 	tileFullMargin = 1.15,
 	panEdge = 0.3,
 	panOpenShare = 0.55,
+	worldPanOpenShare = 0.9,
+	worldMapID = 947,
 	enterArea = 2,
 	leaveArea = 3.3,
 	enterContinentArea = 1.1,
@@ -1441,8 +1443,8 @@ function SmoothZoom.GetPanRect(mapID)
 	return MapUtils:GetZoneDetailSpaceRect(mapID)
 end
 
-function SmoothZoom.PanRoom(share)
-	local open = Clamp((1 - share) / (1 - SmoothZoom.panOpenShare), 0, 1)
+function SmoothZoom.PanRoom(share, openShare)
+	local open = Clamp((1 - share) / (1 - (openShare or SmoothZoom.panOpenShare)), 0, 1)
 
 	return 1 - (1 - open) * (1 - open)
 end
@@ -1467,9 +1469,20 @@ function SmoothZoom.GetExtents(container, scale)
 	local fit = space and SmoothZoom.GetSpaceFit(container)
 	if type(fit) == "number" and fit > 0 then
 		local halfWidth, halfHeight = viewWidth / 2 / (scale * width), viewHeight / 2 / (scale * height)
-		local room = SmoothZoom.PanRoom(math.max(halfWidth * 2 / (right - left), halfHeight * 2 / (bottom - top)))
-		local lowX, highX = SmoothZoom.PanRange(left, right, halfWidth, room)
-		local lowY, highY = SmoothZoom.PanRange(top, bottom, halfHeight, room)
+		local roomScale = scale
+		local anim = SmoothZoom.anim
+		if anim ~= nil and anim.mapID == container.mapID and anim.target ~= nil and anim.target > scale then roomScale = anim.target end
+		local shareX, shareY = halfWidth * 2 / (right - left) * scale / roomScale, halfHeight * 2 / (bottom - top) * scale / roomScale
+		local roomX, roomY
+		if container.mapID == SmoothZoom.worldMapID then
+			roomX, roomY = SmoothZoom.PanRoom(shareX, SmoothZoom.worldPanOpenShare), SmoothZoom.PanRoom(shareY, SmoothZoom.worldPanOpenShare)
+		else
+			roomX = SmoothZoom.PanRoom(math.max(shareX, shareY))
+			roomY = roomX
+		end
+
+		local lowX, highX = SmoothZoom.PanRange(left, right, halfWidth, roomX)
+		local lowY, highY = SmoothZoom.PanRange(top, bottom, halfHeight, roomY)
 
 		return lowX, highX, lowY, highY
 	end
