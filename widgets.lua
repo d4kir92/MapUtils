@@ -213,6 +213,16 @@ local Player = {
 	following = false,
 }
 
+local MapSettings = {
+	height = 20,
+	gap = 3,
+	pad = 8,
+	onColor = {0.2, 1, 0.2},
+	offColor = {0.6, 0.6, 0.6},
+	styles = {LeftButton = "MAP", RightButton = "TERRAIN", MiddleButton = "MIXED"},
+	buttons = {},
+}
+
 function Widgets.CreateFrame()
 	local container = map.ScrollContainer
 	local frame = CreateFrame("Frame", nil, map)
@@ -1209,6 +1219,116 @@ function Player.Create()
 	MapUtils:RegisterMapEditElement(Player.element)
 end
 
+function MapSettings.GetText(button)
+	if button.key == nil then
+		local color = MapUtils:IsOneMap() and MapSettings.onColor or MapSettings.offColor
+
+		return format("|cff%02x%02x%02x%s|r", color[1] * 255, color[2] * 255, color[3] * 255, MapUtils:Trans("LID_ONEMAPSHORT"))
+	end
+
+	return format("%s: |cffffffff%s|r", MapUtils:Trans(button.label), MapUtils:Trans("LID_MAPSTYLESHORT" .. MapUtils:GetMapStyleOption(button.key)))
+end
+
+function MapSettings.ShowTooltip(button)
+	GameTooltip:SetOwner(button, "ANCHOR_TOP")
+	if button.key == nil then
+		GameTooltip:SetText(MapUtils:Trans("LID_ONEMAP"))
+		GameTooltip:AddDoubleLine(format("|cffffd100%s|r", MapUtils:Trans("LID_LEFTCLICK")), MapUtils:IsOneMap() and "|cff20ff20" .. MapUtils:Trans("LID_STATUSON") .. "|r" or "|cffff4040" .. MapUtils:Trans("LID_STATUSOFF") .. "|r", 1, 1, 1)
+	else
+		local current = MapUtils:GetMapStyleOption(button.key)
+		GameTooltip:SetText(MapUtils:Trans(button.title))
+		for _, entry in ipairs({{"LeftButton", "LID_LEFTCLICK"}, {"RightButton", "LID_RIGHTCLICK"}, {"MiddleButton", "LID_MIDDLECLICK"}}) do
+			local style = MapSettings.styles[entry[1]]
+			local shade = style == current and 0.2 or 1
+			GameTooltip:AddDoubleLine(format("|cffffd100%s|r", MapUtils:Trans(entry[2])), MapUtils:Trans("LID_MAPSTYLE" .. style), 1, 1, 1, shade, 1, shade)
+		end
+	end
+
+	GameTooltip:Show()
+end
+
+function MapSettings.OnClick(button, mouseButton)
+	if InCombatLockdown() then return end
+	if button.key == nil then
+		if mouseButton == "LeftButton" then MapUtils:SetOneMapEnabled(not MapUtils:IsOneMap()) end
+	else
+		local style = MapSettings.styles[mouseButton]
+		if style ~= nil then MapUtils:SetMapStyleOption(button.key, style) end
+	end
+
+	MapSettings.Refresh()
+	if GameTooltip:IsOwned(button) then MapSettings.ShowTooltip(button) end
+end
+
+function MapSettings.CreateButton(key, label, title)
+	local button = CreateFrame("Button", nil, MapSettings.frame)
+	button.key, button.label, button.title = key, label, title
+	button:SetHeight(MapSettings.height)
+	button:RegisterForClicks("LeftButtonUp", "RightButtonUp", "MiddleButtonUp")
+	button.bg = button:CreateTexture(nil, "BACKGROUND")
+	button.bg:SetAllPoints(button)
+	button.bg:SetColorTexture(0, 0, 0, 0.6)
+	button.text = button:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+	button.text:SetPoint("CENTER", button, "CENTER", 0, 0)
+	Widgets.SetOutline(button.text)
+	button:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD")
+	button:SetScript("OnClick", MapSettings.OnClick)
+	button:SetScript("OnEnter", MapSettings.ShowTooltip)
+	button:SetScript("OnLeave", function() GameTooltip:Hide() end)
+	tinsert(MapSettings.buttons, button)
+
+	return button
+end
+
+function MapSettings.Refresh()
+	local frame = MapSettings.frame
+	if frame == nil then return end
+	local x = 0
+	for _, button in ipairs(MapSettings.buttons) do
+		button.text:SetText(MapSettings.GetText(button))
+		local width = math.ceil(button.text:GetStringWidth()) + MapSettings.pad * 2
+		button:SetWidth(width)
+		button:ClearAllPoints()
+		button:SetPoint("LEFT", frame, "LEFT", x, 0)
+		x = x + width + MapSettings.gap
+	end
+
+	frame:SetSize(math.max(1, x - MapSettings.gap), MapSettings.height)
+end
+
+function MapUtils:RefreshMapSettingsWidget()
+	MapSettings.Refresh()
+end
+
+function MapSettings.Layout()
+	local frame = MapSettings.frame
+	if frame == nil then return end
+	MapSettings.Refresh()
+	frame:SetShown(MapUtils:IsMapEditElementVisible(MapSettings.element))
+end
+
+function MapSettings.Create()
+	MapSettings.frame = Widgets.CreateFrame()
+	MapSettings.CreateButton(nil)
+	MapSettings.CreateButton("MAPSTYLE", "LID_ZONESHORT", "LID_ZONEMAPSTYLE")
+	MapSettings.CreateButton("CITYMAPSTYLE", "LID_CITYSHORT", "LID_CITYMAPSTYLE")
+	MapSettings.Refresh()
+	MapSettings.element = {
+		key = "MAPSETTINGSWIDGET",
+		title = "LID_MAPSETTINGSWIDGET",
+		frame = MapSettings.frame,
+		defaultPoint = {"BOTTOMRIGHT", -Widgets.inset, Widgets.inset + 28},
+		defaultAlign = "RIGHT",
+		options = {
+			scale = true
+		},
+		OnLayout = MapSettings.Layout,
+		OnEditMode = MapSettings.Layout,
+	}
+
+	MapUtils:RegisterMapEditElement(MapSettings.element)
+end
+
 function Widgets.Init()
 	if Widgets.ready or MapUtils.RegisterMapEditElement == nil or MapUtils.GetConfig == nil then return end
 	Widgets.ready = true
@@ -1216,8 +1336,10 @@ function Widgets.Init()
 	Notify.Create()
 	Party.Create()
 	Player.Create()
+	MapSettings.Create()
 	map:HookScript("OnShow", function()
 		Toggles.Layout()
+		MapSettings.Refresh()
 		Party.Update(true)
 	end)
 end
@@ -1233,3 +1355,4 @@ MapUtils.ProfileTable("Toggles", Toggles)
 MapUtils.ProfileTable("Notify", Notify)
 MapUtils.ProfileTable("Party", Party)
 MapUtils.ProfileTable("Player", Player)
+MapUtils.ProfileTable("MapSettings", MapSettings)

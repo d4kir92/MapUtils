@@ -2551,6 +2551,18 @@ function base.HideHover()
 	end
 end
 
+function MapUtils:GetOneMapHoverColor()
+	local color = MapUtils:GetConfig("ONEMAPHOVERCOLOR", nil)
+	if type(color) ~= "table" then return 1, 1, 1, 1 end
+
+	return color.r or 1, color.g or 1, color.b or 1, color.a or 1
+end
+
+function MapUtils:RefreshOneMapHover()
+	if base.hover ~= nil then base.hover.x = nil end
+	base.HideHover()
+end
+
 function base.GetHoverLevel()
 	local level = MinimapLayer.frame and MinimapLayer.frame:GetFrameLevel() or container:GetFrameLevel() + 4
 	for _, city in pairs(cities) do
@@ -2568,7 +2580,7 @@ end
 function base.UpdateHover()
 	local active = container ~= nil and container:IsShown() and container.built == MODE_FULL and container.space ~= nil and container.refWidth ~= nil
 	base.SetBlizzardHighlightHidden(active)
-	if not active or not WorldMapFrame.ScrollContainer:IsMouseOver() or MapUtils.GetOneMapTargetAt == nil or MapUtils.GetOneMapCursor == nil or (MapUtils.IsInstanceMapShown ~= nil and MapUtils:IsInstanceMapShown()) then return base.HideHover() end
+	if not active or not MapUtils:GetConfig("ONEMAPHOVER", false) or not WorldMapFrame.ScrollContainer:IsMouseOver() or MapUtils.GetOneMapTargetAt == nil or MapUtils.GetOneMapCursor == nil or (MapUtils.IsInstanceMapShown ~= nil and MapUtils:IsInstanceMapShown()) then return base.HideHover() end
 	local host = WorldMapFrame:GetMapID()
 	local x, y = MapUtils:GetOneMapCursor()
 	if x == nil or y == nil then return base.HideHover() end
@@ -2606,6 +2618,7 @@ function base.UpdateHover()
 	local refWidth, refHeight = container.refWidth, container.refHeight
 	texture:SetTexture(fileDataID, nil, nil, "TRILINEAR")
 	texture:SetTexCoord(0, texPercentageX, 0, texPercentageY)
+	texture:SetVertexColor(MapUtils:GetOneMapHoverColor())
 	texture:SetSize(textureX * (pr - pl) * refWidth, textureY * (pb - pt) * refHeight)
 	texture:ClearAllPoints()
 	texture:SetPoint("TOPLEFT", container, "TOPLEFT", (pl + scrollChildX * (pr - pl)) * refWidth, -(pt + scrollChildY * (pb - pt) + shift) * refHeight)
