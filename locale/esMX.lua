@@ -213,6 +213,7 @@ MapUtils:AddTrans("esMX", "LID_SHOWUNEXPLOREDDESC", "Si se desactiva, solo se mu
 MapUtils:AddTrans("esMX", "LID_SHOWWIDGET", "Mostrar")
 MapUtils:AddTrans("esMX", "LID_SPIRITHEALER", "Ángel de la resurrección")
 MapUtils:AddTrans("esMX", "LID_SPIRITHEALERS", "Ángeles de la resurrección")
+MapUtils:AddTrans("esMX", "LID_SPIRITHEALERSIMPLE", "Simple")
 MapUtils:AddTrans("esMX", "LID_SPIRITHEALERSTYLE", "Estilo de ícono")
 MapUtils:AddTrans("esMX", "LID_STATUSHIDDEN", "Oculto")
 MapUtils:AddTrans("esMX", "LID_STATUSOFF", "Desactivado")

@@ -213,6 +213,7 @@ MapUtils:AddTrans("deDE", "LID_SHOWUNEXPLOREDDESC", "Wenn deaktiviert, werden nu
 MapUtils:AddTrans("deDE", "LID_SHOWWIDGET", "Einblenden")
 MapUtils:AddTrans("deDE", "LID_SPIRITHEALER", "Geistheiler")
 MapUtils:AddTrans("deDE", "LID_SPIRITHEALERS", "Geistheiler")
+MapUtils:AddTrans("deDE", "LID_SPIRITHEALERSIMPLE", "Einfach")
 MapUtils:AddTrans("deDE", "LID_SPIRITHEALERSTYLE", "Symbolstil")
 MapUtils:AddTrans("deDE", "LID_STATUSHIDDEN", "Ausgeblendet")
 MapUtils:AddTrans("deDE", "LID_STATUSOFF", "Aus")

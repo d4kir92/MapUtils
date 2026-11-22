@@ -213,6 +213,7 @@ MapUtils:AddTrans("itIT", "LID_SHOWUNEXPLOREDDESC", "Se disattivato, vengono mos
 MapUtils:AddTrans("itIT", "LID_SHOWWIDGET", "Mostra")
 MapUtils:AddTrans("itIT", "LID_SPIRITHEALER", "Guaritore spirituale")
 MapUtils:AddTrans("itIT", "LID_SPIRITHEALERS", "Guaritori spirituali")
+MapUtils:AddTrans("itIT", "LID_SPIRITHEALERSIMPLE", "Semplice")
 MapUtils:AddTrans("itIT", "LID_SPIRITHEALERSTYLE", "Stile icona")
 MapUtils:AddTrans("itIT", "LID_STATUSHIDDEN", "Nascosto")
 MapUtils:AddTrans("itIT", "LID_STATUSOFF", "Disattivo")

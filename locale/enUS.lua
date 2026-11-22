@@ -213,6 +213,7 @@ MapUtils:AddTrans("enUS", "LID_SHOWUNEXPLOREDDESC", "When disabled, only icons t
 MapUtils:AddTrans("enUS", "LID_SHOWWIDGET", "Show")
 MapUtils:AddTrans("enUS", "LID_SPIRITHEALER", "Spirit healer")
 MapUtils:AddTrans("enUS", "LID_SPIRITHEALERS", "Spirit healers")
+MapUtils:AddTrans("enUS", "LID_SPIRITHEALERSIMPLE", "Simple")
 MapUtils:AddTrans("enUS", "LID_SPIRITHEALERSTYLE", "Icon style")
 MapUtils:AddTrans("enUS", "LID_STATUSHIDDEN", "Hidden")
 MapUtils:AddTrans("enUS", "LID_STATUSOFF", "Off")

@@ -213,6 +213,7 @@ MapUtils:AddTrans("zhTW", "LID_SHOWUNEXPLOREDDESC", "關閉後，只顯示此角
 MapUtils:AddTrans("zhTW", "LID_SHOWWIDGET", "顯示")
 MapUtils:AddTrans("zhTW", "LID_SPIRITHEALER", "靈魂醫者")
 MapUtils:AddTrans("zhTW", "LID_SPIRITHEALERS", "靈魂醫者")
+MapUtils:AddTrans("zhTW", "LID_SPIRITHEALERSIMPLE", "簡潔")
 MapUtils:AddTrans("zhTW", "LID_SPIRITHEALERSTYLE", "圖示樣式")
 MapUtils:AddTrans("zhTW", "LID_STATUSHIDDEN", "隱藏")
 MapUtils:AddTrans("zhTW", "LID_STATUSOFF", "關閉")

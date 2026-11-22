@@ -213,6 +213,7 @@ MapUtils:AddTrans("ruRU", "LID_SHOWUNEXPLOREDDESC", "Если выключено
 MapUtils:AddTrans("ruRU", "LID_SHOWWIDGET", "Показывать")
 MapUtils:AddTrans("ruRU", "LID_SPIRITHEALER", "Целитель душ")
 MapUtils:AddTrans("ruRU", "LID_SPIRITHEALERS", "Целители душ")
+MapUtils:AddTrans("ruRU", "LID_SPIRITHEALERSIMPLE", "Простой")
 MapUtils:AddTrans("ruRU", "LID_SPIRITHEALERSTYLE", "Стиль значка")
 MapUtils:AddTrans("ruRU", "LID_STATUSHIDDEN", "Скрыто")
 MapUtils:AddTrans("ruRU", "LID_STATUSOFF", "Выкл.")

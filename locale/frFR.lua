@@ -213,6 +213,7 @@ MapUtils:AddTrans("frFR", "LID_SHOWUNEXPLOREDDESC", "Si désactivé, seules les 
 MapUtils:AddTrans("frFR", "LID_SHOWWIDGET", "Afficher")
 MapUtils:AddTrans("frFR", "LID_SPIRITHEALER", "Gardien des âmes")
 MapUtils:AddTrans("frFR", "LID_SPIRITHEALERS", "Gardiens des âmes")
+MapUtils:AddTrans("frFR", "LID_SPIRITHEALERSIMPLE", "Simple")
 MapUtils:AddTrans("frFR", "LID_SPIRITHEALERSTYLE", "Style d'icône")
 MapUtils:AddTrans("frFR", "LID_STATUSHIDDEN", "Masqué")
 MapUtils:AddTrans("frFR", "LID_STATUSOFF", "Désactivé")

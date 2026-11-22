@@ -213,6 +213,7 @@ MapUtils:AddTrans("koKR", "LID_SHOWUNEXPLOREDDESC", "끄면 이 캐릭터가 가
 MapUtils:AddTrans("koKR", "LID_SHOWWIDGET", "표시")
 MapUtils:AddTrans("koKR", "LID_SPIRITHEALER", "영혼의 치유사")
 MapUtils:AddTrans("koKR", "LID_SPIRITHEALERS", "영혼의 치유사")
+MapUtils:AddTrans("koKR", "LID_SPIRITHEALERSIMPLE", "단순")
 MapUtils:AddTrans("koKR", "LID_SPIRITHEALERSTYLE", "아이콘 스타일")
 MapUtils:AddTrans("koKR", "LID_STATUSHIDDEN", "숨겨짐")
 MapUtils:AddTrans("koKR", "LID_STATUSOFF", "꺼짐")

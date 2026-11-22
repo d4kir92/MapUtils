@@ -652,6 +652,7 @@ function MapUtils:InitSetting()
 		AddDropdown("SPIRITHEALERSTYLE", "NORMAL", {
 			{value = "NORMAL", label = MapUtils:Trans("LID_NORMAL")},
 			{value = "CHIBI", label = "Chibi"},
+			{value = "SIMPLE", label = MapUtils:Trans("LID_SPIRITHEALERSIMPLE")},
 		}, function() MapUtils:RefreshPins() end)
 		AddExploreCheckbox("SPIRITHEALER")
 		AddCategory("CONVERGENCES", 2, nil, ADDED_1017)

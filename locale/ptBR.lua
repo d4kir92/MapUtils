@@ -213,6 +213,7 @@ MapUtils:AddTrans("ptBR", "LID_SHOWUNEXPLOREDDESC", "Se desativado, só são mos
 MapUtils:AddTrans("ptBR", "LID_SHOWWIDGET", "Mostrar")
 MapUtils:AddTrans("ptBR", "LID_SPIRITHEALER", "Curandeiro espiritual")
 MapUtils:AddTrans("ptBR", "LID_SPIRITHEALERS", "Curandeiros espirituais")
+MapUtils:AddTrans("ptBR", "LID_SPIRITHEALERSIMPLE", "Simples")
 MapUtils:AddTrans("ptBR", "LID_SPIRITHEALERSTYLE", "Estilo do ícone")
 MapUtils:AddTrans("ptBR", "LID_STATUSHIDDEN", "Oculto")
 MapUtils:AddTrans("ptBR", "LID_STATUSOFF", "Desligado")
