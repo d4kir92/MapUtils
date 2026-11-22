@@ -2,7 +2,20 @@ local _, MapUtils = ...
 if WorldMapFrame == nil or C_Map == nil or MapUtils.QUESTGIVERS == nil or MapUtils.QUESTINFO == nil then return end
 local GIVERS = MapUtils.QUESTGIVERS
 local INFO = MapUtils.QUESTINFO
-local QG = {}
+local QG = {
+	["cacheReasons"] = {}
+}
+
+function QG.CountCacheReason(reason)
+	local counter = QG.cacheReasons[reason]
+	if counter == nil then
+		counter = MapUtils.Profile("Quest cache rebuild: " .. reason, function() end)
+		QG.cacheReasons[reason] = counter
+	end
+
+	counter()
+end
+
 local ICON_ATLAS = "QuestNormal"
 local ICON_FILE = "Interface\\GossipFrame\\AvailableQuestIcon"
 local REPEATABLE_ATLAS = "UI-QuestPoiRecurring-QuestBang"
@@ -388,6 +401,16 @@ function QG.GetAvailableCache()
 	key = key .. (QG.showPvP and "1" or "0") .. (QG.showCloth and "1" or "0") .. (player.showLowLevel and "1" or "0")
 	local now = GetTime()
 	if QG.available == nil or QG.stale or QG.availableKey ~= key or now - (QG.availableTime or 0) > 30 then
+		if QG.available == nil then
+			QG.CountCacheReason("first")
+		elseif QG.stale then
+			QG.CountCacheReason("stale " .. (QG.staleBy or "refresh"))
+		elseif QG.availableKey ~= key then
+			QG.CountCacheReason("player or quest log")
+		else
+			QG.CountCacheReason("older than 30 s")
+		end
+
 		QG.available = {}
 		QG.availableKey = key
 		QG.availableTime = now
@@ -980,6 +1003,7 @@ if MapUtils.CanvasPinUpdaters ~= nil then tinsert(MapUtils.CanvasPinUpdaters, QG
 function MapUtils:RefreshQuestGivers()
 	dirty = true
 	QG.stale = true
+	QG.staleBy = "refresh"
 	lastCollect = 0
 	QG.HidePins()
 end
@@ -1003,6 +1027,7 @@ updater:SetScript(
 		if event ~= "MODIFIER_STATE_CHANGED" then
 			dirty = true
 			QG.stale = true
+			QG.staleBy = event
 
 			return
 		end

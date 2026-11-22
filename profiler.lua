@@ -340,6 +340,20 @@ function Profiler.BuildReport()
 		tinsert(lines, format("  %-34s %7d %9.1f %9.1f %7.3f %7.2f", stat.label, stat.openCalls, stat.openTotal or 0, stat.openSelf, (stat.openTotal or 0) / stat.openCalls, stat.openPeak or 0))
 	end
 
+	local reasons = {}
+	for _, stat in pairs(Profiler.stats) do
+		if stat.label:find("^World pin layout: ") or stat.label:find("^Quest cache rebuild: ") then tinsert(reasons, stat) end
+	end
+
+	if #reasons > 0 then
+		table.sort(reasons, function(a, b) return a.label < b.label end)
+		tinsert(lines, "")
+		tinsert(lines, "Rebuild reasons (calls):")
+		for _, stat in ipairs(reasons) do
+			tinsert(lines, format("  %-48s %7d", stat.label, stat.calls))
+		end
+	end
+
 	return table.concat(lines, "\n"), lines
 end
 

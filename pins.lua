@@ -2959,6 +2959,7 @@ local function UpdateWorldPins()
 		return
 	end
 
+	PinCache.CountLayoutReason(sameState, sameView, scale == worldScale)
 	PinCache.worldLayoutTime = now
 	PinCache.worldWidth, PinCache.worldHeight = w, h
 	worldMapID = mapID
@@ -3093,6 +3094,29 @@ local function UpdateWorldPins()
 		end
 	end
 	PinCache.CullWorldPins(child, w, h, baseLevel, true)
+end
+
+PinCache.layoutReasons = {
+	["state"] = MapUtils.Profile("World pin layout: pin state", function() end),
+	["view"] = MapUtils.Profile("World pin layout: size or zone art", function() end),
+	["zoom"] = MapUtils.Profile("World pin layout: zoom step", function() end),
+	["scale"] = MapUtils.Profile("World pin layout: scale idle", function() end),
+	["same"] = MapUtils.Profile("World pin layout: nothing changed", function() end)
+}
+
+function PinCache.CountLayoutReason(sameState, sameView, sameScale)
+	local reasons = PinCache.layoutReasons
+	if not sameState then
+		reasons.state()
+	elseif not sameView then
+		reasons.view()
+	elseif sameScale then
+		reasons.same()
+	elseif MapUtils.IsSmoothZooming ~= nil and MapUtils:IsSmoothZooming() then
+		reasons.zoom()
+	else
+		reasons.scale()
+	end
 end
 
 function PinCache.ZoneShown()
