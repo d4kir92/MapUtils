@@ -1184,10 +1184,27 @@ function WheelZoom.Apply()
 	WheelZoom.own = false
 end
 
+function MapUtils:GetFollowZoomAnchor(container)
+	if MapUtils.IsFollowingPlayer == nil or not MapUtils:IsFollowingPlayer() or container.mapID == nil or C_Map.GetPlayerMapPosition == nil then return nil end
+	local pos = C_Map.GetPlayerMapPosition(container.mapID, "player")
+	if pos == nil then return nil end
+	local x, y = pos:GetXY()
+	if x == nil or y == nil or MapUtils:IsSecret(x) or MapUtils:IsSecret(y) or (x == 0 and y == 0) or x < 0 or x > 1 or y < 0 or y > 1 then return nil end
+
+	return x, y
+end
+
+function MapUtils:GetZoomAnchor(container)
+	local x, y = MapUtils:GetFollowZoomAnchor(container)
+	if x ~= nil then return x, y end
+
+	return container:GetNormalizedCursorPosition()
+end
+
 function WheelZoom.OnMouseWheel(container, delta)
 	if not IsEnabled("WORLDMAPZOOM") or MapUtils:IsOneMap() or container.zoomLevels == nil then return end
 	if WheelZoom.foreignTime == GetTime() then return end
-	local x, y = container:GetNormalizedCursorPosition()
+	local x, y = MapUtils:GetZoomAnchor(container)
 	WheelZoom.pending = {
 		["delta"] = delta,
 		["x"] = x,
@@ -1243,7 +1260,7 @@ function MapLevelZoom.AtScale(snap, scale)
 end
 
 function MapLevelZoom.ChildAtCursor(container, mapID)
-	local x, y = container:GetNormalizedCursorPosition()
+	local x, y = MapUtils:GetZoomAnchor(container)
 	if x == nil or y == nil then return nil end
 	local info = C_Map.GetMapInfoAtPosition(mapID, x, y)
 	if info and info.mapID ~= mapID then return info.mapID end
@@ -1933,8 +1950,11 @@ end
 function SmoothZoom.CursorAnchor(container)
 	local scale = container:GetCanvasScale()
 	local scrollX, scrollY = container:GetCurrentScrollX(), container:GetCurrentScrollY()
+	if scrollX == nil or scrollY == nil or scale == nil or scale <= 0 then return nil end
+	local playerX, playerY = MapUtils:GetFollowZoomAnchor(container)
+	if playerX ~= nil then return playerX, playerY, scale, scrollX, scrollY end
 	local offsetX, offsetY = SmoothZoom.CursorOffset(container)
-	if scrollX == nil or scrollY == nil or scale == nil or scale <= 0 or offsetX == nil then return nil end
+	if offsetX == nil then return nil end
 
 	return scrollX + offsetX / scale, scrollY + offsetY / scale, scale, scrollX, scrollY
 end

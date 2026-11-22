@@ -952,7 +952,7 @@ function QG.Update()
 	local scope = MapUtils:IsPinScopeAzeroth(mapID)
 	if scope ~= QG.scope then
 		QG.scope = scope
-		QG.stale = true
+		QG.collectSignature = nil
 		dirty = true
 		lastCollect = 0
 	end

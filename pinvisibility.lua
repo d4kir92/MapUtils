@@ -74,7 +74,21 @@ function MapUtils:IsPinZoneOnly(key)
 	return PinVisibility.zoneOnly[key] == true
 end
 
+function MapUtils:ArePinsHidden()
+	return PinVisibility.hidden == true
+end
+
+function MapUtils:SetPinsHidden(value)
+	PinVisibility.hidden = value == true
+end
+
 function MapUtils:GetPinScopeShown(key, default, azeroth)
+	if PinVisibility.hidden then return false end
+
+	return MapUtils:GetPinScopeSetting(key, default, azeroth)
+end
+
+function MapUtils:GetPinScopeSetting(key, default, azeroth)
 	if azeroth and MapUtils:IsPinZoneOnly(key) then return false end
 	local zone = MapUtils:GetConfig(key, default) == true
 	if not azeroth then return zone end
@@ -94,7 +108,7 @@ end
 function MapUtils:KeepPinAzerothState(key, default)
 	local db = PinVisibility.GetDB()
 	if MapUtils:IsPinZoneOnly(key) then return end
-	if db[key .. "_AZEROTH"] == nil then db[key .. "_AZEROTH"] = MapUtils:GetPinScopeShown(key, default, true) end
+	if db[key .. "_AZEROTH"] == nil then db[key .. "_AZEROTH"] = MapUtils:GetPinScopeSetting(key, default, true) end
 end
 
 function MapUtils:SetPinAzerothShown(key, default, value)

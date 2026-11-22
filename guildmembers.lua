@@ -36,6 +36,12 @@ function MapUtils:RefreshGuildMembers()
 end
 
 function MapUtils:GetGuildPinScopeShown(azeroth)
+	if MapUtils:ArePinsHidden() then return false end
+
+	return MapUtils:GetGuildPinScopeSetting(azeroth)
+end
+
+function MapUtils:GetGuildPinScopeSetting(azeroth)
 	if MapUtils:GetConfig("GUILDMEMBERPINS", true) ~= true then return false end
 	local zone = MAUTTAB["GUILDMEMBERPINS_ZONE"] ~= false
 	if not azeroth then return zone end
@@ -45,7 +51,7 @@ function MapUtils:GetGuildPinScopeShown(azeroth)
 end
 
 function MapUtils:SetGuildPinScopeShown(azeroth, value)
-	local zone, az = MapUtils:GetGuildPinScopeShown(false), MapUtils:GetGuildPinScopeShown(true)
+	local zone, az = MapUtils:GetGuildPinScopeSetting(false), MapUtils:GetGuildPinScopeSetting(true)
 	if azeroth then
 		az = value == true
 	else

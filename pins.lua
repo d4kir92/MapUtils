@@ -2773,12 +2773,22 @@ function MapUtils:GetOneMapForeignPins(mapID, piersOn, dungeonsOn, convergencesO
 	local items = {}
 	local seen = {}
 	local function Remember(entry, u, v)
-		tinsert(seen, {entry.kind, entry.name, u, v})
+		local bucketKey = tostring(entry.kind) .. "\1" .. tostring(entry.name)
+		local bucket = seen[bucketKey]
+		if bucket == nil then
+			bucket = {}
+			seen[bucketKey] = bucket
+		end
+
+		bucket[#bucket + 1] = u
+		bucket[#bucket + 1] = v
 	end
 
 	local function IsSeen(entry, u, v)
-		for _, other in ipairs(seen) do
-			if other[1] == entry.kind and other[2] == entry.name and math.abs(other[3] - u) < 0.004 and math.abs(other[4] - v) < 0.004 then return true end
+		local bucket = seen[tostring(entry.kind) .. "\1" .. tostring(entry.name)]
+		if bucket == nil then return false end
+		for index = 1, #bucket, 2 do
+			if math.abs(bucket[index] - u) < 0.004 and math.abs(bucket[index + 1] - v) < 0.004 then return true end
 		end
 
 		return false

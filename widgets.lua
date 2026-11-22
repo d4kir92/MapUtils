@@ -242,12 +242,14 @@ function Toggles.IsEnabled(category)
 end
 
 function Toggles.IsOn(category, azeroth)
-	if category.guild then return MapUtils:GetGuildPinScopeShown(azeroth) end
+	if category.guild then return MapUtils:GetGuildPinScopeSetting(azeroth) end
 
-	return MapUtils:GetPinScopeShown(category.key, category.default, azeroth)
+	return MapUtils:GetPinScopeSetting(category.key, category.default, azeroth)
 end
 
 function Toggles.IsZoneOnly(category)
+	if category.all then return true end
+
 	return category.key ~= nil and not category.guild and MapUtils:IsPinZoneOnly(category.key)
 end
 
@@ -255,20 +257,8 @@ function Toggles.HasScope(category, azeroth)
 	return not azeroth or not Toggles.IsZoneOnly(category)
 end
 
-function Toggles.AreAllOn(azeroth)
-	local any = false
-	for _, category in ipairs(Toggles.categories) do
-		if Toggles.IsEnabled(category) and Toggles.HasScope(category, azeroth) then
-			any = true
-			if not Toggles.IsOn(category, azeroth) then return false end
-		end
-	end
-
-	return any
-end
-
 function Toggles.GetState(category, azeroth)
-	if category.all then return Toggles.AreAllOn(azeroth) end
+	if category.all then return not MapUtils:ArePinsHidden() end
 
 	return Toggles.IsOn(category, azeroth)
 end
@@ -315,19 +305,26 @@ function Toggles.Set(category, azeroth, value)
 	Toggles.Refresh()
 end
 
-function Toggles.SetAll(azeroth, value)
+function Toggles.SetAllHidden(hidden)
+	MapUtils:SetPinsHidden(hidden)
 	for _, category in ipairs(Toggles.categories) do
-		if Toggles.IsEnabled(category) and Toggles.HasScope(category, azeroth) and Toggles.IsOn(category, azeroth) ~= value then Toggles.Apply(category, azeroth, value) end
+		if Toggles.IsEnabled(category) then
+			if category.guild then
+				MapUtils:RefreshGuildMembers()
+			else
+				Toggles.RefreshCategory(category)
+			end
+		end
 	end
 
-	Notify.Show(Toggles.GetIconMarkup(Toggles.eye) .. MapUtils:Trans(Toggles.eye.label), azeroth, value)
+	Notify.ShowText(Toggles.GetIconMarkup(Toggles.eye) .. MapUtils:Trans(Toggles.eye.label) .. ": " .. Toggles.GetStateText(not hidden))
 	Toggles.Refresh()
 end
 
 function Toggles.Click(category, mouseButton)
 	local azeroth = mouseButton == "RightButton" and not Toggles.IsZoneOnly(category)
 	if category.all then
-		Toggles.SetAll(azeroth, not Toggles.AreAllOn(azeroth))
+		Toggles.SetAllHidden(not MapUtils:ArePinsHidden())
 	else
 		Toggles.Set(category, azeroth, not Toggles.IsOn(category, azeroth))
 	end
@@ -491,6 +488,13 @@ function Toggles.ShowTooltip(button)
 	local category = button.category
 	GameTooltip:SetOwner(button, "ANCHOR_LEFT")
 	GameTooltip:SetText(MapUtils:Trans(category.label))
+	if category.all then
+		GameTooltip:AddDoubleLine(format("|cffffd100%s|r", MapUtils:Trans("LID_LEFTCLICK")), Toggles.GetStateText(Toggles.GetState(category, false)), 1, 1, 1)
+		GameTooltip:Show()
+
+		return
+	end
+
 	if Toggles.IsZoneOnly(category) then
 		GameTooltip:AddDoubleLine(format("|cffffd100%s|r  %s", MapUtils:Trans("LID_LEFTCLICK"), MapUtils:Trans("LID_ZONEMAP")), Toggles.GetStateText(Toggles.GetState(category, false)), 1, 1, 1)
 		GameTooltip:Show()
@@ -1132,6 +1136,10 @@ function Player.SetFollowing(following)
 	else
 		Player.button.pulse:Stop()
 	end
+end
+
+function MapUtils:IsFollowingPlayer()
+	return Player.following == true and map:IsShown()
 end
 
 function Player.OnClick(_, mouseButton)
