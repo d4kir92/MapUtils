@@ -1508,6 +1508,13 @@ function SmoothZoom.GetExtents(container, scale)
 
 		local lowX, highX = SmoothZoom.PanRange(left, right, halfWidth, roomX)
 		local lowY, highY = SmoothZoom.PanRange(top, bottom, halfHeight, roomY)
+		if container.mapID ~= SmoothZoom.worldMapID then
+			local _, centreX, centreY = SmoothZoom.FitView(container, container.mapID)
+			if centreX ~= nil then
+				lowX, highX = math.min(lowX, centreX), math.max(highX, centreX)
+				lowY, highY = math.min(lowY, centreY), math.max(highY, centreY)
+			end
+		end
 
 		return lowX, highX, lowY, highY
 	end
