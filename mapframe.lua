@@ -1353,6 +1353,7 @@ local SmoothZoom = {
 	enterContinentArea = 1.1,
 	cityEnterShare = 0.5,
 	cityCoreShare = 0.5,
+	cityZoomCoreShare = 0.85,
 	zoneEnterCover = 0.95,
 	leaveContinentArea = 1.8,
 	minZoomPick = 1.02,
@@ -1661,7 +1662,7 @@ function SmoothZoom.PickMap(container)
 	local hostCity = MapUtils.GetZoneDetailCityZone ~= nil and MapUtils:GetZoneDetailCityZone(host) ~= nil
 	if not hostCity and scale <= SmoothZoom.GetMinScale(container) * SmoothZoom.minZoomPick then return pick end
 	local cityAtCenter = MapUtils:GetZoneDetailCityAt(space, u, v)
-	if cityAtCenter ~= nil and cityAtCenter ~= host and not SmoothZoom.InCityCore(cityAtCenter, space, u, v) then cityAtCenter = nil end
+	if cityAtCenter ~= nil and cityAtCenter ~= host and not SmoothZoom.InCityCore(cityAtCenter, space, u, v, SmoothZoom.cityZoomCoreShare) then cityAtCenter = nil end
 	local continent, zone
 	if cityAtCenter ~= nil then
 		continent = MapUtils:GetZoneDetailContinent(cityAtCenter)
@@ -1687,7 +1688,7 @@ function SmoothZoom.PickMap(container)
 	if city == nil and pick ~= continent then
 		local zl, zr, zt, zb = C_Map.GetMapRectOnMap(pick, space)
 		local inner = zl ~= nil and zr > zl and zb > zt and C_Map.GetMapInfoAtPosition(pick, (u - zl) / (zr - zl), (v - zt) / (zb - zt))
-		if inner and inner.mapID ~= pick and MapUtils:GetZoneDetailCityZone(inner.mapID) ~= nil and (inner.mapID == host or SmoothZoom.InCityCore(inner.mapID, space, u, v)) then city = inner.mapID end
+		if inner and inner.mapID ~= pick and MapUtils:GetZoneDetailCityZone(inner.mapID) ~= nil and (inner.mapID == host or SmoothZoom.InCityCore(inner.mapID, space, u, v, SmoothZoom.cityZoomCoreShare)) then city = inner.mapID end
 	end
 
 	city = cityAtCenter or city
@@ -1720,10 +1721,11 @@ function SmoothZoom.PickMap(container)
 	return pick
 end
 
-function SmoothZoom.InCityCore(city, space, u, v)
+function SmoothZoom.InCityCore(city, space, u, v, share)
 	local l, r, t, b = SmoothZoom.RectOn(city, space)
 	if l == nil or r <= l or b <= t then return false end
-	local reachX, reachY = (r - l) * SmoothZoom.cityCoreShare / 2, (b - t) * SmoothZoom.cityCoreShare / 2
+	share = share or SmoothZoom.cityCoreShare
+	local reachX, reachY = (r - l) * share / 2, (b - t) * share / 2
 
 	return math.abs(u - (l + r) / 2) <= reachX and math.abs(v - (t + b) / 2) <= reachY
 end
@@ -1772,6 +1774,14 @@ function SmoothZoom.ClickTarget(host, x, y)
 	return zone.mapID, continent, space
 end
 
+function SmoothZoom.ChildCityAt(host, x, y)
+	if x == nil or y == nil or MapUtils.GetZoneDetailCityZone == nil then return nil end
+	local info = C_Map.GetMapInfoAtPosition(host, x, y)
+	if info == nil or info.mapID == host or MapUtils:GetZoneDetailCityZone(info.mapID) ~= host then return nil end
+
+	return info.mapID
+end
+
 function MapUtils:GetOneMapTargetAt(host, x, y)
 	if not SmoothZoom.IsSpace(host) then return nil end
 
@@ -1786,6 +1796,7 @@ function SmoothZoom.OnCanvasClick(map, button, x, y)
 	if not SmoothZoom.IsSpace(host) then return false end
 	local cursorX, cursorY = SmoothZoom.CanvasCursor(map.ScrollContainer)
 	local target = SmoothZoom.ClickTarget(host, cursorX or x, cursorY or y)
+	if target == host then target = SmoothZoom.ChildCityAt(host, cursorX or x, cursorY or y) end
 	if target == nil or target == host then return false end
 	SmoothZoom.anim = nil
 	MapLevelZoom.lastSwitch = GetTime()
