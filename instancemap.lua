@@ -8,6 +8,10 @@ local PIN_TOGGLE_KEYS = {
 	["level"] = "LEVELPINS",
 }
 
+function MapUtils:IsInstanceMapEnabled()
+	return not MapUtils.nativeInstanceMaps and MapUtils:GetConfig("SHOWINSTANCEMAPS", true) ~= false
+end
+
 local compendium = _G["AzerothCompendiumAPI"]
 if type(compendium) == "table" and compendium.ShowInstanceMap ~= nil then
 	function MapUtils:ShowInstanceMap(instances, level)
@@ -97,7 +101,7 @@ end
 local instanceMap = MapUtils:CreateInstanceMap(
 	{
 		["media"] = MEDIA_PATH,
-		["isDisabled"] = function() return MapUtils.nativeInstanceMaps end,
+		["isDisabled"] = function() return not MapUtils:IsInstanceMapEnabled() end,
 		["getLevels"] = function(instanceMapID) return art[instanceMapID] end,
 		["getLabel"] = GetLevelLabel,
 		["getPins"] = function(info) return MapUtils:GetDebugInstancePins(info) end,

@@ -204,6 +204,7 @@ MapUtils:AddTrans("ruRU", "LID_SHOWBOSSPINS", "Показать метки бо�
 MapUtils:AddTrans("ruRU", "LID_SHOWCURSORCOORDS", "Показывать координаты курсора")
 MapUtils:AddTrans("ruRU", "LID_SHOWDESTMAP", "Показать карту пункта назначения")
 MapUtils:AddTrans("ruRU", "LID_SHOWENTRANCEPINS", "Показать метки входов")
+MapUtils:AddTrans("ruRU", "LID_SHOWINSTANCEMAPS", "Показывать карты подземелий и рейдов")
 MapUtils:AddTrans("ruRU", "LID_SHOWLEVELPINS", "Показать метки переходов между уровнями")
 MapUtils:AddTrans("ruRU", "LID_SHOWPLAYERCOORDS", "Показывать координаты игрока")
 MapUtils:AddTrans("ruRU", "LID_SHOWQUESTITEMPINS", "Показать метки предметов для заданий")

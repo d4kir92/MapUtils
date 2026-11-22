@@ -638,6 +638,13 @@ function MapUtils:InitSetting()
 	AddExploreCheckbox("MEETINGSTONE")
 	if not MapUtils.nativeInstanceMaps then
 		AddCategory("INSTANCEMAPPINS", 2, "LID_INSTANCEMAPS", ADDED_1004)
+		AddCheckbox(
+			"SHOWINSTANCEMAPS",
+			true,
+			function()
+				if not MapUtils:IsInstanceMapEnabled() and MapUtils:IsInstanceMapShown() then MapUtils:ToggleInstanceMap() end
+			end, nil, "2026-11-22"
+		)
 		AddSharedCheckbox("INSTANCEPINS_BOSS", "LID_SHOWBOSSPINS", ADDED_1004)
 		AddSharedCheckbox("INSTANCEPINS_ITEM", "LID_SHOWQUESTITEMPINS", ADDED_1004)
 		AddSharedCheckbox("INSTANCEPINS_QUEST", "LID_SHOWQUESTPINS", "2026-11-15")

@@ -2235,7 +2235,7 @@ local function GetClickHints(pin)
 	)
 
 	if entry.kind == "dungeon" then
-		if (entry.instanceMap or entry.instance) ~= nil and MapUtils.ShowInstanceMap ~= nil then
+		if (entry.instanceMap or entry.instance) ~= nil and MapUtils.IsInstanceMapEnabled ~= nil and MapUtils:IsInstanceMapEnabled() then
 			tinsert(
 				hints,
 				{
@@ -2583,7 +2583,7 @@ local function OnPinClick(pin, button)
 			end
 
 			if MapUtils.GlideToMap == nil or not MapUtils:GlideToMap(destMapID, destX, destY) then WorldMapFrame:SetMapID(destMapID) end
-		elseif button == "RightButton" and entry.kind == "dungeon" and (entry.instanceMap or entry.instance) ~= nil and MapUtils.ShowInstanceMap ~= nil then
+		elseif button == "RightButton" and entry.kind == "dungeon" and (entry.instanceMap or entry.instance) ~= nil and MapUtils.IsInstanceMapEnabled ~= nil and MapUtils:IsInstanceMapEnabled() then
 			MapUtils:ShowInstanceMap(entry.instanceMap or entry.instance, entry.instanceMapLevel)
 		end
 	end
