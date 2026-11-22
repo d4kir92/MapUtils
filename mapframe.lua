@@ -1633,7 +1633,9 @@ function SmoothZoom.PickMap(container)
 	end
 
 	local pick = space
-	if u < 0 or u > 1 or v < 0 or v > 1 or scale <= SmoothZoom.GetMinScale(container) * SmoothZoom.minZoomPick then return pick end
+	if u < 0 or u > 1 or v < 0 or v > 1 then return pick end
+	local hostCity = MapUtils.GetZoneDetailCityZone ~= nil and MapUtils:GetZoneDetailCityZone(host) ~= nil
+	if not hostCity and scale <= SmoothZoom.GetMinScale(container) * SmoothZoom.minZoomPick then return pick end
 	local cityAtCenter = MapUtils:GetZoneDetailCityAt(space, u, v)
 	local continent, zone
 	if cityAtCenter ~= nil then
