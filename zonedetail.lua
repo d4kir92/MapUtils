@@ -1039,6 +1039,7 @@ end
 
 base.seaArt = {
 	["path"] = "Interface\\AddOns\\MapUtils\\media\\sea",
+	["edge"] = MASK_PATH .. "worldedge",
 	["pad"] = 3,
 	["tile"] = 0.5
 }
@@ -1048,7 +1049,7 @@ function base.WorldEdge(width, height)
 	if edge == nil then
 		edge = container:CreateMaskTexture()
 		edge.mapMaskGroup = WORLD
-		SetMapMaskTexture(edge, EDGE_PATH, "CLAMPTOBLACKADDITIVE")
+		SetMapMaskTexture(edge, base.seaArt.edge, "CLAMPTOBLACKADDITIVE")
 		base.worldEdge = edge
 	end
 
