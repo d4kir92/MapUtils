@@ -380,7 +380,7 @@ function QG.GetAvailableCache()
 		doneCount, doneSum = doneCount + 1, doneSum + questID
 	end
 
-	local key = format("%d:%d:%d:%s:%s:%d:%d:%d:%d", player.level or 0, player.green or 0, player.side or 0, tostring(QG.showStarts), tostring(QG.showEnds), logCount, logSum, doneCount, doneSum)
+	local key = format("%d:%d:%d:%d:%d:%d:%d", player.level or 0, player.green or 0, player.side or 0, logCount, logSum, doneCount, doneSum)
 	for index = 1, #CATEGORY_KEYS do
 		key = key .. (enabledCategories[index] and "1" or "0")
 	end

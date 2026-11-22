@@ -1969,6 +1969,10 @@ function SmoothZoom.LeaveCity(container, delta, base)
 	return SmoothZoom.Switch(container, zone)
 end
 
+function MapUtils:IsSmoothZooming()
+	return SmoothZoom.anim ~= nil or SmoothZoom.center ~= nil
+end
+
 function SmoothZoom.OnMouseWheel(container, delta)
 	if not MapUtils:IsOneMap() or container.zoomLevels == nil or container.mapID == nil then return end
 	if WheelZoom.installed and (not IsEnabled("WORLDMAPZOOM") or WheelZoom.foreignTime == GetTime()) then return end

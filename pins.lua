@@ -252,7 +252,8 @@ local PinCache = {
 	["atlas"] = {},
 	["atlasWidth"] = {},
 	["halfCoords"] = {},
-	["druidFlights"] = {[62] = true, [63] = true}
+	["druidFlights"] = {[62] = true, [63] = true},
+	["zoomLayoutInterval"] = 0.08
 }
 
 local MINIMAP_YARDS = {}
@@ -2950,12 +2951,15 @@ local function UpdateWorldPins()
 	local w, h = child:GetWidth(), child:GetHeight()
 	if scale == nil or scale <= 0 or w <= 0 or h <= 0 then return end
 	local zoneShown = PinCache.ZoneShown()
-	if sameState and scale == worldScale and w == PinCache.worldWidth and h == PinCache.worldHeight and zoneShown == PinCache.worldZoneShown then
+	local sameView = sameState and w == PinCache.worldWidth and h == PinCache.worldHeight and zoneShown == PinCache.worldZoneShown
+	local now = GetTime()
+	if sameView and (scale == worldScale or MapUtils.IsSmoothZooming ~= nil and MapUtils:IsSmoothZooming() and now - (PinCache.worldLayoutTime or 0) < PinCache.zoomLayoutInterval) then
 		PinCache.CullWorldPins(child, w, h, baseLevel, false)
 
 		return
 	end
 
+	PinCache.worldLayoutTime = now
 	PinCache.worldWidth, PinCache.worldHeight = w, h
 	worldMapID = mapID
 	worldScale = scale
