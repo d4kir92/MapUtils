@@ -1680,7 +1680,7 @@ function SmoothZoom.PickMap(container)
 	end
 
 	if pick == continent and not continentVisible then
-		for _, radius in ipairs({0.1, 0.25}) do
+		for _, radius in ipairs({0.05, 0.125}) do
 			for direction = 0, 7 do
 				local angle = direction * math.pi / 4
 				local sampleX = u + math.cos(angle) * viewWidth * radius
