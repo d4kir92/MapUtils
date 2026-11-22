@@ -288,8 +288,70 @@ function Profiler.SortOpen(a, b)
 	return (a.openSelf or 0) > (b.openSelf or 0)
 end
 
+function Profiler.GetMetadata(name, field)
+	if C_AddOns and C_AddOns.GetAddOnMetadata then return C_AddOns.GetAddOnMetadata(name, field) end
+	if GetAddOnMetadata then return GetAddOnMetadata(name, field) end
+end
+
+function Profiler.SystemLine()
+	local settings = type(MAUTTAB) == "table" and MAUTTAB or {}
+	local zoneStyle = settings["MAPSTYLE"] or "MIXED"
+	local width, height = GetPhysicalScreenSize()
+	local cvars = {}
+	for _, name in ipairs({"graphicsQuality", "graphicsTextureResolution", "gxApi", "maxFPS", "useUiScale", "uiScale"}) do
+		local value = GetCVar(name)
+		if value ~= nil then tinsert(cvars, name .. "=" .. value) end
+	end
+
+	return format("MapUtils %s, map style %s, city style %s, screen %dx%d, Lua memory %.1f MB, %s", tostring(Profiler.GetMetadata(addonName, "Version")), zoneStyle, settings["CITYMAPSTYLE"] or zoneStyle, width or 0, height or 0, collectgarbage("count") / 1024, table.concat(cvars, ", "))
+end
+
+function Profiler.SettingsLines(lines)
+	local keys = {}
+	for key, value in pairs(type(MAUTTAB) == "table" and MAUTTAB or {}) do
+		local kind = type(value)
+		if type(key) == "string" and (kind == "boolean" or kind == "number" or kind == "string" and #value <= 40) then tinsert(keys, key) end
+	end
+
+	table.sort(keys)
+	local line = {}
+	for _, key in ipairs(keys) do
+		tinsert(line, key .. "=" .. tostring(MAUTTAB[key]))
+		if #line == 8 then
+			tinsert(lines, "  " .. table.concat(line, ", "))
+			line = {}
+		end
+	end
+
+	if #line > 0 then tinsert(lines, "  " .. table.concat(line, ", ")) end
+end
+
+function Profiler.AddonLines(lines)
+	local count = C_AddOns and C_AddOns.GetNumAddOns and C_AddOns.GetNumAddOns() or GetNumAddOns and GetNumAddOns() or 0
+	local isLoaded = C_AddOns and C_AddOns.IsAddOnLoaded or IsAddOnLoaded
+	local getInfo = C_AddOns and C_AddOns.GetAddOnInfo or GetAddOnInfo
+	local line = {}
+	local loaded = 0
+	for index = 1, count do
+		local name = getInfo and getInfo(index)
+		if name ~= nil and isLoaded and isLoaded(index) then
+			loaded = loaded + 1
+			local version = Profiler.GetMetadata(name, "Version")
+			tinsert(line, version ~= nil and version ~= "" and name .. " " .. version or name)
+			if #line == 6 then
+				tinsert(lines, "  " .. table.concat(line, ", "))
+				line = {}
+			end
+		end
+	end
+
+	if #line > 0 then tinsert(lines, "  " .. table.concat(line, ", ")) end
+
+	return loaded
+end
+
 function Profiler.BuildReport()
-	local lines = {"MapUtils profiler report " .. date("%Y-%m-%d %H:%M:%S"), Profiler.BenchContext()}
+	local lines = {"MapUtils profiler report " .. date("%Y-%m-%d %H:%M:%S"), Profiler.BenchContext(), Profiler.SystemLine()}
 	local duration = Profiler.GetDuration()
 	tinsert(lines, format("%.1f s, %d frames, MapUtils Lua avg %.3f ms/frame, peak %.1f ms", duration, Profiler.frames, Profiler.frames > 0 and Profiler.frameSum / Profiler.frames or 0, Profiler.framePeak))
 	tinsert(lines, "")
@@ -353,6 +415,14 @@ function Profiler.BuildReport()
 			tinsert(lines, format("  %-48s %7d", stat.label, stat.calls))
 		end
 	end
+
+	tinsert(lines, "")
+	tinsert(lines, "MapUtils settings:")
+	Profiler.SettingsLines(lines)
+	tinsert(lines, "")
+	local header = #lines + 1
+	tinsert(lines, "")
+	lines[header] = format("Loaded addons (%d):", Profiler.AddonLines(lines))
 
 	return table.concat(lines, "\n"), lines
 end
