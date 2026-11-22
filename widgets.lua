@@ -214,11 +214,18 @@ local Player = {
 }
 
 local MapSettings = {
-	height = 20,
+	size = 22,
 	gap = 3,
-	pad = 8,
-	onColor = {0.2, 1, 0.2},
-	offColor = {0.6, 0.6, 0.6},
+	dotScale = 0.45,
+	ringWidth = 2,
+	ringColor = {1, 0.82, 0, 1},
+	circleMask = "Interface\\CharacterFrame\\TempPortraitAlphaMask",
+	blizzardButtonSpace = 52,
+	oneMapIcon = "Interface\\Icons\\INV_Misc_Spyglass_02",
+	zoneIcon = "Interface\\Icons\\INV_Misc_Map_01",
+	allianceCityIcon = "Interface\\Icons\\Spell_Arcane_TeleportStormWind",
+	hordeCityIcon = "Interface\\Icons\\Spell_Arcane_TeleportOrgrimmar",
+	dotColors = {MAP = {0.85, 0.72, 0.45}, TERRAIN = {0.3, 0.75, 0.25}},
 	styles = {LeftButton = "MAP", RightButton = "TERRAIN", MiddleButton = "MIXED"},
 	buttons = {},
 }
@@ -1219,14 +1226,11 @@ function Player.Create()
 	MapUtils:RegisterMapEditElement(Player.element)
 end
 
-function MapSettings.GetText(button)
-	if button.key == nil then
-		local color = MapUtils:IsOneMap() and MapSettings.onColor or MapSettings.offColor
+function MapSettings.GetIcon(button)
+	if button.key ~= "CITYMAPSTYLE" then return button.icon end
+	if UnitFactionGroup("player") == "Horde" then return MapSettings.hordeCityIcon end
 
-		return format("|cff%02x%02x%02x%s|r", color[1] * 255, color[2] * 255, color[3] * 255, MapUtils:Trans("LID_ONEMAPSHORT"))
-	end
-
-	return format("%s: |cffffffff%s|r", MapUtils:Trans(button.label), MapUtils:Trans("LID_MAPSTYLESHORT" .. MapUtils:GetMapStyleOption(button.key)))
+	return button.icon
 end
 
 function MapSettings.ShowTooltip(button)
@@ -1260,18 +1264,68 @@ function MapSettings.OnClick(button, mouseButton)
 	if GameTooltip:IsOwned(button) then MapSettings.ShowTooltip(button) end
 end
 
-function MapSettings.CreateButton(key, label, title)
+function MapSettings.Mask(owner, anchor, inset)
+	if owner.CreateMaskTexture == nil then return nil end
+	local mask = owner:CreateMaskTexture()
+	mask:SetTexture(MapSettings.circleMask, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+	mask:SetPoint("TOPLEFT", anchor, "TOPLEFT", inset, -inset)
+	mask:SetPoint("BOTTOMRIGHT", anchor, "BOTTOMRIGHT", -inset, inset)
+
+	return mask
+end
+
+function MapSettings.Round(owner, anchor, inset, ...)
+	local mask = MapSettings.Mask(owner, anchor, inset)
+	if mask == nil then return end
+	for _, texture in ipairs({...}) do
+		texture:AddMaskTexture(mask)
+	end
+end
+
+function MapSettings.CreateDot(button)
+	local size = MapSettings.size * MapSettings.dotScale
+	local dot = CreateFrame("Frame", nil, button)
+	dot:SetSize(size, size)
+	dot:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", 1, -1)
+	dot:SetFrameLevel(button:GetFrameLevel() + 2)
+	dot.border = dot:CreateTexture(nil, "BACKGROUND")
+	dot.border:SetAllPoints(dot)
+	dot.border:SetColorTexture(0, 0, 0, 1)
+	dot.left = dot:CreateTexture(nil, "ARTWORK")
+	dot.left:SetPoint("TOPLEFT", dot, "TOPLEFT", 0, 0)
+	dot.left:SetPoint("BOTTOMRIGHT", dot, "BOTTOM", 0, 0)
+	dot.right = dot:CreateTexture(nil, "ARTWORK")
+	dot.right:SetPoint("TOPLEFT", dot, "TOP", 0, 0)
+	dot.right:SetPoint("BOTTOMRIGHT", dot, "BOTTOMRIGHT", 0, 0)
+	MapSettings.Round(dot, dot, 0, dot.border)
+	MapSettings.Round(dot, dot, 1, dot.left, dot.right)
+
+	return dot
+end
+
+function MapSettings.CreateButton(key, icon, title)
 	local button = CreateFrame("Button", nil, MapSettings.frame)
-	button.key, button.label, button.title = key, label, title
-	button:SetHeight(MapSettings.height)
+	button.key, button.icon, button.title = key, icon, title
+	button:SetSize(MapSettings.size, MapSettings.size)
 	button:RegisterForClicks("LeftButtonUp", "RightButtonUp", "MiddleButtonUp")
-	button.bg = button:CreateTexture(nil, "BACKGROUND")
-	button.bg:SetAllPoints(button)
-	button.bg:SetColorTexture(0, 0, 0, 0.6)
-	button.text = button:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-	button.text:SetPoint("CENTER", button, "CENTER", 0, 0)
-	Widgets.SetOutline(button.text)
-	button:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD")
+	button.back = button:CreateTexture(nil, "BACKGROUND")
+	button.back:SetAllPoints(button)
+	button.back:SetColorTexture(0, 0, 0, 0.8)
+	button.ring = button:CreateTexture(nil, "BORDER")
+	button.ring:SetAllPoints(button)
+	button.ring:SetColorTexture(unpack(MapSettings.ringColor))
+	button.ring:Hide()
+	button.texture = button:CreateTexture(nil, "ARTWORK")
+	button.texture:SetPoint("TOPLEFT", button, "TOPLEFT", MapSettings.ringWidth, -MapSettings.ringWidth)
+	button.texture:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -MapSettings.ringWidth, MapSettings.ringWidth)
+	button.texture:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+	button.hover = button:CreateTexture(nil, "HIGHLIGHT")
+	button.hover:SetAllPoints(button)
+	button.hover:SetColorTexture(1, 1, 1, 0.25)
+	button.hover:SetBlendMode("ADD")
+	MapSettings.Round(button, button, 0, button.back, button.ring, button.hover)
+	MapSettings.Round(button, button, MapSettings.ringWidth, button.texture)
+	if key ~= nil then button.dot = MapSettings.CreateDot(button) end
 	button:SetScript("OnClick", MapSettings.OnClick)
 	button:SetScript("OnEnter", MapSettings.ShowTooltip)
 	button:SetScript("OnLeave", function() GameTooltip:Hide() end)
@@ -1280,20 +1334,45 @@ function MapSettings.CreateButton(key, label, title)
 	return button
 end
 
+function MapSettings.ApplyState(button)
+	button.texture:SetTexture(MapSettings.GetIcon(button))
+	if button.key == nil then
+		local on = MapUtils:IsOneMap()
+		button.texture:SetDesaturated(not on)
+		button.texture:SetAlpha(on and 1 or Toggles.offAlpha)
+		button.ring:SetShown(on)
+
+		return
+	end
+
+	local style = MapUtils:GetMapStyleOption(button.key)
+	local left = MapSettings.dotColors[style == "TERRAIN" and "TERRAIN" or "MAP"]
+	local right = MapSettings.dotColors[style == "MAP" and "MAP" or "TERRAIN"]
+	button.dot.left:SetColorTexture(left[1], left[2], left[3], 1)
+	button.dot.right:SetColorTexture(right[1], right[2], right[3], 1)
+end
+
 function MapSettings.Refresh()
 	local frame = MapSettings.frame
 	if frame == nil then return end
-	local x = 0
-	for _, button in ipairs(MapSettings.buttons) do
-		button.text:SetText(MapSettings.GetText(button))
-		local width = math.ceil(button.text:GetStringWidth()) + MapSettings.pad * 2
-		button:SetWidth(width)
+	local vertical = MapSettings.element ~= nil and MapUtils:GetMapEditOrientation(MapSettings.element) == "VERTICAL"
+	local step = MapSettings.size + MapSettings.gap
+	for index, button in ipairs(MapSettings.buttons) do
+		MapSettings.ApplyState(button)
 		button:ClearAllPoints()
-		button:SetPoint("LEFT", frame, "LEFT", x, 0)
-		x = x + width + MapSettings.gap
+		if vertical then
+			button:SetPoint("TOP", frame, "TOP", 0, -(index - 1) * step)
+		else
+			button:SetPoint("LEFT", frame, "LEFT", (index - 1) * step, 0)
+		end
 	end
 
-	frame:SetSize(math.max(1, x - MapSettings.gap), MapSettings.height)
+	local length = math.max(1, #MapSettings.buttons * step - MapSettings.gap)
+	if vertical then
+		frame:SetSize(MapSettings.size, length)
+	else
+		frame:SetSize(length, MapSettings.size)
+	end
 end
 
 function MapUtils:RefreshMapSettingsWidget()
@@ -1309,17 +1388,18 @@ end
 
 function MapSettings.Create()
 	MapSettings.frame = Widgets.CreateFrame()
-	MapSettings.CreateButton(nil)
-	MapSettings.CreateButton("MAPSTYLE", "LID_ZONESHORT", "LID_ZONEMAPSTYLE")
-	MapSettings.CreateButton("CITYMAPSTYLE", "LID_CITYSHORT", "LID_CITYMAPSTYLE")
-	MapSettings.Refresh()
+	MapSettings.CreateButton(nil, MapSettings.oneMapIcon, "LID_ONEMAP")
+	MapSettings.CreateButton("MAPSTYLE", MapSettings.zoneIcon, "LID_ZONEMAPSTYLE")
+	MapSettings.CreateButton("CITYMAPSTYLE", MapSettings.allianceCityIcon, "LID_CITYMAPSTYLE")
 	MapSettings.element = {
 		key = "MAPSETTINGSWIDGET",
 		title = "LID_MAPSETTINGSWIDGET",
 		frame = MapSettings.frame,
-		defaultPoint = {"BOTTOMRIGHT", -Widgets.inset, Widgets.inset + 28},
-		defaultAlign = "RIGHT",
+		defaultPoint = {"TOPLEFT", Widgets.inset + MapSettings.blizzardButtonSpace, -Widgets.inset},
+		defaultAlign = "LEFT",
+		defaultOrientation = "HORIZONTAL",
 		options = {
+			orientation = true,
 			scale = true
 		},
 		OnLayout = MapSettings.Layout,
