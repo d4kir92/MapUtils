@@ -1037,6 +1037,46 @@ local function DrawContinent(continentID, refWidth, refHeight)
 	return {left, right, top, bottom}
 end
 
+base.seaArt = {
+	["path"] = "Interface\\AddOns\\MapUtils\\media\\sea",
+	["pad"] = 3,
+	["tile"] = 0.5
+}
+
+function base.WorldEdge(width, height)
+	local edge = base.worldEdge
+	if edge == nil then
+		edge = container:CreateMaskTexture()
+		edge.mapMaskGroup = WORLD
+		SetMapMaskTexture(edge, EDGE_PATH, "CLAMPTOBLACKADDITIVE")
+		base.worldEdge = edge
+	end
+
+	edge:SetSize(width, height)
+	edge:ClearAllPoints()
+	edge:SetPoint("TOPLEFT", container, "TOPLEFT", 0, 0)
+
+	return edge
+end
+
+function base.DrawSea(width, height)
+	local art = base.seaArt
+	local sea = base.world.sea
+	if sea == nil then
+		sea = container:CreateTexture(nil, "BACKGROUND", nil, -8)
+		sea:SetTexture(art.path, "REPEAT", "REPEAT", "TRILINEAR")
+		base.world.sea = sea
+	end
+
+	local tile = height * art.tile
+	local seaWidth, seaHeight = width * (1 + art.pad * 2), height * (1 + art.pad * 2)
+	sea:SetSize(seaWidth, seaHeight)
+	sea:ClearAllPoints()
+	sea:SetPoint("TOPLEFT", container, "TOPLEFT", -width * art.pad, height * art.pad)
+	sea:SetTexCoord(0, seaWidth / tile, 0, seaHeight / tile)
+	sea.used = true
+end
+
 local function ShowBase(shown)
 	base.shown = shown
 	for continentID, entry in pairs(base.continents) do
@@ -1273,7 +1313,10 @@ local function Build(mode, space)
 	container.refWidth = refWidth
 	container.refHeight = refHeight
 	container:SetSize(refWidth, refHeight)
-	if mode == MODE_FULL and space == WORLD then DrawTileLayer(base.world, WORLD, 0, 0, 1, "BACKGROUND") end
+	if mode == MODE_FULL and space == WORLD then
+		DrawTileLayer(base.world, WORLD, 0, 0, 1, "BACKGROUND", nil, base.WorldEdge(refWidth, refHeight))
+		base.DrawSea(refWidth, refHeight)
+	end
 	for _, continentID in ipairs(CONTINENTS) do
 		local continentRect = SPACE_OF[continentID] == space and DrawContinent(continentID, refWidth, refHeight)
 		if mode == MODE_AREAS and SPACE_OF[continentID] == space and not continentRect then

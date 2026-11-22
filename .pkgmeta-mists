@@ -17,6 +17,7 @@ ignore:
   - data/era/questgivers.lua
   - data/era/revealdata.lua
   - data/era/zonemasks.lua
+  - data/forever/extraart.lua
   - data/forever/instances.lua
   - data/forever/librarybooks.lua
   - data/forever/minimapcoarse.lua
@@ -35,6 +36,7 @@ ignore:
   - data/tbc/zonemasks.lua
   - data/wrath/questgivers.lua
   - instancepins.lua
+  - legacyprogress.lua
   - librarybooks.lua
   - media/2959.blp
   - media/2959_2.blp

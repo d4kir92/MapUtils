@@ -10,6 +10,7 @@ ignore:
   - convergences_wowhead.lua
   - data/cata/instances.lua
   - data/cata/questgivers.lua
+  - data/forever/extraart.lua
   - data/forever/instances.lua
   - data/forever/librarybooks.lua
   - data/forever/minimapcoarse.lua
@@ -32,6 +33,7 @@ ignore:
   - data/wrath/instances.lua
   - data/wrath/questgivers.lua
   - instancepins.lua
+  - legacyprogress.lua
   - librarybooks.lua
   - media/246.blp
   - media/256.blp
