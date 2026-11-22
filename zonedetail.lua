@@ -2537,11 +2537,19 @@ function MinimapLayer.DebugLine(text)
 end
 
 function base.SetBlizzardHighlightHidden(hidden)
-	if base.blizzardHighlightHidden == hidden then return end
-	base.blizzardHighlightHidden = hidden
+	hidden = hidden or not MapUtils:IsZoneHighlightShown()
+	local r, g, b, a = MapUtils:GetOneMapHoverColor()
+	local key = format("%s:%s:%.3f:%.3f:%.3f:%.3f", tostring(hidden), tostring(WorldMapFrame:GetMapID()), r, g, b, a)
+	if base.blizzardHighlightKey == key then return end
+	base.blizzardHighlightKey = key
 	for pin in WorldMapFrame:EnumeratePinsByTemplate("MapHighlightPinTemplate") do
-		pin:SetAlpha(hidden and 0 or 1)
+		pin:SetAlpha(hidden and 0 or a)
+		if pin.HighlightTexture ~= nil then pin.HighlightTexture:SetVertexColor(r, g, b) end
 	end
+end
+
+function MapUtils:IsZoneHighlightShown()
+	return MapUtils:GetConfig("ZONEHIGHLIGHT", true) == true
 end
 
 function base.HideHover()
@@ -2552,7 +2560,7 @@ function base.HideHover()
 end
 
 function MapUtils:GetOneMapHoverColor()
-	local color = MapUtils:GetConfig("ONEMAPHOVERCOLOR", nil)
+	local color = MapUtils:GetConfig("ZONEHIGHLIGHTCOLOR", nil)
 	if type(color) ~= "table" then return 1, 1, 1, 1 end
 
 	return color.r or 1, color.g or 1, color.b or 1, color.a or 1
@@ -2560,6 +2568,7 @@ end
 
 function MapUtils:RefreshOneMapHover()
 	if base.hover ~= nil then base.hover.x = nil end
+	base.blizzardHighlightKey = nil
 	base.HideHover()
 end
 
@@ -2580,7 +2589,7 @@ end
 function base.UpdateHover()
 	local active = container ~= nil and container:IsShown() and container.built == MODE_FULL and container.space ~= nil and container.refWidth ~= nil
 	base.SetBlizzardHighlightHidden(active)
-	if not active or not MapUtils:GetConfig("ONEMAPHOVER", false) or not WorldMapFrame.ScrollContainer:IsMouseOver() or MapUtils.GetOneMapTargetAt == nil or MapUtils.GetOneMapCursor == nil or (MapUtils.IsInstanceMapShown ~= nil and MapUtils:IsInstanceMapShown()) then return base.HideHover() end
+	if not active or not MapUtils:IsZoneHighlightShown() or not WorldMapFrame.ScrollContainer:IsMouseOver() or MapUtils.GetOneMapTargetAt == nil or MapUtils.GetOneMapCursor == nil or (MapUtils.IsInstanceMapShown ~= nil and MapUtils:IsInstanceMapShown()) then return base.HideHover() end
 	local host = WorldMapFrame:GetMapID()
 	local x, y = MapUtils:GetOneMapCursor()
 	if x == nil or y == nil then return base.HideHover() end

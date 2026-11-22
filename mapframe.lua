@@ -1801,7 +1801,10 @@ function SmoothZoom.OnCanvasClick(map, button, x, y)
 	SmoothZoom.anim = nil
 	MapLevelZoom.lastSwitch = GetTime()
 	WheelZoom.pending = nil
-	if not SmoothZoom.GlideInto(WheelZoom.container, target) then map:SetMapID(target) end
+	if not SmoothZoom.GlideInto(WheelZoom.container, target) then
+		map:SetMapID(target)
+		if map:GetMapID() == target then SmoothZoom.CenterOnMap(WheelZoom.container) end
+	end
 
 	return true
 end
@@ -1827,26 +1830,44 @@ function SmoothZoom.Glide(container, toScale, toX, toY, onDone)
 	return true
 end
 
-function SmoothZoom.GlideInto(container, target)
-	if not MapUtils:GetConfig("ONEMAPTRANSITIONS", false) then return false end
-	if container == nil or not SmoothZoom.CanSwitch(container) then return false end
+function SmoothZoom.FitView(container, target)
 	local hostLeft, hostRight, hostTop, hostBottom = MapUtils:GetZoneDetailSpaceRect(container.mapID)
 	local space = MapUtils:GetZoneDetailSpace(container.mapID)
 	local left, right, top, bottom = SmoothZoom.RectOn(target, space)
 	local width, height = container.Child:GetSize()
-	if hostLeft == nil or left == nil or hostRight <= hostLeft or hostBottom <= hostTop or width == nil or width <= 0 or height == nil or height <= 0 then return false end
+	if hostLeft == nil or left == nil or hostRight <= hostLeft or hostBottom <= hostTop or width == nil or width <= 0 or height == nil or height <= 0 then return nil end
 	local l = hostLeft + left * (hostRight - hostLeft)
 	local r = hostLeft + right * (hostRight - hostLeft)
 	local t = hostTop + top * (hostBottom - hostTop)
 	local b = hostTop + bottom * (hostBottom - hostTop)
-	if r <= l or b <= t then return false end
-	local scale = math.min(container:GetWidth() / ((r - l) * width), container:GetHeight() / ((b - t) * height))
+	if r <= l or b <= t then return nil end
+
+	return math.min(container:GetWidth() / ((r - l) * width), container:GetHeight() / ((b - t) * height)), (l + r) / 2, (t + b) / 2
+end
+
+function SmoothZoom.CenterOnMap(container)
+	if container == nil or not SmoothZoom.CanSwitch(container) or MapUtils:GetZoneDetailCityZone(container.mapID) ~= nil then return end
+	local scale, x, y = SmoothZoom.FitView(container, container.mapID)
+	if scale == nil then return end
+	SmoothZoom.anim = nil
+	SmoothZoom.center = nil
+	SmoothZoom.pickMapID = container.mapID
+	SmoothZoom.SetView(container, scale, x, y, scale, x, y)
+	SmoothZoom.userMoved = false
+	if MapUtils.UpdateWorldPinsNow ~= nil then MapUtils.UpdateWorldPinsNow() end
+end
+
+function SmoothZoom.GlideInto(container, target)
+	if not MapUtils:GetConfig("ONEMAPTRANSITIONS", false) then return false end
+	if container == nil or not SmoothZoom.CanSwitch(container) then return false end
+	local scale, x, y = SmoothZoom.FitView(container, target)
+	if scale == nil then return false end
 
 	return SmoothZoom.Glide(
 		container,
 		scale,
-		(l + r) / 2,
-		(t + b) / 2,
+		x,
+		y,
 		function()
 			if not SmoothZoom.Switch(container, target, true) then
 				MapLevelZoom.lastSwitch = GetTime()
