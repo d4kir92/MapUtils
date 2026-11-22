@@ -1868,6 +1868,8 @@ function SmoothZoom.Step(container, elapsed)
 			if not anim.dragging and x ~= nil and y ~= nil then anim.anchorX, anim.anchorY = x + offsetX / scale, y + offsetY / scale end
 			anim.offsetX, anim.offsetY = offsetX, offsetY
 		end
+
+		anim.startScale, anim.correctX, anim.correctY = scale, nil, nil
 	end
 
 	anim.dragging = panning
@@ -1878,8 +1880,20 @@ function SmoothZoom.Step(container, elapsed)
 		SmoothZoom.anim = nil
 	end
 
+	anim.startScale = anim.startScale or scale
 	anim.scale = nextScale
 	local x, y = anim.anchorX - anim.offsetX / nextScale, anim.anchorY - anim.offsetY / nextScale
+	if anim.target < anim.startScale and not panning then
+		if anim.correctX == nil then
+			local minX, maxX, minY, maxY = SmoothZoom.GetExtents(container, anim.target)
+			local finalX, finalY = anim.anchorX - anim.offsetX / anim.target, anim.anchorY - anim.offsetY / anim.target
+			anim.correctX, anim.correctY = Clamp(finalX, minX, maxX) - finalX, Clamp(finalY, minY, maxY) - finalY
+		end
+
+		local progress = Clamp(math.log(nextScale / anim.startScale) / math.log(anim.target / anim.startScale), 0, 1)
+		x, y = x + anim.correctX * progress, y + anim.correctY * progress
+	end
+
 	SmoothZoom.SetView(container, nextScale, x, y, nextScale, x, y, anim.preserveCityScale)
 end
 
