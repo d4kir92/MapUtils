@@ -2855,7 +2855,12 @@ end
 
 local function GetPoiScale()
 	local zoom = 0
-	if WorldMapFrame.GetCanvasZoomPercent ~= nil then zoom = WorldMapFrame:GetCanvasZoomPercent() or 0 end
+	local oneMap = MapUtils.GetOneMapZoomPercent ~= nil and MapUtils:GetOneMapZoomPercent()
+	if oneMap then
+		zoom = oneMap
+	elseif WorldMapFrame.GetCanvasZoomPercent ~= nil then
+		zoom = WorldMapFrame:GetCanvasZoomPercent() or 0
+	end
 	zoom = math.min(math.max(zoom, 0), 1)
 	local scale = POI_START_SCALE + (POI_END_SCALE - POI_START_SCALE) * zoom
 	if WorldMapFrame.GetGlobalPinScale ~= nil then scale = scale * (WorldMapFrame:GetGlobalPinScale() or 1) end

@@ -1339,6 +1339,7 @@ local SmoothZoom = {
 	snapLog = 0.002,
 	settleEpsilon = 0.0005,
 	centerDuration = 0.6,
+	pinZoomRange = 150,
 }
 
 function MapUtils:IsOneMap()
@@ -2004,6 +2005,17 @@ function SmoothZoom.LeaveCity(container, delta, base)
 	SmoothZoom.anim = nil
 
 	return SmoothZoom.Switch(container, zone)
+end
+
+function MapUtils:GetOneMapZoomPercent()
+	local container = WheelZoom.container
+	if container == nil or not MapUtils:IsOneMap() or not SmoothZoom.IsSpace(container.mapID) then return nil end
+	local left, right = MapUtils:GetZoneDetailSpaceRect(container.mapID)
+	local width, view = container.Child:GetWidth(), container:GetWidth()
+	if left == nil or right <= left or width == nil or width <= 0 or view == nil or view <= 0 then return nil end
+	local share = container:GetCanvasScale() * width * (right - left) / view
+
+	return Clamp(math.log(math.max(share, 1)) / math.log(SmoothZoom.pinZoomRange), 0, 1)
 end
 
 function MapUtils:IsSmoothZooming()
