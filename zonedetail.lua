@@ -768,10 +768,34 @@ function MapUtils:IsZoneDetailMap(mapID)
 	return GetSpaceRect(mapID) ~= nil
 end
 
+local function DrawnRect(width, height, left, right, top, bottom)
+	if left == nil or bottom <= top or container == nil or container.refWidth == nil or container.refHeight == nil or width == nil or width <= 0 or height == nil or height <= 0 then return left, right, top, bottom end
+	local span = container.refHeight * (right - left) * width / (container.refWidth * height)
+	local drawnTop = 0.5 - (0.5 - top) / (bottom - top) * span
+
+	return left, right, drawnTop, drawnTop + span
+end
+
+local layerSizes = {}
+local function LayerSize(mapID)
+	local size = layerSizes[mapID]
+	if size == nil then
+		local layers = C_Map.GetMapArtLayers(mapID)
+		local layer = layers and layers[1]
+		size = layer and layer.layerWidth and layer.layerWidth > 0 and layer.layerHeight and layer.layerHeight > 0 and {layer.layerWidth, layer.layerHeight} or false
+		layerSizes[mapID] = size
+	end
+
+	if not size then return nil end
+
+	return size[1], size[2]
+end
+
 function MapUtils:GetZoneDetailSpaceRect(mapID)
 	if GetMode() ~= MODE_FULL then return nil end
+	local width, height = LayerSize(mapID)
 
-	return GetSpaceRect(mapID)
+	return DrawnRect(width, height, GetSpaceRect(mapID))
 end
 
 function MapUtils:GetZoneDetailSpace(mapID)
@@ -1364,33 +1388,16 @@ local function GetHostRect(mapID)
 	return GetSpaceRect(mapID)
 end
 
-local function LayoutTop(top, bottom, span)
-	if bottom <= top then return top end
-
-	return 0.5 - (0.5 - top) / (bottom - top) * span
-end
-
 local function Layout(mapID, width, height)
-	local left, right, top, bottom = GetHostRect(mapID)
-	if left == nil or container.refWidth == nil or container.refHeight == nil then return false end
+	local left, right, top = DrawnRect(width, height, GetHostRect(mapID))
+	if left == nil or container.refWidth == nil then return false end
 	local scale = (right - left) * width / container.refWidth
 	if scale <= 0 then return false end
-	local layoutTop = LayoutTop(top, bottom, container.refHeight * scale / height)
 	container:SetScale(scale)
 	container:ClearAllPoints()
-	container:SetPoint("TOPLEFT", WorldMapFrame.ScrollContainer.Child, "TOPLEFT", left * width / scale, -layoutTop * height / scale)
+	container:SetPoint("TOPLEFT", WorldMapFrame.ScrollContainer.Child, "TOPLEFT", left * width / scale, -top * height / scale)
 
 	return true
-end
-
-function MapUtils:GetZoneDetailLayoutRect(mapID, width, height)
-	if container == nil or container.built == nil then return nil end
-	local left, right, top, bottom = GetHostRect(mapID)
-	if left == nil or container.refWidth == nil or container.refHeight == nil or width == nil or width <= 0 or height == nil or height <= 0 then return left, right, top, bottom end
-	local span = container.refHeight * (right - left) * width / (container.refWidth * height)
-	local layoutTop = LayoutTop(top, bottom, span)
-
-	return left, right, layoutTop, layoutTop + span
 end
 
 local MinimapLayer
