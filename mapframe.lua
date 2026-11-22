@@ -1352,6 +1352,7 @@ local SmoothZoom = {
 	leaveArea = 3.3,
 	enterContinentArea = 1.1,
 	cityEnterShare = 0.5,
+	cityCoreShare = 0.5,
 	zoneEnterCover = 0.95,
 	leaveContinentArea = 1.8,
 	minZoomPick = 1.02,
@@ -1660,12 +1661,13 @@ function SmoothZoom.PickMap(container)
 	local hostCity = MapUtils.GetZoneDetailCityZone ~= nil and MapUtils:GetZoneDetailCityZone(host) ~= nil
 	if not hostCity and scale <= SmoothZoom.GetMinScale(container) * SmoothZoom.minZoomPick then return pick end
 	local cityAtCenter = MapUtils:GetZoneDetailCityAt(space, u, v)
+	if cityAtCenter ~= nil and cityAtCenter ~= host and not SmoothZoom.InCityCore(cityAtCenter, space, u, v) then cityAtCenter = nil end
 	local continent, zone
 	if cityAtCenter ~= nil then
 		continent = MapUtils:GetZoneDetailContinent(cityAtCenter)
 		zone = C_Map.GetMapInfo(cityAtCenter)
 	else
-		continent, zone = SmoothZoom.ContinentAt(space, u, v, MapUtils:GetZoneDetailContinent(host))
+		continent, zone = SmoothZoom.ContinentAt(space, u, v, MapUtils:GetZoneDetailContinent(host), host)
 	end
 	if continent == nil or not SmoothZoom.IsSpace(continent) or not Fits(continent, true) then return pick end
 	pick = continent
@@ -1685,7 +1687,7 @@ function SmoothZoom.PickMap(container)
 	if city == nil and pick ~= continent then
 		local zl, zr, zt, zb = C_Map.GetMapRectOnMap(pick, space)
 		local inner = zl ~= nil and zr > zl and zb > zt and C_Map.GetMapInfoAtPosition(pick, (u - zl) / (zr - zl), (v - zt) / (zb - zt))
-		if inner and inner.mapID ~= pick and MapUtils:GetZoneDetailCityZone(inner.mapID) ~= nil then city = inner.mapID end
+		if inner and inner.mapID ~= pick and MapUtils:GetZoneDetailCityZone(inner.mapID) ~= nil and (inner.mapID == host or SmoothZoom.InCityCore(inner.mapID, space, u, v)) then city = inner.mapID end
 	end
 
 	city = cityAtCenter or city
@@ -1718,20 +1720,38 @@ function SmoothZoom.PickMap(container)
 	return pick
 end
 
-function SmoothZoom.ZoneAt(continent, space, u, v, left, right, top, bottom)
+function SmoothZoom.InCityCore(city, space, u, v)
+	local l, r, t, b = SmoothZoom.RectOn(city, space)
+	if l == nil or r <= l or b <= t then return false end
+	local reachX, reachY = (r - l) * SmoothZoom.cityCoreShare / 2, (b - t) * SmoothZoom.cityCoreShare / 2
+
+	return math.abs(u - (l + r) / 2) <= reachX and math.abs(v - (t + b) / 2) <= reachY
+end
+
+function SmoothZoom.CityOrZone(info, space, u, v, keep)
+	if info == nil or info.mapID == keep or MapUtils.GetZoneDetailCityZone == nil then return info end
+	local around = MapUtils:GetZoneDetailCityZone(info.mapID)
+	if around == nil or SmoothZoom.InCityCore(info.mapID, space, u, v) then return info end
+	local l, r, t, b = SmoothZoom.RectOn(around, space)
+	if l == nil or u < l or u > r or v < t or v > b then return nil end
+
+	return C_Map.GetMapInfo(around)
+end
+
+function SmoothZoom.ZoneAt(continent, space, u, v, left, right, top, bottom, keep)
 	local zone = C_Map.GetMapInfoAtPosition(continent, (u - left) / (right - left), (v - top) / (bottom - top))
 	if zone == nil or zone.mapID == continent or not MapUtils.IsMapInside(zone.mapID, continent) then return nil end
 	local l, r, t, b = SmoothZoom.RectOn(zone.mapID, space)
-	if l ~= nil and u >= l and u <= r and v >= t and v <= b then return zone end
+	if l ~= nil and u >= l and u <= r and v >= t and v <= b then return SmoothZoom.CityOrZone(zone, space, u, v, keep) end
 end
 
-function SmoothZoom.ContinentAt(space, u, v, preferred)
+function SmoothZoom.ContinentAt(space, u, v, preferred, keep)
 	if MapUtils.GetZoneDetailContinents == nil then return nil end
 	local fallback, foundContinent, foundZone
 	for _, continent in ipairs(MapUtils:GetZoneDetailContinents(space)) do
 		local l, r, t, b = SmoothZoom.RectOn(continent, space)
 		if l ~= nil and r > l and b > t and u >= l and u <= r and v >= t and v <= b then
-			local zone = SmoothZoom.ZoneAt(continent, space, u, v, l, r, t, b)
+			local zone = SmoothZoom.ZoneAt(continent, space, u, v, l, r, t, b, keep)
 			if zone ~= nil and continent == preferred then return continent, zone end
 			if zone ~= nil and foundZone == nil then foundContinent, foundZone = continent, zone end
 			if fallback == nil or continent == preferred then fallback = continent end
