@@ -2613,6 +2613,22 @@ local function Install()
 	base.cull.RunProfiled = MapUtils.Profile("ZoneDetail.Cull", base.cull.Run)
 	base.UpdateHoverProfiled = MapUtils.Profile("ZoneDetail.Hover", base.UpdateHover)
 	MapUtils:RegisterRenderLayer("Zone art", function() return container end)
+	MapUtils:RegisterRenderLayer("Zone art: zones", function()
+		local frames = {}
+		for _, zone in pairs(zones) do
+			tinsert(frames, zone.frame)
+		end
+
+		return frames
+	end)
+	MapUtils:RegisterRenderLayer("Zone art: underground", function()
+		local frames = {}
+		for _, under in pairs(unders) do
+			tinsert(frames, under.frame)
+		end
+
+		return frames
+	end)
 	MapUtils:RegisterRenderLayer("Terrain tiles", function()
 		local frames = {MinimapLayer.frame}
 		for _, city in pairs(cities) do
