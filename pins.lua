@@ -2951,7 +2951,8 @@ local function UpdateWorldPins()
 	local w, h = child:GetWidth(), child:GetHeight()
 	if scale == nil or scale <= 0 or w <= 0 or h <= 0 then return end
 	local zoneShown = PinCache.ZoneShown()
-	local sameView = sameState and w == PinCache.worldWidth and h == PinCache.worldHeight and zoneShown == PinCache.worldZoneShown
+	local sameSize = PinCache.SameSize(w, h)
+	local sameView = sameState and sameSize and zoneShown == PinCache.worldZoneShown
 	local now = GetTime()
 	if sameView and (scale == worldScale or MapUtils.IsSmoothZooming ~= nil and MapUtils:IsSmoothZooming() and now - (PinCache.worldLayoutTime or 0) < PinCache.zoomLayoutInterval) then
 		PinCache.CullWorldPins(child, w, h, baseLevel, false)
@@ -2959,7 +2960,7 @@ local function UpdateWorldPins()
 		return
 	end
 
-	PinCache.CountLayoutReason(sameState, sameView, scale == worldScale)
+	PinCache.CountLayoutReason(sameState, sameSize, sameView, scale == worldScale)
 	PinCache.worldLayoutTime = now
 	PinCache.worldWidth, PinCache.worldHeight = w, h
 	worldMapID = mapID
@@ -3098,16 +3099,26 @@ end
 
 PinCache.layoutReasons = {
 	["state"] = MapUtils.Profile("World pin layout: pin state", function() end),
-	["view"] = MapUtils.Profile("World pin layout: size or zone art", function() end),
+	["size"] = MapUtils.Profile("World pin layout: canvas size", function() end),
+	["view"] = MapUtils.Profile("World pin layout: zone art shown", function() end),
 	["zoom"] = MapUtils.Profile("World pin layout: zoom step", function() end),
 	["scale"] = MapUtils.Profile("World pin layout: scale idle", function() end),
 	["same"] = MapUtils.Profile("World pin layout: nothing changed", function() end)
 }
 
-function PinCache.CountLayoutReason(sameState, sameView, sameScale)
+function PinCache.SameSize(w, h)
+	local lastWidth, lastHeight = PinCache.worldWidth, PinCache.worldHeight
+	if lastWidth == nil or lastHeight == nil then return false end
+
+	return math.abs(w - lastWidth) <= lastWidth * 0.001 and math.abs(h - lastHeight) <= lastHeight * 0.001
+end
+
+function PinCache.CountLayoutReason(sameState, sameSize, sameView, sameScale)
 	local reasons = PinCache.layoutReasons
 	if not sameState then
 		reasons.state()
+	elseif not sameSize then
+		reasons.size()
 	elseif not sameView then
 		reasons.view()
 	elseif sameScale then
@@ -3137,7 +3148,7 @@ function PinCache.PollWorldPins()
 	local moved = view.scrollX ~= x or view.scrollY ~= y or view.width ~= width or view.height ~= height
 	view.scrollX, view.scrollY, view.width, view.height = x, y, width, height
 	local w, h = child:GetSize()
-	if worldMapID ~= WorldMapFrame:GetMapID() or worldScale ~= child:GetScale() or PinCache.worldWidth ~= w or PinCache.worldHeight ~= h or PinCache.ZoneShown() ~= PinCache.worldZoneShown or view.nextPoll == nil or now >= view.nextPoll then
+	if worldMapID ~= WorldMapFrame:GetMapID() or worldScale ~= child:GetScale() or not PinCache.SameSize(w, h) or PinCache.ZoneShown() ~= PinCache.worldZoneShown or view.nextPoll == nil or now >= view.nextPoll then
 		view.nextPoll = now + 0.5
 		PinCache.updateWorldPins()
 	elseif moved and view.level ~= nil then

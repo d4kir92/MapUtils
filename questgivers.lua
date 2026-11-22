@@ -1002,8 +1002,7 @@ end
 if MapUtils.CanvasPinUpdaters ~= nil then tinsert(MapUtils.CanvasPinUpdaters, QG.Update) end
 function MapUtils:RefreshQuestGivers()
 	dirty = true
-	QG.stale = true
-	QG.staleBy = "refresh"
+	QG.collectSignature = nil
 	lastCollect = 0
 	QG.HidePins()
 end
