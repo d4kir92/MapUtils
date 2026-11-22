@@ -1544,8 +1544,12 @@ function SmoothZoom.Switch(container, target, keepCurrentView)
 	if toLeft == nil and MapUtils.GetZoneDetailRawRect ~= nil then toLeft, toRight, toTop, toBottom = MapUtils:GetZoneDetailRawRect(target) end
 	local layers = C_Map.GetMapArtLayers(target)
 	local layer = layers and layers[1]
-	local width = container.Child:GetWidth()
+	local width, height = container.Child:GetSize()
 	if fromLeft == nil or toLeft == nil or layer == nil or layer.layerWidth == nil or layer.layerWidth <= 0 or width == nil or width <= 0 then return false end
+	if MapUtils.GetZoneDetailLayoutRect ~= nil then
+		local _, _, layoutTop, layoutBottom = MapUtils:GetZoneDetailLayoutRect(container.mapID, width, height)
+		if layoutTop ~= nil and layoutBottom > layoutTop then fromTop, fromBottom = layoutTop, layoutBottom end
+	end
 	local city = MapUtils:GetZoneDetailCityZone(target) ~= nil
 	local function mapX(value) return toLeft + (value - fromLeft) / (fromRight - fromLeft) * (toRight - toLeft) end
 	local function mapY(value) return toTop + (value - fromTop) / (fromBottom - fromTop) * (toBottom - toTop) end
@@ -1570,6 +1574,10 @@ function SmoothZoom.Switch(container, target, keepCurrentView)
 	SmoothZoom.pickMapID = target
 	local targetWidth = container.Child:GetWidth()
 	if targetWidth == nil or targetWidth <= 0 then targetWidth = layer.layerWidth end
+	if MapUtils.GetZoneDetailLayoutRect ~= nil then
+		local _, _, layoutTop, layoutBottom = MapUtils:GetZoneDetailLayoutRect(target, targetWidth, container.Child:GetHeight())
+		if layoutTop ~= nil and layoutBottom > layoutTop then toTop, toBottom = layoutTop, layoutBottom end
+	end
 	local factor = (fromRight - fromLeft) * width / ((toRight - toLeft) * targetWidth)
 	SmoothZoom.SetView(container, scale * factor, mapX(x), mapY(y), targetScale * factor, mapX(targetX), mapY(targetY), city)
 	SmoothZoom.ShowLoadedArt()

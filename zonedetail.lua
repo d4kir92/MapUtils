@@ -1376,6 +1376,14 @@ local function Layout(mapID, width, height)
 	return true
 end
 
+function MapUtils:GetZoneDetailLayoutRect(mapID, width, height)
+	if container == nil or container.built == nil then return nil end
+	local left, right, top, bottom = GetHostRect(mapID)
+	if left == nil or container.refWidth == nil or container.refHeight == nil or width == nil or width <= 0 or height == nil or height <= 0 then return left, right, top, bottom end
+
+	return left, right, top, top + container.refHeight * (right - left) * width / (container.refWidth * height)
+end
+
 local MinimapLayer
 local function SyncBlizzardArt()
 	local cityDetail = MinimapLayer.cityDetailHost ~= nil and MinimapLayer.cityDetailHost == WorldMapFrame:GetMapID()
