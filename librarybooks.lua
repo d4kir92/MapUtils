@@ -36,7 +36,7 @@ function MapUtils:LibraryBookPinsEnabled(minimap, anyMap)
 	if not MapUtils:IsPinCategoryEnabled(key) then return false end
 	if anyMap then return MapUtils:GetPinScopeShown(key, LibraryBooks.defaults[key], false) or MapUtils:GetPinScopeShown(key, LibraryBooks.defaults[key], true) end
 
-	return MapUtils:GetPinScopeShown(key, LibraryBooks.defaults[key], MapUtils:IsAzerothMap())
+	return MapUtils:GetPinScopeShown(key, LibraryBooks.defaults[key], MapUtils:IsPinScopeAzeroth())
 end
 
 function MapUtils:RefreshLibraryBooks()

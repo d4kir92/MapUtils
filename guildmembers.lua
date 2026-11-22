@@ -5,10 +5,10 @@ local Guild = MapUtils:CreateGuildMap({
 	priority = 10,
 	isHidden = function(mapID, kind)
 		if MapUtils.IsInstanceMapShown ~= nil and MapUtils:IsInstanceMapShown() then return true end
-		if kind == "friend" then return not MapUtils:IsPinCategoryEnabled("FRIENDMEMBERPINS") or not MapUtils:GetPinScopeShown("FRIENDMEMBERPINS", true, MapUtils:IsAzerothMap(mapID)) end
+		if kind == "friend" then return not MapUtils:IsPinCategoryEnabled("FRIENDMEMBERPINS") or not MapUtils:GetPinScopeShown("FRIENDMEMBERPINS", true, MapUtils:IsPinScopeAzeroth(mapID)) end
 		if not MapUtils:IsPinCategoryEnabled("GUILDMEMBERPINS") then return true end
 
-		return not MapUtils:GetGuildPinScopeShown(MapUtils:IsAzerothMap(mapID))
+		return not MapUtils:GetGuildPinScopeShown(MapUtils:IsPinScopeAzeroth(mapID))
 	end,
 	getClip = function(mapID)
 		if MapUtils.IsOneMap ~= nil and MapUtils.IsZoneDetailMap ~= nil and MapUtils:IsOneMap() and MapUtils:IsZoneDetailMap(mapID) then return -50, 51 end

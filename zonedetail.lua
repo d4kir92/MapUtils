@@ -862,6 +862,12 @@ function MapUtils:GetZoneDetailCityZone(mapID)
 	return best
 end
 
+function MapUtils:IsZoneDetailArtFull()
+	if container == nil or not container:IsShown() or container.built ~= MODE_FULL or container.cityMode then return true end
+
+	return base.fade.detail >= 1
+end
+
 function MapUtils:GetZoneDetailSources()
 	local sources = {}
 	for _, continentID in ipairs(CONTINENTS) do

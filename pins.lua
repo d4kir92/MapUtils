@@ -2939,7 +2939,8 @@ local function UpdateWorldPins()
 	local sameState = mapID == worldMapID and piersOn == worldPiers and dungeonsOn == worldDungeons and flightsOn == worldFlights and meetingStonesOn == worldMeetingStones and crossingsOn == worldCrossings and spiritHealersOn == worldSpiritHealers and convergencesOn == worldConvergences and libraryBooksOn == PinCache.worldLibraryBooks
 	local w, h = child:GetWidth(), child:GetHeight()
 	if scale == nil or scale <= 0 or w <= 0 or h <= 0 then return end
-	if sameState and scale == worldScale and w == PinCache.worldWidth and h == PinCache.worldHeight then
+	local zoneShown = PinCache.ZoneShown()
+	if sameState and scale == worldScale and w == PinCache.worldWidth and h == PinCache.worldHeight and zoneShown == PinCache.worldZoneShown then
 		PinCache.CullWorldPins(child, w, h, baseLevel, false)
 
 		return
@@ -2972,6 +2973,9 @@ local function UpdateWorldPins()
 		PinCache.worldEntries = list
 	end
 
+	PinCache.worldZoneShown = zoneShown
+	local entries = PinCache.worldEntries
+
 	local size = ICON_SIZE / scale
 	local poiScale = GetPoiScale()
 	local dungeonSize = DUNGEON_ICON_SIZE * poiScale / scale
@@ -2979,11 +2983,11 @@ local function UpdateWorldPins()
 	local clusters
 	if MapUtils:IsDebug() then
 		clusters = {}
-		for _, item in ipairs(PinCache.worldEntries) do
+		for _, item in ipairs(entries) do
 			tinsert(clusters, {items = {item}})
 		end
 	else
-		for _, item in ipairs(PinCache.worldEntries) do
+		for _, item in ipairs(entries) do
 			local kind = item.entry.kind
 			local baseSize = (kind == "dungeon" or kind == "flight") and dungeonSize or size
 			if kind == "crossing" then baseSize = dungeonSize * 0.7 end
@@ -2992,7 +2996,7 @@ local function UpdateWorldPins()
 			if sizeFactors[key] == nil then sizeFactors[key] = MapUtils:GetPinKindSizeFactor(kind) end
 			item.distance = baseSize * sizeFactors[key]
 		end
-		clusters = MapUtils:ClusterMapPins(PinCache.worldEntries, w, h)
+		clusters = MapUtils:ClusterMapPins(entries, w, h)
 	end
 
 	for _, cluster in ipairs(clusters) do
@@ -3077,6 +3081,10 @@ local function UpdateWorldPins()
 	PinCache.CullWorldPins(child, w, h, baseLevel, true)
 end
 
+function PinCache.ZoneShown()
+	return MapUtils.IsZoneDetailArtFull == nil or MapUtils:IsZoneDetailArtFull()
+end
+
 PinCache.updateWorldPins = MapUtils.Profile("pins UpdateWorldPins", UpdateWorldPins)
 function PinCache.PollWorldPins()
 	local child = GetWorldCanvas()
@@ -3091,7 +3099,7 @@ function PinCache.PollWorldPins()
 	local moved = view.scrollX ~= x or view.scrollY ~= y or view.width ~= width or view.height ~= height
 	view.scrollX, view.scrollY, view.width, view.height = x, y, width, height
 	local w, h = child:GetSize()
-	if worldMapID ~= WorldMapFrame:GetMapID() or worldScale ~= child:GetScale() or PinCache.worldWidth ~= w or PinCache.worldHeight ~= h or view.nextPoll == nil or now >= view.nextPoll then
+	if worldMapID ~= WorldMapFrame:GetMapID() or worldScale ~= child:GetScale() or PinCache.worldWidth ~= w or PinCache.worldHeight ~= h or PinCache.ZoneShown() ~= PinCache.worldZoneShown or view.nextPoll == nil or now >= view.nextPoll then
 		view.nextPoll = now + 0.5
 		PinCache.updateWorldPins()
 	elseif moved and view.level ~= nil then

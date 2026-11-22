@@ -59,6 +59,13 @@ function MapUtils:IsAzerothMap(mapID)
 	return azeroth
 end
 
+function MapUtils:IsPinScopeAzeroth(mapID)
+	if mapID == nil and WorldMapFrame ~= nil and WorldMapFrame.GetMapID ~= nil then mapID = WorldMapFrame:GetMapID() end
+	if mapID ~= nil and MapUtils.IsZoneDetailArtFull ~= nil and MapUtils:IsOneMap() and MapUtils:IsZoneDetailMap(mapID) then return not MapUtils:IsZoneDetailArtFull() end
+
+	return MapUtils:IsAzerothMap(mapID)
+end
+
 function MapUtils:IsPinCategoryEnabled(key)
 	return PinVisibility.GetDB()[key .. "_ENABLED"] ~= false
 end
@@ -99,7 +106,7 @@ end
 function MapUtils:IsPinShownOnMap(key, default, mapID)
 	if not MapUtils:IsPinCategoryEnabled(key) then return false end
 
-	return MapUtils:GetPinScopeShown(key, default, MapUtils:IsAzerothMap(mapID))
+	return MapUtils:GetPinScopeShown(key, default, MapUtils:IsPinScopeAzeroth(mapID))
 end
 
 function MapUtils:GetPinSizeDefault(key)

@@ -949,6 +949,14 @@ function QG.Update()
 	if MapUtils:UpdateVisibleQuestPins(nativeQuests) then dirty = true end
 	local mapID = WorldMapFrame:GetMapID()
 	local now = GetTime()
+	local scope = MapUtils:IsPinScopeAzeroth(mapID)
+	if scope ~= QG.scope then
+		QG.scope = scope
+		QG.stale = true
+		dirty = true
+		lastCollect = 0
+	end
+
 	if mapID ~= lastMapID or (dirty and now - lastCollect >= COLLECT_DELAY) then
 		if mapID ~= lastMapID then QG.HidePins() end
 		dirty = false
