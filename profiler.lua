@@ -221,10 +221,15 @@ function Profiler.TrackState(delta, lua)
 	state.frames = state.frames + 1
 	state.time = state.time + delta
 	state.lua = state.lua + lua
-	if delta > state.worst then state.worst = delta end
-	if delta > 1 / 60 then state.slow = state.slow + 1 end
+	if afterCount then
+		state.countFrames = (state.countFrames or 0) + 1
+	else
+		if delta > state.worst then state.worst = delta end
+		if delta > 1 / 60 then state.slow = state.slow + 1 end
+	end
+
 	local now = GetTime()
-	if delta >= Profiler.hitchThreshold then
+	if delta >= Profiler.hitchThreshold and not afterCount then
 		local top = {}
 		for label, value in pairs(Profiler.frameSelf) do
 			tinsert(top, {label, value})
@@ -297,9 +302,10 @@ function Profiler.BuildReport()
 	table.sort(list, function(a, b) return a.time > b.time end)
 	for _, state in ipairs(list) do
 		local avg = state.frames > 0 and state.time / state.frames * 1000 or 0
-		tinsert(lines, format("%s %7d %6.0f %8.2f %9.1f %6.0f%% %7.3f %5s %6s %9.1f %4d", state.key, state.frames, avg > 0 and 1000 / avg or 0, avg, state.worst * 1000, state.frames > 0 and state.slow / state.frames * 100 or 0, state.frames > 0 and state.lua / state.frames or 0, state.samples > 0 and format("%d", state.textures / state.samples) or "-", state.samples > 0 and format("%d", state.masks / state.samples) or "-", state.frames > 0 and (state.alloc or 0) / state.frames or 0, state.gc or 0))
+		tinsert(lines, format("%s %7d %6.0f %8.2f %9.1f %6.0f%% %7.3f %5s %6s %9.1f %4d", state.key, state.frames, avg > 0 and 1000 / avg or 0, avg, state.worst * 1000, state.frames > (state.countFrames or 0) and state.slow / (state.frames - (state.countFrames or 0)) * 100 or 0, state.frames > 0 and state.lua / state.frames or 0, state.samples > 0 and format("%d", state.textures / state.samples) or "-", state.samples > 0 and format("%d", state.masks / state.samples) or "-", state.frames > 0 and (state.alloc or 0) / state.frames or 0, state.gc or 0))
 	end
 
+	tinsert(lines, "worst ms, <60fps and hitches skip the frame after each texture count (profiler's own cost, every " .. Profiler.stateSampleInterval .. " s)")
 	tinsert(lines, "")
 	tinsert(lines, format("Hitches >= %d ms (last %d): time, state, frame ms, MapUtils lua ms, memory change (gc = Lua garbage collection ran), top self ms", Profiler.hitchThreshold * 1000, Profiler.hitchMax))
 	for _, hitch in ipairs(Profiler.hitches) do
