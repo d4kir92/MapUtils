@@ -204,6 +204,7 @@ local SUPERTRACKED_ALPHA = 0.5
 local SUPERTRACKED_MIN_DISTANCE = 1000
 local TRACKED_ICON_SCALE = 0.72
 local MEETING_STONE_ICON_SCALE = 0.8
+local SHIP_ICON_SCALE = 1.4
 local PUSHED_OFFSET = 1
 local CIRCLE_TRACKED = "UI-QuestPoi-QuestNumber-SuperTracked"
 local CIRCLE_TRACKED_PUSHED = "UI-QuestPoi-QuestNumber-Pressed-SuperTracked"
@@ -3082,7 +3083,8 @@ local function UpdateWorldPins()
 			local flightSize = (GetAtlasWidth(entry.icon) or ICON_SIZE) * poiScale / scale * factor
 			pin:SetSize(flightSize, flightSize)
 		else
-			pin:SetSize(size * factor, size * factor)
+			local shipScale = pin.icon == TRANSPORT_ICONS["ship"] and SHIP_ICON_SCALE or 1
+			pin:SetSize(size * factor * shipScale, size * factor * shipScale)
 		end
 
 		local wasRescaled = pin.rescaleFactor ~= nil and pin.rescaleFactor ~= 1
@@ -3264,7 +3266,9 @@ local function UpdateMinimapPins()
 		pin.entry = entry
 		ApplyIcon(pin, GetEntryIcon(entry))
 		ApplyEntryTint(pin, entry)
-		LayoutPinIcon(pin, ICON_SIZE * GetEntryIconScale(entry), 0, 0)
+		local minimapSize = ICON_SIZE * (pin.icon == TRANSPORT_ICONS["ship"] and SHIP_ICON_SCALE or 1)
+		pin:SetSize(minimapSize, minimapSize)
+		LayoutPinIcon(pin, minimapSize * GetEntryIconScale(entry), 0, 0)
 		local pos = GetEntryWorldPos(mapID, entry)
 		if pos == nil then
 			pin:Hide()
