@@ -233,15 +233,37 @@ end
 function MAP_SIZE.ResolveLayout()
 	local close = WorldMapFrameCloseButton
 	if close == nil or not frame:IsShown() or IsLocked() or applying or dragging or sizing ~= nil then return end
-	local left, top = GetPos()
-	if left == nil then return end
+	local base = MAP_SIZE.resolveBase
+	if base == nil then
+		local left, top = GetPos()
+		if left == nil then return end
+		base = {["left"] = left, ["top"] = top, ["points"] = {}}
+		for i = 1, frame:GetNumPoints() do
+			tinsert(base.points, {frame:GetPoint(i)})
+		end
+
+		MAP_SIZE.resolveBase = base
+	end
+
+	MAP_SIZE.resolveToken = (MAP_SIZE.resolveToken or 0) + 1
+	local token = MAP_SIZE.resolveToken
 	applying = true
-	SetPos(left + 1, top)
+	SetPos(base.left + 1, base.top)
 	applying = false
 	C_Timer.After(0.5, function()
+		if token ~= MAP_SIZE.resolveToken then return end
+		MAP_SIZE.resolveBase = nil
 		if dragging or sizing ~= nil or IsLocked() then return end
 		applying = true
-		SetPos(left, top)
+		if #base.points == 0 then
+			SetPos(base.left, base.top)
+		else
+			frame:ClearAllPoints()
+			for _, point in ipairs(base.points) do
+				frame:SetPoint(unpack(point))
+			end
+		end
+
 		applying = false
 	end)
 end
