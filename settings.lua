@@ -694,9 +694,10 @@ function MapUtils:InitSetting()
 		["name"] = "MapUtils",
 		["icon"] = ICON,
 		["dbtab"] = MAUTTAB,
-		["vTT"] = {{format("|T%d:16:16:0:0|t MapUtils", ICON), "v" .. MapUtils:GetAddonVersion()}, {MapUtils:Trans("LID_LEFTCLICK"), MapUtils:Trans("LID_OPENSETTINGS")}, {MapUtils:Trans("LID_RIGHTCLICK"), MapUtils:Trans("LID_HIDEMINIMAPBUTTON")}},
+		["vTT"] = {{format("|T%d:16:16:0:0|t MapUtils", ICON), "v" .. MapUtils:GetAddonVersion()}, {MapUtils:Trans("LID_LEFTCLICK"), MapUtils:Trans("LID_OPENSETTINGS")}, {MapUtils:Trans("LID_RIGHTCLICK"), MapUtils:Trans("LID_OPENSETTINGS")}, {MapUtils:Trans("LID_SHIFTRIGHTCLICK"), MapUtils:Trans("LID_HIDEMINIMAPBUTTON")}},
 		["funcL"] = function() MapUtils:ToggleSettings() end,
-		["funcR"] = function()
+		["funcR"] = function() MapUtils:ToggleSettings() end,
+		["funcSR"] = function()
 			MapUtils:SV(MAUTTAB, "MMBTN", false)
 			MapUtils:INFO("Minimap Button is now hidden.")
 			MapUtils:HideMMBtn("MapUtils")
