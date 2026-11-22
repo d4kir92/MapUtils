@@ -1346,7 +1346,7 @@ local SmoothZoom = {
 	tileFullMargin = 1.15,
 	panEdge = 0.3,
 	panOpenShare = 0.55,
-	worldPanOpenShare = 0.99,
+	worldRoomZoom = 2,
 	worldMapID = 947,
 	enterArea = 2,
 	leaveArea = 3.3,
@@ -1500,7 +1500,10 @@ function SmoothZoom.GetExtents(container, scale)
 		local shareX, shareY = halfWidth * 2 / (right - left) * scale / roomScale, halfHeight * 2 / (bottom - top) * scale / roomScale
 		local roomX, roomY
 		if container.mapID == SmoothZoom.worldMapID then
-			roomX, roomY = SmoothZoom.PanRoom(shareX, SmoothZoom.worldPanOpenShare), SmoothZoom.PanRoom(shareY, SmoothZoom.worldPanOpenShare)
+			local minScale = SmoothZoom.GetMinScale(container)
+			local open = minScale > 0 and Clamp(math.log(roomScale / minScale) / math.log(SmoothZoom.worldRoomZoom), 0, 1) or 1
+			roomX = 1 - (1 - open) * (1 - open)
+			roomY = roomX
 		else
 			roomX = SmoothZoom.PanRoom(math.max(shareX, shareY))
 			roomY = roomX
