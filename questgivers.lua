@@ -477,11 +477,21 @@ function QG.GetTitle(questID, fallback)
 	return fallback
 end
 
+function QG.GetQuestColor(questID, quest)
+	local kind = MapUtils:GetQuestInstanceKind(questID, quest)
+	if kind == 2 then return MapUtils.QUEST_RAID_COLOR end
+	if kind == 1 then return MapUtils.QUEST_DUNGEON_COLOR end
+	if quest and QG.IsRepeatable(questID, quest) then return REPEATABLE_COLOR end
+
+	return nil
+end
+
 function QG.GetColoredTitle(questID, quest)
 	local title = QG.GetTitle(questID, quest and quest[3] or tostring(questID))
-	if quest and QG.IsRepeatable(questID, quest) then return REPEATABLE_COLOR .. title .. "|r", true end
+	local titleColor = QG.GetQuestColor(questID, quest)
+	if titleColor then return titleColor .. title .. "|r", titleColor end
 
-	return title
+	return title, nil
 end
 
 function QG.GetXP(quest)
@@ -592,10 +602,12 @@ function QG.AddQuestLines(quests)
 		local quest = INFO[questID]
 		local level = QG.GetLevel(quest)
 		local color = GetQuestDifficultyColor and GetQuestDifficultyColor(level)
-		local title, repeatable = QG.GetColoredTitle(questID, quest)
-		local levelLabel = repeatable and format("%s[|r%d%s]|r", REPEATABLE_COLOR, level, REPEATABLE_COLOR) or format("[%d]", level)
+		local title, titleColor = QG.GetColoredTitle(questID, quest)
+		local repeatable = quest and QG.IsRepeatable(questID, quest)
+		local levelLabel = titleColor and format("%s[|r%d%s]|r", titleColor, level, titleColor) or format("[%d]", level)
 		local tag = ""
-		if quest[22] then tag = " |cff9d9d9d(" .. MapUtils:Trans(INSTANCE_TAGS[quest[22]]) .. ")|r" end
+		local instanceKind = MapUtils:GetQuestInstanceKind(questID, quest)
+		if instanceKind then tag = " |cff9d9d9d(" .. MapUtils:Trans(INSTANCE_TAGS[instanceKind]) .. ")|r" end
 		local category = quest[5] or (repeatable and 3)
 		if category then tag = tag .. " |cff9d9d9d(" .. MapUtils:Trans(CATEGORY_TAGS[category]) .. ")|r" end
 		if details and index > 1 then GameTooltip:AddLine(" ") end
@@ -838,33 +850,43 @@ function QG.CreatePin(canvas)
 end
 
 function QG.SetPinIcon(pin, atlas, fallback)
-	if pin.iconAtlas == atlas then return end
-	pin.iconAtlas = atlas
-	if C_Texture and C_Texture.GetAtlasInfo and C_Texture.GetAtlasInfo(atlas) then
+	local key = atlas or fallback
+	if pin.iconKey == key then return end
+	pin.iconKey = key
+	if atlas and C_Texture and C_Texture.GetAtlasInfo and C_Texture.GetAtlasInfo(atlas) then
 		pin.icon:SetAtlas(atlas)
 	else
+		pin.icon:SetTexCoord(0, 1, 0, 1)
 		pin.icon:SetTexture(fallback)
 	end
 end
 
-function QG.HasTurnIn(cluster)
+function QG.GetClusterTurnInKind(cluster)
+	local best = nil
 	for _, spot in ipairs(cluster.spots) do
-		if spot.turnins then return true end
-	end
-
-	return false
-end
-
-function QG.HasOnlyRepeatableStarts(cluster)
-	local hasStarts = false
-	for _, spot in ipairs(cluster.spots) do
-		for _, questID in ipairs(spot.quests or {}) do
-			if not QG.IsRepeatable(questID, INFO[questID]) then return false end
-			hasStarts = true
+		for _, questID in ipairs(spot.turnins or {}) do
+			local kind = MapUtils:GetQuestInstanceKind(questID, INFO[questID]) or 0
+			if best == nil or kind > best then best = kind end
+			if best == 2 then return 2 end
 		end
 	end
 
-	return hasStarts
+	return best
+end
+
+function QG.GetClusterStartPriority(cluster)
+	local best = 0
+	for _, spot in ipairs(cluster.spots) do
+		for _, questID in ipairs(spot.quests or {}) do
+			local quest = INFO[questID]
+			local kind = MapUtils:GetQuestInstanceKind(questID, quest)
+			local priority = kind == 2 and 4 or kind == 1 and 3 or (quest and QG.IsRepeatable(questID, quest) and 1 or 2)
+			if priority > best then best = priority end
+			if best == 4 then return 4 end
+		end
+	end
+
+	return best
 end
 
 function QG.HidePins()
@@ -952,12 +974,26 @@ function QG.Layout(canvas)
 		end
 
 		pin.cluster = cluster
-		if QG.HasTurnIn(cluster) then
-			QG.SetPinIcon(pin, TURNIN_ATLAS, TURNIN_FILE)
-		elseif QG.HasOnlyRepeatableStarts(cluster) then
-			QG.SetPinIcon(pin, REPEATABLE_ATLAS, REPEATABLE_FILE)
+		local turnInKind = QG.GetClusterTurnInKind(cluster)
+		if turnInKind ~= nil then
+			if turnInKind == 2 then
+				QG.SetPinIcon(pin, nil, MapUtils.QUEST_RAID_TURNIN_ICON)
+			elseif turnInKind == 1 then
+				QG.SetPinIcon(pin, nil, MapUtils.QUEST_DUNGEON_TURNIN_ICON)
+			else
+				QG.SetPinIcon(pin, TURNIN_ATLAS, TURNIN_FILE)
+			end
 		else
-			QG.SetPinIcon(pin, ICON_ATLAS, ICON_FILE)
+			local priority = QG.GetClusterStartPriority(cluster)
+			if priority == 4 then
+				QG.SetPinIcon(pin, nil, MapUtils.QUEST_RAID_START_ICON)
+			elseif priority == 3 then
+				QG.SetPinIcon(pin, nil, MapUtils.QUEST_DUNGEON_START_ICON)
+			elseif priority == 1 then
+				QG.SetPinIcon(pin, REPEATABLE_ATLAS, REPEATABLE_FILE)
+			else
+				QG.SetPinIcon(pin, ICON_ATLAS, ICON_FILE)
+			end
 		end
 		pin:SetSize(size, size)
 		local circle = size * CIRCLE_SCALE

@@ -153,6 +153,27 @@ function MapUtils:GetOneMapQuestSources(mapID)
 	return list
 end
 
+MapUtils.QUEST_DUNGEON_COLOR = "|cff66e0ff"
+MapUtils.QUEST_RAID_COLOR = "|cff4cd936"
+MapUtils.QUEST_DUNGEON_START_ICON = "Interface\\AddOns\\MapUtils\\media\\quest_dungeon_start"
+MapUtils.QUEST_DUNGEON_TURNIN_ICON = "Interface\\AddOns\\MapUtils\\media\\quest_dungeon_turnin"
+MapUtils.QUEST_RAID_START_ICON = "Interface\\AddOns\\MapUtils\\media\\quest_raid_start"
+MapUtils.QUEST_RAID_TURNIN_ICON = "Interface\\AddOns\\MapUtils\\media\\quest_raid_turnin"
+function MapUtils:GetQuestInstanceKind(questID, quest, allowTagFallback)
+	if quest == nil and MapUtils.QUESTINFO ~= nil then quest = MapUtils.QUESTINFO[questID] end
+	if quest and (quest[22] == 1 or quest[22] == 2) then return quest[22] end
+	if (quest == nil or allowTagFallback) and C_QuestLog and C_QuestLog.GetQuestTagInfo then
+		local tag = C_QuestLog.GetQuestTagInfo(questID)
+		local tagID = tag and tag.tagID
+		if tagID and not self:IsSecret(tagID) then
+			if tagID == 62 or tagID == 88 or tagID == 89 then return 2 end
+			if tagID == 81 or tagID == 85 then return 1 end
+		end
+	end
+
+	return nil
+end
+
 if WorldMapFrame == nil or C_Map == nil or C_QuestLog == nil then return end
 if C_Map.GetMapChildrenInfo == nil or C_Map.GetMapRectOnMap == nil or C_QuestLog.GetQuestsOnMap == nil or C_QuestLog.ReadyForTurnIn == nil then return end
 local updater = CreateFrame("Frame", nil, WorldMapFrame)
@@ -271,11 +292,30 @@ local function SetPinAtlas(texture, atlas, fallback)
 	if info then
 		texture:SetAtlas(atlas)
 		texture.pixelWidth, texture.pixelHeight = info.width, info.height
+		texture:Show()
 	elseif fallback then
+		texture:SetTexCoord(0, 1, 0, 1)
 		texture:SetTexture(fallback)
 		texture.pixelWidth, texture.pixelHeight = 24, 24
+		texture:Show()
 	else
 		texture:Hide()
+	end
+end
+
+local function SetPinTurnInIcon(pin, kind)
+	if pin.iconKind == kind then return end
+	pin.iconKind = kind
+	if kind == 2 or kind == 1 then
+		local info = C_Texture and C_Texture.GetAtlasInfo and C_Texture.GetAtlasInfo("UI-QuestIcon-TurnIn-Normal")
+		local size = info and info.height or 18
+		pin.icon:SetPoint("CENTER")
+		pin.icon:SetTexCoord(0, 1, 0, 1)
+		pin.icon:SetTexture(kind == 2 and MapUtils.QUEST_RAID_TURNIN_ICON or MapUtils.QUEST_DUNGEON_TURNIN_ICON)
+		pin.icon.pixelWidth, pin.icon.pixelHeight = size, size
+		pin.icon:Show()
+	else
+		SetPinAtlas(pin.icon, "UI-QuestIcon-TurnIn-Normal", "Interface\\GossipFrame\\ActiveQuestIcon")
 	end
 end
 
@@ -290,7 +330,7 @@ local function CreatePin(canvas)
 	SetPinAtlas(pin.normal, "UI-QuestPoi-QuestNumber")
 	SetPinAtlas(pin.pushed, "UI-QuestPoi-QuestNumber-Pressed")
 	SetPinAtlas(pin.highlight, "UI-QuestPoi-InnerGlow")
-	SetPinAtlas(pin.icon, "UI-QuestIcon-TurnIn-Normal", "Interface\\GossipFrame\\ActiveQuestIcon")
+	SetPinTurnInIcon(pin, 0)
 	pin:SetNormalTexture(pin.normal)
 	pin:SetPushedTexture(pin.pushed)
 	pin:SetHighlightTexture(pin.highlight, "ADD")
@@ -299,7 +339,14 @@ local function CreatePin(canvas)
 		for index, item in ipairs(self.cluster) do
 			local entry = item.entry
 			if index > 1 then GameTooltip:AddLine(" ") end
-			GameTooltip:AddLine(C_QuestLog.GetTitleForQuestID(entry.questID) or QUESTS_LABEL, 1, 0.82, 0)
+			local title = C_QuestLog.GetTitleForQuestID(entry.questID) or QUESTS_LABEL
+			local kind = MapUtils:GetQuestInstanceKind(entry.questID, nil, true)
+			if kind == 2 then
+				title = MapUtils.QUEST_RAID_COLOR .. title .. "|r"
+			elseif kind == 1 then
+				title = MapUtils.QUEST_DUNGEON_COLOR .. title .. "|r"
+			end
+			GameTooltip:AddLine(title, 1, 0.82, 0)
 			GameTooltip:AddLine(entry.name or "", 1, 1, 1)
 		end
 		GameTooltip:Show()
@@ -372,6 +419,14 @@ local function UpdatePins()
 
 		pin.entry = entry
 		pin.cluster = cluster.items
+		local iconKind = 0
+		for _, item in ipairs(cluster.items) do
+			local kind = MapUtils:GetQuestInstanceKind(item.entry.questID, nil, true) or 0
+			if kind > iconKind then iconKind = kind end
+			if iconKind == 2 then break end
+		end
+
+		SetPinTurnInIcon(pin, iconKind)
 		local selected = C_SuperTrack and C_SuperTrack.GetSuperTrackedQuestID and C_SuperTrack.GetSuperTrackedQuestID() == entry.questID or false
 		if pin.selected ~= selected then
 			pin.selected = selected
