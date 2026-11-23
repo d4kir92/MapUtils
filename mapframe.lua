@@ -235,6 +235,7 @@ function MAP_SIZE.ResolveLayout()
 	if close == nil or not frame:IsShown() or IsLocked() or applying or dragging or sizing ~= nil then return end
 	local base = MAP_SIZE.resolveBase
 	if base == nil then
+		if close:GetLeft() ~= nil then return end
 		local left, top = GetPos()
 		if left == nil then return end
 		base = {["left"] = left, ["top"] = top, ["points"] = {}}
