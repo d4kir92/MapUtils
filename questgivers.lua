@@ -611,37 +611,68 @@ function QG.AddQuestLines(quests)
 	return #quests > 0
 end
 
+function QG.MergeUnique(target, seen, list)
+	for _, questID in ipairs(list or {}) do
+		if not seen[questID] then
+			seen[questID] = true
+			tinsert(target, questID)
+		end
+	end
+end
+
+function QG.GroupSpots(list)
+	local entries = {}
+	local byName = {}
+	for _, spot in ipairs(list) do
+		local entry = byName[spot.name]
+		if entry == nil then
+			entry = {
+				["name"] = spot.name,
+				["quests"] = {},
+				["turnins"] = {},
+				["seenQuests"] = {},
+				["seenTurnins"] = {}
+			}
+
+			byName[spot.name] = entry
+			tinsert(entries, entry)
+		end
+
+		QG.MergeUnique(entry.quests, entry.seenQuests, spot.quests)
+		QG.MergeUnique(entry.turnins, entry.seenTurnins, spot.turnins)
+	end
+
+	return entries
+end
+
 function QG.OnEnter(pin)
 	local cluster = pin.cluster
 	if cluster == nil then return end
 	GameTooltip:SetOwner(pin, "ANCHOR_RIGHT")
 	QG.hovered = pin
 	local hasQuests = false
-	local seen = {}
 	local first = true
 	local shown = 0
 	local hidden = 0
-	for _, spot in ipairs(cluster.spots) do
-		if not seen[spot.giver] and shown >= TOOLTIP_GIVERS then
-			seen[spot.giver] = true
+	for _, entry in ipairs(QG.GroupSpots(cluster.spots)) do
+		if shown >= TOOLTIP_GIVERS then
 			hidden = hidden + 1
-		elseif not seen[spot.giver] then
-			seen[spot.giver] = true
+		else
 			shown = shown + 1
 			if first then
-				GameTooltip:SetText(spot.name, 1, 0.82, 0)
+				GameTooltip:SetText(entry.name, 1, 0.82, 0)
 				first = false
 			else
 				GameTooltip:AddLine(" ")
-				GameTooltip:AddLine(spot.name, 1, 0.82, 0)
+				GameTooltip:AddLine(entry.name, 1, 0.82, 0)
 			end
 
-			for _, questID in ipairs(spot.turnins or {}) do
+			for _, questID in ipairs(entry.turnins) do
 				local quest = INFO[questID]
 				GameTooltip:AddLine(format("%s%s: %s", QG.INDENT, MapUtils:Trans("LID_QUESTTURNIN"), QG.GetColoredTitle(questID, quest)), 0.25, 1, 0.25, true)
 			end
 
-			if QG.AddQuestLines(spot.quests or {}) then hasQuests = true end
+			if QG.AddQuestLines(entry.quests) then hasQuests = true end
 		end
 	end
 
