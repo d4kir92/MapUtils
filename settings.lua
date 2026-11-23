@@ -19,6 +19,181 @@ local cvarCheckboxes = {}
 local guildCheckboxes = {}
 local optionCheckboxes = {}
 local styleControls = {}
+local Preset = {}
+Preset.LIST = {
+	{
+		["key"] = "CLASSIC",
+		["label"] = "LID_PRESETCLASSIC",
+		["desc"] = "LID_PRESETCLASSICDESC",
+		["oneMap"] = false,
+		["mapStyle"] = "MAP",
+		["cityStyle"] = "MAP",
+		["reveal"] = false,
+		["simple"] = false,
+		["fade"] = false
+	},
+	{
+		["key"] = "RETAIL",
+		["label"] = "LID_PRESETRETAIL",
+		["desc"] = "LID_PRESETRETAILDESC",
+		["oneMap"] = false,
+		["mapStyle"] = "MAP",
+		["cityStyle"] = "MAP",
+		["reveal"] = true,
+		["simple"] = false,
+		["zoom"] = true,
+		["fade"] = true,
+		["zoneLevels"] = true
+	},
+	{
+		["key"] = "ONEMAP",
+		["label"] = "LID_PRESETONEMAP",
+		["desc"] = "LID_PRESETONEMAPDESC",
+		["oneMap"] = true,
+		["mapStyle"] = "MIXED",
+		["cityStyle"] = "MIXED",
+		["reveal"] = true,
+		["zoom"] = true,
+		["fade"] = true,
+		["zoneLevels"] = true
+	}
+}
+
+function Preset.Apply(entry)
+	if entry == nil then return end
+	MAUTTAB = MAUTTAB or {}
+	MapUtils:SV(MAUTTAB, "PRESETSHOWN", true)
+	MapUtils:SV(MAUTTAB, "MAPPRESET", entry.key)
+	if entry.zoom ~= nil and MapUtils.IsWorldMapWheelZoomAvailable and MapUtils:IsWorldMapWheelZoomAvailable() then MapUtils:SetMapOption("WORLDMAPZOOM", entry.zoom == true) end
+	MapUtils:SetOneMapEnabled(entry.oneMap == true)
+	MapUtils:SetMapStyleOption("MAPSTYLE", entry.mapStyle)
+	MapUtils:SetMapStyleOption("CITYMAPSTYLE", entry.cityStyle)
+	if MapUtils:HasRevealData() and entry.reveal ~= nil then
+		MapUtils:SetMapOption(
+			"REVEALMAP",
+			entry.reveal == true,
+			function()
+				MapUtils:RefreshReveal()
+				MapUtils:RefreshZoneDetail()
+			end
+		)
+	end
+
+	if entry.simple ~= nil and MapUtils.IsSimpleMapFrameAvailable and MapUtils:IsSimpleMapFrameAvailable() and not MapUtils:IsSimpleMapFrameByLeatrix() and not MapUtils:IsSimpleMapFrameByEllesmere() then
+		MapUtils:SetMapOption("WORLDMAPSIMPLE", entry.simple == true, function() MapUtils:RefreshSimpleMapFrame() end)
+	end
+
+	if entry.fade ~= nil then MapUtils:SetMapOption("WORLDMAPFADE", entry.fade == true, function() MapUtils:RefreshWorldMapFrame() end) end
+	if entry.zoneLevels ~= nil then MapUtils:SetMapOption("ZONELEVELS", entry.zoneLevels == true) end
+	if maset ~= nil then maset:UpdateDependencies() end
+	if Preset.dialog ~= nil then Preset.dialog:Hide() end
+end
+
+function Preset.Select(entry)
+	if entry == nil then return end
+	if Preset.confirm then
+		StaticPopupDialogs["MAPUTILS_APPLY_PRESET"] = {
+			["text"] = MapUtils:Trans("LID_MAPPRESETCONFIRM"),
+			["button1"] = YES,
+			["button2"] = NO,
+			["OnAccept"] = function(_, data) Preset.Apply(data) end,
+			["timeout"] = 0,
+			["whileDead"] = true,
+			["hideOnEscape"] = true,
+			["preferredIndex"] = 3
+		}
+		StaticPopup_Show("MAPUTILS_APPLY_PRESET", MapUtils:Trans(entry.label), nil, entry)
+	else
+		Preset.Apply(entry)
+	end
+end
+
+function Preset.CreateDialog()
+	if Preset.dialog ~= nil then return Preset.dialog end
+	local win = MapUtils:CreateUIWindowFrame("MapUtilsPresetDialog", UIParent, MapUtils:GetWoWBuild() ~= "RETAIL" and "BasicFrameTemplateWithInset" or nil)
+	win:SetSize(420, 326)
+	win:SetPoint("CENTER")
+	win:SetFrameStrata("DIALOG")
+	win:SetToplevel(true)
+	win:SetMovable(true)
+	win:EnableMouse(true)
+	win:RegisterForDrag("LeftButton")
+	win:SetScript("OnDragStart", win.StartMoving)
+	win:SetScript("OnDragStop", win.StopMovingOrSizing)
+	if win.CloseButton then win.CloseButton:SetScript("OnClick", function() win:Hide() end) end
+	local title = format("|T%d:16:16:0:0|t %s", ICON, MapUtils:Trans("LID_MAPPRESETTITLE"))
+	if win.SetTitle then
+		win:SetTitle(title)
+	elseif win.TitleText then
+		win.TitleText:SetText(title)
+	end
+
+	win:SetScript(
+		"OnHide",
+		function()
+			if MAUTTAB ~= nil and MAUTTAB["PRESETSHOWN"] == false then MapUtils:SV(MAUTTAB, "PRESETSHOWN", true) end
+		end
+	)
+	local intro = win:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+	intro:SetPoint("TOPLEFT", win, "TOPLEFT", 18, -36)
+	intro:SetPoint("TOPRIGHT", win, "TOPRIGHT", -18, -36)
+	intro:SetJustifyH("LEFT")
+	win.intro = intro
+	win.cards = {}
+	for index, entry in ipairs(Preset.LIST) do
+		local card = CreateFrame("Frame", nil, win)
+		card:SetPoint("TOPLEFT", win, "TOPLEFT", 16, -78 - (index - 1) * 80)
+		card:SetPoint("TOPRIGHT", win, "TOPRIGHT", -16, -78 - (index - 1) * 80)
+		card:SetHeight(70)
+		local bg = card:CreateTexture(nil, "BACKGROUND")
+		bg:SetAllPoints(card)
+		bg:SetColorTexture(0.05, 0.05, 0.05, 0.55)
+		local btn = CreateFrame("Button", nil, card, "UIPanelButtonTemplate")
+		btn:SetPoint("TOPLEFT", card, "TOPLEFT", 8, -7)
+		btn:SetPoint("TOPRIGHT", card, "TOPRIGHT", -8, -7)
+		btn:SetHeight(24)
+		btn:SetScript("OnClick", function() Preset.Select(entry) end)
+		local desc = card:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+		desc:SetPoint("TOPLEFT", card, "TOPLEFT", 10, -35)
+		desc:SetPoint("BOTTOMRIGHT", card, "BOTTOMRIGHT", -10, 6)
+		desc:SetJustifyH("LEFT")
+		desc:SetJustifyV("TOP")
+		win.cards[index] = {["btn"] = btn, ["desc"] = desc, ["entry"] = entry}
+	end
+
+	tinsert(UISpecialFrames, "MapUtilsPresetDialog")
+	Preset.dialog = win
+
+	return win
+end
+
+function Preset.RefreshTexts(win)
+	local title = format("|T%d:16:16:0:0|t %s", ICON, MapUtils:Trans("LID_MAPPRESETTITLE"))
+	if win.SetTitle then
+		win:SetTitle(title)
+	elseif win.TitleText then
+		win.TitleText:SetText(title)
+	end
+
+	win.intro:SetText(MapUtils:Trans("LID_MAPPRESETDESC"))
+	for _, card in ipairs(win.cards) do
+		card.btn:SetText(MapUtils:Trans(card.entry.label))
+		card.desc:SetText(MapUtils:Trans(card.entry.desc))
+	end
+end
+
+function Preset.Show(confirm)
+	Preset.confirm = confirm == true
+	local win = Preset.CreateDialog()
+	Preset.RefreshTexts(win)
+	win:ClearAllPoints()
+	win:SetPoint("CENTER")
+	win:Show()
+end
+
+function MapUtils:ShowPresetDialog(confirm)
+	Preset.Show(confirm ~= false)
+end
 
 MapUtils:RegisterSharedSettings({
 	keys = {"GUILDMEMBERPINS", "GUILDMEMBERLEVEL", "GUILDMEMBERNAME", "GUILDMEMBERSHARE", "GUILDMEMBERZONES"},
@@ -373,6 +548,8 @@ local function HandleSlash(args)
 		MapUtils:ToggleTransportLog()
 	elseif sub == "taint" and MapUtils.PrintTaintReport ~= nil then
 		MapUtils:PrintTaintReport()
+	elseif sub == "preset" then
+		MapUtils:ShowPresetDialog(true)
 	else
 		MapUtils:ToggleSettings()
 	end
@@ -381,6 +558,13 @@ end
 function MapUtils:InitSetting()
 	if maset ~= nil then return end
 	MAUTTAB = MAUTTAB or {}
+	local isFirstUse = MAUTTAB["PRESETSHOWN"] == nil and MAUTTAB["MMBTN"] == nil and MAUTTAB["WINDOWWIDTH"] == nil
+	if isFirstUse then
+		MAUTTAB["PRESETSHOWN"] = false
+	elseif MAUTTAB["PRESETSHOWN"] == nil then
+		MAUTTAB["PRESETSHOWN"] = true
+	end
+
 	MapUtils:SetVersion()
 	MapUtils:SetAppendTab(MAUTTAB)
 	maset = MapUtils:CreateUIWindow({
@@ -437,6 +621,14 @@ function MapUtils:InitSetting()
 	footer.Discord:SetScript("OnEditFocusGained", function(sel) sel:HighlightText() end)
 	footer.Discord:SetScript("OnEscapePressed", function(sel) sel:ClearFocus() end)
 	AddCategory("GENERAL")
+	local presetRow = CreateFrame("Frame", nil, maset.content)
+	local presetBtn = CreateFrame("Button", "MapUtilsSettingsPreset", presetRow, "UIPanelButtonTemplate")
+	presetBtn:SetSize(220, 22)
+	presetBtn:SetPoint("LEFT", presetRow, "LEFT", 4, 0)
+	presetBtn:SetText(MapUtils:Trans("LID_MAPPRESET"))
+	presetBtn:SetScript("OnClick", function() Preset.Show(true) end)
+	AddTooltip(presetBtn, "LID_MAPPRESET", "LID_MAPPRESETDESC")
+	MapUtils.UI:Add(maset, presetRow, 26, MapUtils:Trans("LID_MAPPRESET"), true, "preset classic retail onemap", "2026-11-24")
 	AddCheckbox("MMBTN", MapUtils:GetWoWBuild() ~= "RETAIL", function()
 		if MAUTTAB["MMBTN"] then
 			MapUtils:ShowMMBtn("MapUtils")
@@ -746,7 +938,11 @@ loader:SetScript("OnEvent", function(_, event, name)
 		MapUtils:RegisterCompendiumTabs()
 	elseif event == "PLAYER_ENTERING_WORLD" then
 		loader:UnregisterEvent(event)
-		if MapUtils.WhatsNew ~= nil then MapUtils.WhatsNew:ShowIfNew() end
+		if MAUTTAB ~= nil and MAUTTAB["PRESETSHOWN"] == false then
+			Preset.Show(false)
+		elseif MapUtils.WhatsNew ~= nil then
+			MapUtils.WhatsNew:ShowIfNew()
+		end
 	elseif name == "AzerothCompendium" then
 		MapUtils:RegisterCompendiumTabs()
 	end
