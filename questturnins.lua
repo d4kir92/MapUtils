@@ -331,8 +331,7 @@ local function SetPinTurnInIcon(pin, kind)
 	if pin.iconKind == kind then return end
 	pin.iconKind = kind
 	if kind >= 1 and kind <= 3 then
-		local info = C_Texture and C_Texture.GetAtlasInfo and C_Texture.GetAtlasInfo("UI-QuestIcon-TurnIn-Normal")
-		local size = info and info.height or 18
+		local size = (pin.normal.pixelHeight or 32) * 0.5
 		local icon = kind == 3 and MapUtils.QUEST_RAID_TURNIN_ICON or kind == 2 and MapUtils.QUEST_DUNGEON_TURNIN_ICON or MapUtils.QUEST_PVP_TURNIN_ICON
 		pin.icon:SetPoint("CENTER")
 		pin.icon:SetTexCoord(0, 1, 0, 1)
