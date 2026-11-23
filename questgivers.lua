@@ -82,6 +82,67 @@ function QG.IsAddOnLoaded(name)
 	return false
 end
 
+function QG.GetQuestieProfile()
+	if not QG.IsAddOnLoaded("Questie") then return nil end
+	local questie = _G.Questie
+	if type(questie) ~= "table" or type(questie.db) ~= "table" or type(questie.db.profile) ~= "table" then return false end
+
+	return questie.db.profile
+end
+
+function QG.GetQuestieMask(profile)
+	if profile == nil then return -1 end
+	if profile == false then return -2 end
+	local mask = 0
+	if profile.enabled ~= false then mask = mask + 1 end
+	if profile.enableMapIcons ~= false then mask = mask + 2 end
+	if profile.enableTurnins ~= false then mask = mask + 4 end
+	if profile.showAvailableQuests ~= false then mask = mask + 8 end
+	if profile.enableAvailable ~= false then mask = mask + 16 end
+	if profile.showRepeatableQuests ~= false then mask = mask + 32 end
+	if profile.showEventQuests ~= false then mask = mask + 64 end
+	if profile.showDungeonQuests ~= false then mask = mask + 128 end
+	if profile.showRaidQuests ~= false then mask = mask + 256 end
+	if profile.showPvPQuests ~= false then mask = mask + 512 end
+
+	return mask
+end
+
+function QG.QuestieShowsMap(profile)
+	return profile.enabled ~= false and profile.enableMapIcons ~= false
+end
+
+function QG.QuestieShowsTurnIns(profile)
+	if profile == nil then return false end
+	if profile == false then return true end
+
+	return QG.QuestieShowsMap(profile) and profile.enableTurnins ~= false
+end
+
+function QG.QuestieShowsAllStarts(profile)
+	if profile == nil then return false end
+	if profile == false then return true end
+	if not QG.QuestieShowsMap(profile) or profile.showAvailableQuests == false then return false end
+
+	return profile.enableAvailable ~= false and profile.showRepeatableQuests ~= false and profile.showEventQuests ~= false and profile.showDungeonQuests ~= false and profile.showRaidQuests ~= false and profile.showPvPQuests ~= false
+end
+
+function QG.QuestieShowsStart(profile, questID, quest)
+	if profile == nil then return false end
+	if profile == false then return true end
+	if not QG.QuestieShowsMap(profile) or profile.showAvailableQuests == false then return false end
+	local repeatable = QG.IsRepeatable(questID, quest)
+	local event = quest[5] == 1
+	local instanceKind = MapUtils:GetQuestInstanceKind(questID, quest)
+	local dungeon = instanceKind == 1
+	local raid = instanceKind == 2
+	local pvp = QG.IsPvP(questID, quest)
+	local normal = not (repeatable or event or dungeon or raid or pvp)
+	if (normal and profile.enableAvailable == false) or (repeatable and profile.showRepeatableQuests == false) or (event and profile.showEventQuests == false) or (dungeon and profile.showDungeonQuests == false) or (raid and profile.showRaidQuests == false) or (pvp and profile.showPvPQuests == false) then return false end
+
+	return true
+end
+
 function QG.IsDone(questID)
 	if C_QuestLog and C_QuestLog.IsQuestFlaggedCompleted then return C_QuestLog.IsQuestFlaggedCompleted(questID) == true end
 	if IsQuestFlaggedCompleted then return IsQuestFlaggedCompleted(questID) == true end
@@ -215,6 +276,8 @@ function QG.ReadPlayer()
 	end
 	QG.showPvP = MapUtils:GetConfig("QUESTGIVERPVP", false) == true
 	QG.showCloth = MapUtils:GetConfig("QUESTGIVERCLOTH", false) == true
+	QG.questieProfile = QG.GetQuestieProfile()
+	QG.questieMask = QG.GetQuestieMask(QG.questieProfile)
 end
 
 function QG.IsClothDonation(quest)
@@ -278,6 +341,7 @@ function QG.IsAvailable(questID, quest, giverSide)
 	if quest[5] ~= 2 and not enabledCategories[3] and QG.IsRepeatable(questID, quest) then return false end
 	if not QG.showPvP and QG.IsPvP(questID, quest) then return false end
 	if not QG.showCloth and QG.IsClothDonation(quest) then return false end
+	if QG.QuestieShowsStart(QG.questieProfile, questID, quest) then return false end
 	if quest[7] and player.race and not QG.HasBit(quest[7], player.race) then return false end
 	if quest[8] and player.class and not QG.HasBit(quest[8], player.class) then return false end
 	if QG.IsDone(questID) then return false end
@@ -359,9 +423,10 @@ function QG.GetSources(mapID)
 end
 
 function QG.IsShownOnMap(mapID)
-	if mapID == nil or C_Map.GetMapInfo(mapID) == nil or QG.IsAddOnLoaded("Questie") then return false end
-	QG.showStarts = MapUtils:IsPinShownOnMap("QUESTGIVERWORLDMAPPINS", true, mapID)
-	QG.showEnds = MapUtils:GetQuestTurnInDefault() and MapUtils:GetConfig("QUESTGIVERTURNIN", true) == true
+	if mapID == nil or C_Map.GetMapInfo(mapID) == nil then return false end
+	local profile = QG.GetQuestieProfile()
+	QG.showStarts = MapUtils:IsPinShownOnMap("QUESTGIVERWORLDMAPPINS", true, mapID) and not QG.QuestieShowsAllStarts(profile)
+	QG.showEnds = MapUtils:GetQuestTurnInDefault() and MapUtils:GetConfig("QUESTGIVERTURNIN", true) == true and not QG.QuestieShowsTurnIns(profile)
 	if not QG.showStarts and not QG.showEnds then return false end
 
 	return #QG.GetSources(mapID) > 0
@@ -395,7 +460,7 @@ function QG.GetAvailableCache()
 		key = key .. (enabledCategories[index] and "1" or "0")
 	end
 
-	key = key .. (QG.showPvP and "1" or "0") .. (QG.showCloth and "1" or "0") .. (player.showLowLevel and "1" or "0")
+	key = key .. (QG.showPvP and "1" or "0") .. (QG.showCloth and "1" or "0") .. (player.showLowLevel and "1" or "0") .. ":" .. (QG.questieMask or -1)
 	local now = GetTime()
 	if QG.available == nil or QG.stale or QG.availableKey ~= key or now - (QG.availableTime or 0) > 30 then
 		if QG.available == nil then
@@ -1045,6 +1110,14 @@ function QG.Update()
 	local scope = MapUtils:IsPinScopeAzeroth(mapID)
 	if scope ~= QG.scope then
 		QG.scope = scope
+		QG.collectSignature = nil
+		dirty = true
+		lastCollect = 0
+	end
+
+	local questieMask = QG.GetQuestieMask(QG.GetQuestieProfile())
+	if questieMask ~= QG.questieMask then
+		QG.questieMask = questieMask
 		QG.collectSignature = nil
 		dirty = true
 		lastCollect = 0
