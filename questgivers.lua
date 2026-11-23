@@ -261,10 +261,7 @@ function QG.IsRepeatable(questID, quest)
 end
 
 function QG.IsPvP(questID, quest)
-	if quest and QG.HasBit(quest[23] or 0, 2) then return true end
-	local tag = C_QuestLog and C_QuestLog.GetQuestTagInfo and C_QuestLog.GetQuestTagInfo(questID)
-
-	return tag and tag.tagID == 41
+	return MapUtils:IsPvPQuest(questID, quest, true)
 end
 
 function QG.IsAvailable(questID, quest, giverSide)
@@ -478,9 +475,10 @@ function QG.GetTitle(questID, fallback)
 end
 
 function QG.GetQuestColor(questID, quest)
-	local kind = MapUtils:GetQuestInstanceKind(questID, quest)
-	if kind == 2 then return MapUtils.QUEST_RAID_COLOR end
-	if kind == 1 then return MapUtils.QUEST_DUNGEON_COLOR end
+	local kind = MapUtils:GetQuestPinKind(questID, quest, true)
+	if kind == 3 then return MapUtils.QUEST_RAID_COLOR end
+	if kind == 2 then return MapUtils.QUEST_DUNGEON_COLOR end
+	if kind == 1 then return MapUtils.QUEST_PVP_COLOR end
 	if quest and QG.IsRepeatable(questID, quest) then return REPEATABLE_COLOR end
 
 	return nil
@@ -608,6 +606,7 @@ function QG.AddQuestLines(quests)
 		local tag = ""
 		local instanceKind = MapUtils:GetQuestInstanceKind(questID, quest)
 		if instanceKind then tag = " |cff9d9d9d(" .. MapUtils:Trans(INSTANCE_TAGS[instanceKind]) .. ")|r" end
+		if QG.IsPvP(questID, quest) then tag = tag .. " |cff9d9d9d(" .. MapUtils:Trans("LID_QUESTTAGPVP") .. ")|r" end
 		local category = quest[5] or (repeatable and 3)
 		if category then tag = tag .. " |cff9d9d9d(" .. MapUtils:Trans(CATEGORY_TAGS[category]) .. ")|r" end
 		if details and index > 1 then GameTooltip:AddLine(" ") end
@@ -865,9 +864,9 @@ function QG.GetClusterTurnInKind(cluster)
 	local best = nil
 	for _, spot in ipairs(cluster.spots) do
 		for _, questID in ipairs(spot.turnins or {}) do
-			local kind = MapUtils:GetQuestInstanceKind(questID, INFO[questID]) or 0
+			local kind = MapUtils:GetQuestPinKind(questID, INFO[questID], true)
 			if best == nil or kind > best then best = kind end
-			if best == 2 then return 2 end
+			if best == 3 then return 3 end
 		end
 	end
 
@@ -879,10 +878,10 @@ function QG.GetClusterStartPriority(cluster)
 	for _, spot in ipairs(cluster.spots) do
 		for _, questID in ipairs(spot.quests or {}) do
 			local quest = INFO[questID]
-			local kind = MapUtils:GetQuestInstanceKind(questID, quest)
-			local priority = kind == 2 and 4 or kind == 1 and 3 or (quest and QG.IsRepeatable(questID, quest) and 1 or 2)
+			local kind = MapUtils:GetQuestPinKind(questID, quest, QG.showPvP)
+			local priority = kind == 3 and 5 or kind == 2 and 4 or kind == 1 and 3 or (quest and QG.IsRepeatable(questID, quest) and 1 or 2)
 			if priority > best then best = priority end
-			if best == 4 then return 4 end
+			if best == 5 then return 5 end
 		end
 	end
 
@@ -976,19 +975,23 @@ function QG.Layout(canvas)
 		pin.cluster = cluster
 		local turnInKind = QG.GetClusterTurnInKind(cluster)
 		if turnInKind ~= nil then
-			if turnInKind == 2 then
+			if turnInKind == 3 then
 				QG.SetPinIcon(pin, nil, MapUtils.QUEST_RAID_TURNIN_ICON)
-			elseif turnInKind == 1 then
+			elseif turnInKind == 2 then
 				QG.SetPinIcon(pin, nil, MapUtils.QUEST_DUNGEON_TURNIN_ICON)
+			elseif turnInKind == 1 then
+				QG.SetPinIcon(pin, nil, MapUtils.QUEST_PVP_TURNIN_ICON)
 			else
 				QG.SetPinIcon(pin, TURNIN_ATLAS, TURNIN_FILE)
 			end
 		else
 			local priority = QG.GetClusterStartPriority(cluster)
-			if priority == 4 then
+			if priority == 5 then
 				QG.SetPinIcon(pin, nil, MapUtils.QUEST_RAID_START_ICON)
-			elseif priority == 3 then
+			elseif priority == 4 then
 				QG.SetPinIcon(pin, nil, MapUtils.QUEST_DUNGEON_START_ICON)
+			elseif priority == 3 then
+				QG.SetPinIcon(pin, nil, MapUtils.QUEST_PVP_START_ICON)
 			elseif priority == 1 then
 				QG.SetPinIcon(pin, REPEATABLE_ATLAS, REPEATABLE_FILE)
 			else

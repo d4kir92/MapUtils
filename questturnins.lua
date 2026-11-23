@@ -155,10 +155,13 @@ end
 
 MapUtils.QUEST_DUNGEON_COLOR = "|cff66e0ff"
 MapUtils.QUEST_RAID_COLOR = "|cff4cd936"
+MapUtils.QUEST_PVP_COLOR = "|cffff4d4d"
 MapUtils.QUEST_DUNGEON_START_ICON = "Interface\\AddOns\\MapUtils\\media\\quest_dungeon_start"
 MapUtils.QUEST_DUNGEON_TURNIN_ICON = "Interface\\AddOns\\MapUtils\\media\\quest_dungeon_turnin"
 MapUtils.QUEST_RAID_START_ICON = "Interface\\AddOns\\MapUtils\\media\\quest_raid_start"
 MapUtils.QUEST_RAID_TURNIN_ICON = "Interface\\AddOns\\MapUtils\\media\\quest_raid_turnin"
+MapUtils.QUEST_PVP_START_ICON = "Interface\\AddOns\\MapUtils\\media\\quest_pvp_start"
+MapUtils.QUEST_PVP_TURNIN_ICON = "Interface\\AddOns\\MapUtils\\media\\quest_pvp_turnin"
 function MapUtils:GetQuestInstanceKind(questID, quest, allowTagFallback)
 	if quest == nil and MapUtils.QUESTINFO ~= nil then quest = MapUtils.QUESTINFO[questID] end
 	if quest and (quest[22] == 1 or quest[22] == 2) then return quest[22] end
@@ -172,6 +175,27 @@ function MapUtils:GetQuestInstanceKind(questID, quest, allowTagFallback)
 	end
 
 	return nil
+end
+
+function MapUtils:IsPvPQuest(questID, quest, allowTagFallback)
+	if quest == nil and MapUtils.QUESTINFO ~= nil then quest = MapUtils.QUESTINFO[questID] end
+	if quest and quest[23] and math.floor(quest[23] / 2) % 2 == 1 then return true end
+	if (quest == nil or allowTagFallback) and C_QuestLog and C_QuestLog.GetQuestTagInfo then
+		local tag = C_QuestLog.GetQuestTagInfo(questID)
+		local tagID = tag and tag.tagID
+		if tagID and not self:IsSecret(tagID) and tagID == 41 then return true end
+	end
+
+	return false
+end
+
+function MapUtils:GetQuestPinKind(questID, quest, allowTagFallback)
+	local instanceKind = self:GetQuestInstanceKind(questID, quest, allowTagFallback)
+	if instanceKind == 2 then return 3 end
+	if instanceKind == 1 then return 2 end
+	if self:IsPvPQuest(questID, quest, allowTagFallback) then return 1 end
+
+	return 0
 end
 
 if WorldMapFrame == nil or C_Map == nil or C_QuestLog == nil then return end
@@ -306,12 +330,13 @@ end
 local function SetPinTurnInIcon(pin, kind)
 	if pin.iconKind == kind then return end
 	pin.iconKind = kind
-	if kind == 2 or kind == 1 then
+	if kind >= 1 and kind <= 3 then
 		local info = C_Texture and C_Texture.GetAtlasInfo and C_Texture.GetAtlasInfo("UI-QuestIcon-TurnIn-Normal")
 		local size = info and info.height or 18
+		local icon = kind == 3 and MapUtils.QUEST_RAID_TURNIN_ICON or kind == 2 and MapUtils.QUEST_DUNGEON_TURNIN_ICON or MapUtils.QUEST_PVP_TURNIN_ICON
 		pin.icon:SetPoint("CENTER")
 		pin.icon:SetTexCoord(0, 1, 0, 1)
-		pin.icon:SetTexture(kind == 2 and MapUtils.QUEST_RAID_TURNIN_ICON or MapUtils.QUEST_DUNGEON_TURNIN_ICON)
+		pin.icon:SetTexture(icon)
 		pin.icon.pixelWidth, pin.icon.pixelHeight = size, size
 		pin.icon:Show()
 	else
@@ -340,11 +365,13 @@ local function CreatePin(canvas)
 			local entry = item.entry
 			if index > 1 then GameTooltip:AddLine(" ") end
 			local title = C_QuestLog.GetTitleForQuestID(entry.questID) or QUESTS_LABEL
-			local kind = MapUtils:GetQuestInstanceKind(entry.questID, nil, true)
-			if kind == 2 then
+			local kind = MapUtils:GetQuestPinKind(entry.questID, nil, true)
+			if kind == 3 then
 				title = MapUtils.QUEST_RAID_COLOR .. title .. "|r"
-			elseif kind == 1 then
+			elseif kind == 2 then
 				title = MapUtils.QUEST_DUNGEON_COLOR .. title .. "|r"
+			elseif kind == 1 then
+				title = MapUtils.QUEST_PVP_COLOR .. title .. "|r"
 			end
 			GameTooltip:AddLine(title, 1, 0.82, 0)
 			GameTooltip:AddLine(entry.name or "", 1, 1, 1)
@@ -421,9 +448,9 @@ local function UpdatePins()
 		pin.cluster = cluster.items
 		local iconKind = 0
 		for _, item in ipairs(cluster.items) do
-			local kind = MapUtils:GetQuestInstanceKind(item.entry.questID, nil, true) or 0
+			local kind = MapUtils:GetQuestPinKind(item.entry.questID, nil, true)
 			if kind > iconKind then iconKind = kind end
-			if iconKind == 2 then break end
+			if iconKind == 3 then break end
 		end
 
 		SetPinTurnInIcon(pin, iconKind)
