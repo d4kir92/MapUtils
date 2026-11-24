@@ -3,13 +3,7 @@ local DEFAULT_ART_WIDTH = 1024
 local DEFAULT_ART_HEIGHT = 1024
 local UPDATE_INTERVAL = 0.05
 local OVERLAY_LEVEL = 3000
-local LEVEL_BUTTON_WIDTH = 260
-local LEVEL_BUTTON_HEIGHT = 22
 local LEVEL_BUTTON_OFFSET = 8
-local LEVEL_STEPPER_PAD = 70
-local NAV_BUTTON_EXTRA = 53
-local NAV_BUTTON_PLAIN = 30
-local NAV_BUTTON_MIN_TEXT = 60
 local PIN_TOGGLE_OFFSET_X = 40
 local PIN_TOGGLE_OFFSET_Y = 10
 local FRAME_STRATA = {"BACKGROUND", "LOW", "MEDIUM", "HIGH", "DIALOG", "FULLSCREEN", "FULLSCREEN_DIALOG", "TOOLTIP"}
@@ -44,12 +38,324 @@ local function IsWorldMap(mapID)
     return info ~= nil and info.mapType ~= nil and info.mapType <= Enum.UIMapType.World
 end
 
-local function GetNavBar()
-    if WorldMapFrame == nil then return nil end
-    local navBar = WorldMapFrame.NavBar
-    if navBar == nil or type(navBar.navList) ~= "table" then return nil end
-    if not D4:CheckTemplates("NavButtonTemplate") then return nil end
-    return navBar
+function D4:CreateInstanceLevelPanel(parent, options)
+    options = options or {}
+    local panel = CreateFrame("Frame", nil, parent)
+    panel.acoKeepLight = true
+    panel:EnableMouse(true)
+    panel:EnableMouseWheel(true)
+    panel.bg = panel:CreateTexture(nil, "BACKGROUND")
+    panel.bg:SetAllPoints(panel)
+    panel.bg:SetColorTexture(0.05, 0.05, 0.07, 0.84)
+    panel.borders = {}
+    for edge = 1, 4 do
+        local tex = panel:CreateTexture(nil, "BORDER")
+        tex:SetColorTexture(0.45, 0.4, 0.28, 0.85)
+        panel.borders[edge] = tex
+    end
+
+    panel.borders[1]:SetPoint("TOPLEFT", panel, "TOPLEFT", 0, 0)
+    panel.borders[1]:SetPoint("TOPRIGHT", panel, "TOPRIGHT", 0, 0)
+    panel.borders[1]:SetHeight(1)
+    panel.borders[2]:SetPoint("BOTTOMLEFT", panel, "BOTTOMLEFT", 0, 0)
+    panel.borders[2]:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", 0, 0)
+    panel.borders[2]:SetHeight(1)
+    panel.borders[3]:SetPoint("TOPLEFT", panel, "TOPLEFT", 0, 0)
+    panel.borders[3]:SetPoint("BOTTOMLEFT", panel, "BOTTOMLEFT", 0, 0)
+    panel.borders[3]:SetWidth(1)
+    panel.borders[4]:SetPoint("TOPRIGHT", panel, "TOPRIGHT", 0, 0)
+    panel.borders[4]:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", 0, 0)
+    panel.borders[4]:SetWidth(1)
+    panel.pad = 5
+    panel.headerH = 20
+    panel.btnH = 22
+    panel.gap = 2
+    panel.margin = 8
+    local header = CreateFrame("Frame", nil, panel)
+    header:SetPoint("TOPLEFT", panel, "TOPLEFT", 1, -1)
+    header:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -1, -1)
+    header:SetHeight(panel.headerH)
+    header:EnableMouse(true)
+    header.bg = header:CreateTexture(nil, "BACKGROUND")
+    header.bg:SetAllPoints(header)
+    header.bg:SetColorTexture(0.1, 0.1, 0.13, 0.92)
+    header.divider = header:CreateTexture(nil, "BORDER")
+    header.divider:SetPoint("BOTTOMLEFT", header, "BOTTOMLEFT", 0, 0)
+    header.divider:SetPoint("BOTTOMRIGHT", header, "BOTTOMRIGHT", 0, 0)
+    header.divider:SetHeight(1)
+    header.divider:SetColorTexture(0.45, 0.4, 0.28, 0.65)
+    header.dots = {}
+    for col = 0, 1 do
+        for row = -1, 1 do
+            local dot = header:CreateTexture(nil, "ARTWORK")
+            dot:SetSize(2, 2)
+            dot:SetPoint("LEFT", header, "LEFT", 6 + col * 4, row * 4)
+            dot:SetColorTexture(0.72, 0.66, 0.52, 0.9)
+            tinsert(header.dots, dot)
+        end
+    end
+
+    header.title = header:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    header.title:SetPoint("LEFT", header, "LEFT", 17, 0)
+    header.title:SetPoint("RIGHT", header, "RIGHT", -6, 0)
+    header.title:SetJustifyH("LEFT")
+    header.title:SetWordWrap(false)
+    header.title:SetTextColor(1, 0.82, 0)
+    header:SetScript("OnEnter", function(sel)
+        sel.bg:SetColorTexture(0.16, 0.15, 0.18, 0.95)
+        for _, dot in ipairs(sel.dots) do
+            dot:SetColorTexture(1, 0.88, 0.35, 1)
+        end
+    end)
+
+    header:SetScript("OnLeave", function(sel)
+        sel.bg:SetColorTexture(0.1, 0.1, 0.13, 0.92)
+        for _, dot in ipairs(sel.dots) do
+            dot:SetColorTexture(0.72, 0.66, 0.52, 0.9)
+        end
+    end)
+
+    header:SetScript("OnMouseDown", function(_, button) panel:StartDrag(button) end)
+    header:SetScript("OnMouseUp", function() panel:StopDrag() end)
+    panel.header = header
+    local scroll = CreateFrame("ScrollFrame", nil, panel)
+    scroll:SetPoint("TOPLEFT", panel, "TOPLEFT", panel.pad, -(panel.headerH + panel.pad))
+    scroll:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -panel.pad, panel.pad)
+    local content = CreateFrame("Frame", nil, scroll)
+    content:SetSize(1, 1)
+    scroll:SetScrollChild(content)
+    panel.scroll = scroll
+    panel.content = content
+    panel.measure = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    panel.measure:Hide()
+    panel.buttons = {}
+    local function ClampScroll(value)
+        local maxScroll = max(0, (content:GetHeight() or 0) - (scroll:GetHeight() or 0))
+
+        return max(0, min(maxScroll, value or 0))
+    end
+
+    function panel:GetBounds()
+        local viewW = parent:GetWidth() or 0
+        local viewH = parent:GetHeight() or 0
+        local boxW = self:GetWidth() or 0
+        local boxH = self:GetHeight() or 0
+        local m = self.margin
+        local maxX = max(m, viewW - boxW - m)
+        local maxY = max(m, viewH - boxH - m)
+
+        return m, maxX, m, maxY
+    end
+
+    function panel:LoadPosition()
+        if self.posRX ~= nil and self.posRY ~= nil then return end
+        local saved = options.getPos and options.getPos() or nil
+        if type(saved) == "table" and type(saved.rx) == "number" and type(saved.ry) == "number" then
+            self.posRX = max(0, min(1, saved.rx))
+            self.posRY = max(0, min(1, saved.ry))
+        else
+            self.posRX = 0
+            self.posRY = 0.5
+        end
+    end
+
+    function panel:SavePosition()
+        if self.posRX == nil or self.posRY == nil or options.setPos == nil then return end
+        options.setPos({
+            rx = self.posRX,
+            ry = self.posRY,
+        })
+    end
+
+    function panel:ApplyPixelPosition(x, y, updateRatios)
+        local minX, maxX, minY, maxY = self:GetBounds()
+        local cx = max(minX, min(maxX, x))
+        local cy = max(minY, min(maxY, y))
+        self.posX = cx
+        self.posY = cy
+        self:ClearAllPoints()
+        self:SetPoint("TOPLEFT", parent, "TOPLEFT", cx, -cy)
+        if updateRatios then
+            if maxX > minX then self.posRX = (cx - minX) / (maxX - minX) end
+            if maxY > minY then self.posRY = (cy - minY) / (maxY - minY) end
+        end
+    end
+
+    function panel:ApplyRatioPosition()
+        self:LoadPosition()
+        local minX, maxX, minY, maxY = self:GetBounds()
+        local x = minX + self.posRX * (maxX - minX)
+        local y = minY + self.posRY * (maxY - minY)
+        self:ApplyPixelPosition(x, y, false)
+    end
+
+    function panel:OnDragUpdate()
+        if not self.dragging or not IsMouseButtonDown("LeftButton") then
+            self:StopDrag()
+
+            return
+        end
+
+        local cx, cy = GetCursorPosition()
+        local scale = parent:GetEffectiveScale()
+        if scale == nil or scale <= 0 then scale = 1 end
+        local dx = (cx - self.dragStartX) / scale
+        local dy = (cy - self.dragStartY) / scale
+        if not self.dragMoved and abs(dx) < 4 and abs(dy) < 4 then return end
+        self.dragMoved = true
+        self:ApplyPixelPosition(self.dragOriginX + dx, self.dragOriginY - dy, true)
+    end
+
+    function panel:StartDrag(button)
+        if button ~= "LeftButton" then return end
+        self:LoadPosition()
+        if self.posX == nil or self.posY == nil then self:ApplyRatioPosition() end
+        local cx, cy = GetCursorPosition()
+        self.dragging = true
+        self.dragMoved = false
+        self.dragStartX = cx
+        self.dragStartY = cy
+        self.dragOriginX = self.posX or self.margin
+        self.dragOriginY = self.posY or self.margin
+        self:SetScript("OnUpdate", self.OnDragUpdate)
+    end
+
+    function panel:StopDrag()
+        if not self.dragging then return end
+        self.dragging = false
+        self:SetScript("OnUpdate", nil)
+        if self.dragMoved then self:SavePosition() end
+    end
+
+    panel:SetScript("OnMouseDown", function(sel, button) sel:StartDrag(button) end)
+    panel:SetScript("OnMouseUp", function(sel) sel:StopDrag() end)
+    panel:SetScript("OnHide", function(sel) sel:StopDrag() end)
+    panel:SetScript("OnMouseWheel", function(_, delta)
+        local step = panel.btnH + panel.gap
+        scroll:SetVerticalScroll(ClampScroll(scroll:GetVerticalScroll() - delta * step))
+    end)
+
+    function panel:GetButton(index)
+        local btn = self.buttons[index]
+        if btn ~= nil then return btn end
+        btn = CreateFrame("Button", nil, self.content)
+        btn:SetHeight(self.btnH)
+        btn.bg = btn:CreateTexture(nil, "BACKGROUND")
+        btn.bg:SetAllPoints(btn)
+        btn.accent = btn:CreateTexture(nil, "ARTWORK")
+        btn.accent:SetPoint("TOPLEFT", btn, "TOPLEFT", 0, 0)
+        btn.accent:SetPoint("BOTTOMLEFT", btn, "BOTTOMLEFT", 0, 0)
+        btn.accent:SetWidth(2)
+        btn.accent:SetColorTexture(1, 0.82, 0, 1)
+        btn.accent:Hide()
+        btn.highlight = btn:CreateTexture(nil, "HIGHLIGHT")
+        btn.highlight:SetAllPoints(btn)
+        btn.highlight:SetColorTexture(1, 1, 1, 0.14)
+        btn.highlight:SetBlendMode("ADD")
+        btn.label = btn:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        btn.label:SetPoint("LEFT", btn, "LEFT", 8, 0)
+        btn.label:SetPoint("RIGHT", btn, "RIGHT", -8, 0)
+        btn.label:SetJustifyH("LEFT")
+        btn.label:SetWordWrap(false)
+        btn:SetScript("OnClick", function(sel)
+            if sel.levelIndex and options.onSelect then options.onSelect(sel.levelIndex) end
+        end)
+
+        btn:SetScript("OnEnter", function(sel)
+            if sel.fullLabel and sel.label.IsTruncated and sel.label:IsTruncated() then
+                GameTooltip:SetOwner(sel, "ANCHOR_RIGHT")
+                GameTooltip:SetText(sel.fullLabel, 1, 0.82, 0)
+                GameTooltip:Show()
+            end
+        end)
+
+        btn:SetScript("OnLeave", function(sel) if GameTooltip:IsOwned(sel) then GameTooltip:Hide() end end)
+        self.buttons[index] = btn
+
+        return btn
+    end
+
+    function panel:Layout()
+        local count = self.count or 0
+        if count <= 0 then return end
+        local step = self.btnH + self.gap
+        local contentH = count * self.btnH + max(0, count - 1) * self.gap
+        local viewW = parent:GetWidth() or 400
+        local viewH = parent:GetHeight() or 300
+        local maxScrollH = max(self.btnH, viewH - self.margin * 2 - self.pad * 2 - self.headerH)
+        local visibleH = min(contentH, maxScrollH)
+        local maxInnerW = max(60, viewW - self.margin * 2 - self.pad * 2)
+        local innerW = min(self.innerWidth or 140, maxInnerW)
+        self:SetSize(innerW + self.pad * 2, visibleH + self.pad * 2 + self.headerH)
+        self.content:SetSize(innerW, contentH)
+        for i = 1, count do
+            local btn = self.buttons[i]
+            if btn then
+                btn:SetWidth(innerW)
+                btn:ClearAllPoints()
+                btn:SetPoint("TOPLEFT", self.content, "TOPLEFT", 0, -(i - 1) * step)
+            end
+        end
+
+        local active = self.activeIndex or 1
+        local activeTop = (active - 1) * step
+        local activeBottom = activeTop + self.btnH
+        local cur = self.scroll:GetVerticalScroll() or 0
+        if activeTop < cur then
+            cur = activeTop
+        elseif activeBottom > cur + visibleH then
+            cur = activeBottom - visibleH
+        end
+
+        self.scroll:SetVerticalScroll(ClampScroll(cur))
+        self:ApplyRatioPosition()
+        if options.getFrameLevel ~= nil then self:SetFrameLevel(options.getFrameLevel()) end
+    end
+
+    function panel:Refresh(levels, activeIndex)
+        local count = levels and #levels or 0
+        self.count = count
+        self.activeIndex = activeIndex or 1
+        local title = options.getTitle and options.getTitle() or "Floors"
+        self.header.title:SetText(title)
+        local maxW = 0
+        for i = 1, count do
+            local btn = self:GetButton(i)
+            local text = options.getLabel and options.getLabel(levels, levels[i], i) or levels[i].name or tostring(i)
+            btn.levelIndex = i
+            btn.fullLabel = text
+            btn.label:SetText(text)
+            self.measure:SetText(text)
+            local textW = self.measure:GetStringWidth() or 0
+            if textW > maxW then maxW = textW end
+            local active = i == self.activeIndex
+            if active then
+                btn.bg:SetColorTexture(0.85, 0.68, 0.2, 0.28)
+                btn.accent:Show()
+                btn.label:SetTextColor(1, 0.88, 0.35)
+            else
+                btn.bg:SetColorTexture(0.14, 0.14, 0.17, 0.65)
+                btn.accent:Hide()
+                btn.label:SetTextColor(0.88, 0.88, 0.9)
+            end
+
+            btn:Show()
+        end
+
+        for i = count + 1, #self.buttons do
+            self.buttons[i]:Hide()
+        end
+
+        self.measure:SetText(title)
+        local headerW = (self.measure:GetStringWidth() or 0) + 18
+        if headerW > maxW then maxW = headerW end
+        self.innerWidth = max(110, min(200, ceil(maxW) + 20))
+        self:Layout()
+    end
+
+    panel:Hide()
+
+    return panel
 end
 
 function D4:CreateInstanceMap(provider)
@@ -171,111 +477,6 @@ function D4:CreateInstanceMap(provider)
         end
 
         Refresh()
-    end
-
-    local function StepLevel(delta)
-        if shownLevels == nil or shownIndex == nil then return end
-        local index = shownIndex + delta
-        if index < 1 or index > #shownLevels then return end
-        SelectLevel(index)
-    end
-
-    local function SetupLevelMenu(dropdown)
-        if dropdown == nil or dropdown.SetupMenu == nil then return end
-        dropdown:SetupMenu(function(_, root)
-            local levels = shownLevels
-            if levels == nil then return end
-            for i, level in ipairs(levels) do
-                root:CreateRadio(GetLabel(levels, level), function() return shownIndex == i end, function() SelectLevel(i) end)
-            end
-        end)
-    end
-
-    local function OpenLevelMenu(owner)
-        local levels = shownLevels
-        if levels == nil then return end
-        local entries = {}
-        for i, level in ipairs(levels) do
-            tinsert(entries, {
-                ["text"] = GetLabel(levels, level),
-                ["checked"] = function() return shownIndex == i end,
-                ["func"] = function() SelectLevel(i) end,
-            })
-        end
-
-        D4:ShowContextMenu(owner, entries)
-    end
-
-    local function CreateStepperControl(container)
-        local control = CreateFrame("Frame", nil, container, "SettingsDropdownWithButtonsTemplate")
-        control:SetWidth(LEVEL_BUTTON_WIDTH + LEVEL_STEPPER_PAD)
-        if control.Dropdown then control.Dropdown:SetWidth(LEVEL_BUTTON_WIDTH) end
-        local steppers = D4:SetupDropdownSteppers(control, function() StepLevel(-1) end, function() StepLevel(1) end, true)
-        local function UpdateSteppers()
-            local count = shownLevels and #shownLevels or 0
-            local index = shownIndex or 1
-            steppers:SetEnabled(index > 1, index < count)
-        end
-
-        SetupLevelMenu(control.Dropdown)
-        function control:SetLabel(text)
-            D4:SetDropdownText(self.Dropdown, text)
-            UpdateSteppers()
-            if C_Timer then C_Timer.After(0, UpdateSteppers) end
-        end
-
-        control:HookScript("OnShow", UpdateSteppers)
-        return control
-    end
-
-    local function CreateNavButton(navBar)
-        local button = CreateFrame("Button", nil, navBar, "NavButtonTemplate")
-        button.listFunc = function() return nil end
-        local arrow = button.MenuArrowButton
-        button:RegisterForClicks("LeftButtonUp")
-        button:SetScript("OnClick", function(sel)
-            if arrow ~= nil and arrow.OpenMenu ~= nil then
-                arrow:OpenMenu()
-            else
-                OpenLevelMenu(sel)
-            end
-        end)
-
-        if NavBar_ButtonOnEnter ~= nil then button:SetScript("OnEnter", NavBar_ButtonOnEnter) end
-        if NavBar_ButtonOnLeave ~= nil then button:SetScript("OnLeave", NavBar_ButtonOnLeave) end
-        button:HookScript("OnShow", function() SetupLevelMenu(arrow) end)
-        SetupLevelMenu(arrow)
-        if button.selected ~= nil then button.selected:Show() end
-        function button:Reanchor()
-            local list = navBar.navList
-            local last = list[#list]
-            if last == nil then return end
-            local hasMenu = shownLevels ~= nil and #shownLevels > 1
-            local extra = hasMenu and NAV_BUTTON_EXTRA or NAV_BUTTON_PLAIN
-            if arrow ~= nil then arrow:SetShown(hasMenu) end
-            if self:IsEnabled() ~= hasMenu then self:SetEnabled(hasMenu) end
-            local space = (navBar:GetRight() or 0) - (last:GetRight() or 0) - extra
-            local width = min(self.textWidth or 0, max(space, NAV_BUTTON_MIN_TEXT))
-            self.text:SetWidth(width)
-            self:SetWidth(width + extra)
-            if self.anchor ~= last then
-                self.anchor = last
-                self:ClearAllPoints()
-                self:SetPoint("LEFT", last, "RIGHT", 0, 0)
-            end
-
-            self:SetFrameLevel(max(navBar:GetFrameLevel(), last:GetFrameLevel() - 1))
-        end
-
-        function button:SetLabel(text)
-            self.text:SetWidth(0)
-            self:SetText(text)
-            self.textWidth = self.text:GetStringWidth()
-            self:Reanchor()
-        end
-
-        button:Hide()
-        return button
     end
 
     local function ToggleOverlay()
@@ -525,22 +726,18 @@ function D4:CreateInstanceMap(provider)
         overlay.credit:SetPoint("BOTTOM", overlay, "BOTTOM", 0, LEVEL_BUTTON_OFFSET)
         overlay.credit:Hide()
         overlay:Hide()
-        local navBar = GetNavBar()
-        if navBar ~= nil then
-            levelButton = CreateNavButton(navBar)
-        elseif D4:CheckTemplates("SettingsDropdownWithButtonsTemplate") then
-            levelButton = CreateStepperControl(container)
-        else
-            levelButton = CreateFrame("Button", nil, container, "UIPanelButtonTemplate")
-            levelButton:SetSize(LEVEL_BUTTON_WIDTH, LEVEL_BUTTON_HEIGHT)
-            levelButton:SetScript("OnClick", OpenLevelMenu)
-            levelButton.SetLabel = levelButton.SetText
-        end
+        levelButton = D4:CreateInstanceLevelPanel(overlay, {
+            ["getTitle"] = provider.getLevelsTitle,
+            ["getLabel"] = function(levels, level) return GetLabel(levels, level) end,
+            ["onSelect"] = SelectLevel,
+            ["getPos"] = provider.getLevelPanelPos,
+            ["setPos"] = provider.setLevelPanelPos,
+            ["getFrameLevel"] = function() return overlay:GetFrameLevel() + 1000 end,
+        })
 
-        if navBar == nil then
-            levelButton:SetPoint("BOTTOMLEFT", container, "BOTTOMLEFT", LEVEL_BUTTON_OFFSET, LEVEL_BUTTON_OFFSET)
-            levelButton:SetFrameLevel(overlay:GetFrameLevel() + 1000)
-        end
+        overlay:HookScript("OnSizeChanged", function()
+            if levelButton ~= nil and levelButton:IsShown() then levelButton:Layout() end
+        end)
 
         levelButton:Hide()
         container:HookScript("OnMouseUp", OnCanvasMouseUp)
@@ -630,18 +827,18 @@ function D4:CreateInstanceMap(provider)
             local height = info.height or DEFAULT_ART_HEIGHT
             overlay.art:SetTexCoord(0, width / (info.fileWidth or width), 0, height / (info.fileHeight or height))
             Layout(info)
-            levelButton:SetLabel(GetLabel(levels, info))
             local credit = provider.getCredit and provider.getCredit(info)
             overlay.credit:SetText(credit or "")
             overlay.credit:SetShown(credit ~= nil)
+            if #levels > 1 then levelButton:Refresh(levels, index) end
         end
 
         UpdateMapPins(info)
-        if levelButton.Reanchor ~= nil then
-            levelButton:Reanchor()
-            if not levelButton:IsShown() then levelButton:Show() end
-        elseif #levels > 1 then
-            if not levelButton:IsShown() then levelButton:Show() end
+        if #levels > 1 then
+            if not levelButton:IsShown() then
+                levelButton:Refresh(levels, index)
+                levelButton:Show()
+            end
         elseif levelButton:IsShown() then
             levelButton:Hide()
         end

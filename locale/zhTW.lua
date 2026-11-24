@@ -118,6 +118,7 @@ MapUtils:AddTrans("zhTW", "LID_LIBRARYBOOKSHOWUNEXPLOREDDESC", "停用後，只�
 MapUtils:AddTrans("zhTW", "LID_MAPFADE", "移動時透明")
 MapUtils:AddTrans("zhTW", "LID_MAPICONS", "地圖圖示")
 MapUtils:AddTrans("zhTW", "LID_MAPLABELS", "地圖標籤")
+MapUtils:AddTrans("zhTW", "LID_MAPLEVELS", "樓層")
 MapUtils:AddTrans("zhTW", "LID_MAPMENU", "地圖選單")
 MapUtils:AddTrans("zhTW", "LID_MAPPINQUESTEND", "交付任務")
 MapUtils:AddTrans("zhTW", "LID_MAPPINQUESTSTART", "接受任務")

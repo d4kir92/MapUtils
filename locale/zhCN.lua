@@ -118,6 +118,7 @@ MapUtils:AddTrans("zhCN", "LID_LIBRARYBOOKSHOWUNEXPLOREDDESC", "禁用后，只�
 MapUtils:AddTrans("zhCN", "LID_MAPFADE", "移动时透明")
 MapUtils:AddTrans("zhCN", "LID_MAPICONS", "地图图标")
 MapUtils:AddTrans("zhCN", "LID_MAPLABELS", "地图标签")
+MapUtils:AddTrans("zhCN", "LID_MAPLEVELS", "楼层")
 MapUtils:AddTrans("zhCN", "LID_MAPMENU", "地图菜单")
 MapUtils:AddTrans("zhCN", "LID_MAPPINQUESTEND", "交付任务")
 MapUtils:AddTrans("zhCN", "LID_MAPPINQUESTSTART", "接受任务")

@@ -118,6 +118,7 @@ MapUtils:AddTrans("frFR", "LID_LIBRARYBOOKSHOWUNEXPLOREDDESC", "Si désactivé, 
 MapUtils:AddTrans("frFR", "LID_MAPFADE", "Transparence en mouvement")
 MapUtils:AddTrans("frFR", "LID_MAPICONS", "Icônes de la carte")
 MapUtils:AddTrans("frFR", "LID_MAPLABELS", "Libellés de la carte")
+MapUtils:AddTrans("frFR", "LID_MAPLEVELS", "Étages")
 MapUtils:AddTrans("frFR", "LID_MAPMENU", "Menu de la carte")
 MapUtils:AddTrans("frFR", "LID_MAPPINQUESTEND", "Rendu de quête")
 MapUtils:AddTrans("frFR", "LID_MAPPINQUESTSTART", "Prise de quête")

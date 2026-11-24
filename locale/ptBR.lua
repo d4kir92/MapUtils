@@ -118,6 +118,7 @@ MapUtils:AddTrans("ptBR", "LID_LIBRARYBOOKSHOWUNEXPLOREDDESC", "Quando desativad
 MapUtils:AddTrans("ptBR", "LID_MAPFADE", "Transparência ao se mover")
 MapUtils:AddTrans("ptBR", "LID_MAPICONS", "Ícones do mapa")
 MapUtils:AddTrans("ptBR", "LID_MAPLABELS", "Rótulos do mapa")
+MapUtils:AddTrans("ptBR", "LID_MAPLEVELS", "Andares")
 MapUtils:AddTrans("ptBR", "LID_MAPMENU", "Menu do mapa")
 MapUtils:AddTrans("ptBR", "LID_MAPPINQUESTEND", "Entregar missão")
 MapUtils:AddTrans("ptBR", "LID_MAPPINQUESTSTART", "Aceitar missão")

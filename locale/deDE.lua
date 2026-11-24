@@ -118,6 +118,7 @@ MapUtils:AddTrans("deDE", "LID_LIBRARYBOOKSHOWUNEXPLOREDDESC", "Wenn deaktiviert
 MapUtils:AddTrans("deDE", "LID_MAPFADE", "Transparenz beim Laufen")
 MapUtils:AddTrans("deDE", "LID_MAPICONS", "Kartensymbole")
 MapUtils:AddTrans("deDE", "LID_MAPLABELS", "Kartenbeschriftungen")
+MapUtils:AddTrans("deDE", "LID_MAPLEVELS", "Ebenen")
 MapUtils:AddTrans("deDE", "LID_MAPMENU", "Kartenmenü")
 MapUtils:AddTrans("deDE", "LID_MAPPINQUESTEND", "Quest-Abgabe")
 MapUtils:AddTrans("deDE", "LID_MAPPINQUESTSTART", "Quest-Annahme")

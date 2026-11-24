@@ -118,6 +118,7 @@ MapUtils:AddTrans("itIT", "LID_LIBRARYBOOKSHOWUNEXPLOREDDESC", "Se disattivato, 
 MapUtils:AddTrans("itIT", "LID_MAPFADE", "Trasparenza in movimento")
 MapUtils:AddTrans("itIT", "LID_MAPICONS", "Icone della mappa")
 MapUtils:AddTrans("itIT", "LID_MAPLABELS", "Etichette della mappa")
+MapUtils:AddTrans("itIT", "LID_MAPLEVELS", "Piani")
 MapUtils:AddTrans("itIT", "LID_MAPMENU", "Menu della mappa")
 MapUtils:AddTrans("itIT", "LID_MAPPINQUESTEND", "Consegna missione")
 MapUtils:AddTrans("itIT", "LID_MAPPINQUESTSTART", "Accettazione missione")

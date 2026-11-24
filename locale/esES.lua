@@ -118,6 +118,7 @@ MapUtils:AddTrans("esES", "LID_LIBRARYBOOKSHOWUNEXPLOREDDESC", "Si está desacti
 MapUtils:AddTrans("esES", "LID_MAPFADE", "Transparencia al moverse")
 MapUtils:AddTrans("esES", "LID_MAPICONS", "Iconos del mapa")
 MapUtils:AddTrans("esES", "LID_MAPLABELS", "Etiquetas del mapa")
+MapUtils:AddTrans("esES", "LID_MAPLEVELS", "Niveles")
 MapUtils:AddTrans("esES", "LID_MAPMENU", "Menú del mapa")
 MapUtils:AddTrans("esES", "LID_MAPPINQUESTEND", "Entregar misión")
 MapUtils:AddTrans("esES", "LID_MAPPINQUESTSTART", "Aceptar misión")

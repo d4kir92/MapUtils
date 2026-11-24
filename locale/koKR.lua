@@ -118,6 +118,7 @@ MapUtils:AddTrans("koKR", "LID_LIBRARYBOOKSHOWUNEXPLOREDDESC", "비활성화하�
 MapUtils:AddTrans("koKR", "LID_MAPFADE", "이동 중 투명도")
 MapUtils:AddTrans("koKR", "LID_MAPICONS", "지도 아이콘")
 MapUtils:AddTrans("koKR", "LID_MAPLABELS", "지도 표시")
+MapUtils:AddTrans("koKR", "LID_MAPLEVELS", "층")
 MapUtils:AddTrans("koKR", "LID_MAPMENU", "지도 메뉴")
 MapUtils:AddTrans("koKR", "LID_MAPPINQUESTEND", "퀘스트 완료")
 MapUtils:AddTrans("koKR", "LID_MAPPINQUESTSTART", "퀘스트 수락")

@@ -118,6 +118,7 @@ MapUtils:AddTrans("ruRU", "LID_LIBRARYBOOKSHOWUNEXPLOREDDESC", "Если отк�
 MapUtils:AddTrans("ruRU", "LID_MAPFADE", "Прозрачность при движении")
 MapUtils:AddTrans("ruRU", "LID_MAPICONS", "Значки на карте")
 MapUtils:AddTrans("ruRU", "LID_MAPLABELS", "Подписи на карте")
+MapUtils:AddTrans("ruRU", "LID_MAPLEVELS", "Этажи")
 MapUtils:AddTrans("ruRU", "LID_MAPMENU", "Меню карты")
 MapUtils:AddTrans("ruRU", "LID_MAPPINQUESTEND", "Сдать задание")
 MapUtils:AddTrans("ruRU", "LID_MAPPINQUESTSTART", "Взять задание")

@@ -118,6 +118,7 @@ MapUtils:AddTrans("enUS", "LID_LIBRARYBOOKSHOWUNEXPLOREDDESC", "When disabled, o
 MapUtils:AddTrans("enUS", "LID_MAPFADE", "Fade while moving")
 MapUtils:AddTrans("enUS", "LID_MAPICONS", "Map icons")
 MapUtils:AddTrans("enUS", "LID_MAPLABELS", "Map labels")
+MapUtils:AddTrans("enUS", "LID_MAPLEVELS", "Floors")
 MapUtils:AddTrans("enUS", "LID_MAPMENU", "Map menu")
 MapUtils:AddTrans("enUS", "LID_MAPPINQUESTEND", "Quest turn-in")
 MapUtils:AddTrans("enUS", "LID_MAPPINQUESTSTART", "Quest pickup")
