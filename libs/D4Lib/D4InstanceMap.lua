@@ -97,15 +97,48 @@ function D4:CreateInstanceLevelPanel(parent, options)
 
     header.title = header:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
     header.title:SetPoint("LEFT", header, "LEFT", 17, 0)
-    header.title:SetPoint("RIGHT", header, "RIGHT", -6, 0)
+    header.title:SetPoint("RIGHT", header, "RIGHT", -22, 0)
     header.title:SetJustifyH("LEFT")
     header.title:SetWordWrap(false)
     header.title:SetTextColor(1, 0.82, 0)
+    local toggle = CreateFrame("Button", nil, header)
+    toggle:SetSize(16, 16)
+    toggle:SetPoint("RIGHT", header, "RIGHT", -2, 0)
+    toggle.bg = toggle:CreateTexture(nil, "BACKGROUND")
+    toggle.bg:SetAllPoints(toggle)
+    toggle.bg:SetColorTexture(1, 1, 1, 0)
+    toggle.hBar = toggle:CreateTexture(nil, "ARTWORK")
+    toggle.hBar:SetSize(8, 2)
+    toggle.hBar:SetPoint("CENTER", toggle, "CENTER", 0, 0)
+    toggle.hBar:SetColorTexture(0.72, 0.66, 0.52, 0.95)
+    toggle.vBar = toggle:CreateTexture(nil, "ARTWORK")
+    toggle.vBar:SetSize(2, 8)
+    toggle.vBar:SetPoint("CENTER", toggle, "CENTER", 0, 0)
+    toggle.vBar:SetColorTexture(0.72, 0.66, 0.52, 0.95)
+    toggle.vBar:Hide()
+    toggle:SetScript("OnEnter", function(sel)
+        sel.bg:SetColorTexture(1, 1, 1, 0.14)
+        sel.hBar:SetColorTexture(1, 0.88, 0.35, 1)
+        sel.vBar:SetColorTexture(1, 0.88, 0.35, 1)
+        panel:ShowCollapsedTooltip(sel)
+    end)
+
+    toggle:SetScript("OnLeave", function(sel)
+        sel.bg:SetColorTexture(1, 1, 1, 0)
+        sel.hBar:SetColorTexture(0.72, 0.66, 0.52, 0.95)
+        sel.vBar:SetColorTexture(0.72, 0.66, 0.52, 0.95)
+        if GameTooltip:IsOwned(sel) then GameTooltip:Hide() end
+    end)
+
+    toggle:SetScript("OnClick", function() panel:ToggleCollapsed() end)
+    header.toggle = toggle
     header:SetScript("OnEnter", function(sel)
         sel.bg:SetColorTexture(0.16, 0.15, 0.18, 0.95)
         for _, dot in ipairs(sel.dots) do
             dot:SetColorTexture(1, 0.88, 0.35, 1)
         end
+
+        panel:ShowCollapsedTooltip(sel)
     end)
 
     header:SetScript("OnLeave", function(sel)
@@ -113,10 +146,17 @@ function D4:CreateInstanceLevelPanel(parent, options)
         for _, dot in ipairs(sel.dots) do
             dot:SetColorTexture(0.72, 0.66, 0.52, 0.9)
         end
+
+        if GameTooltip:IsOwned(sel) then GameTooltip:Hide() end
     end)
 
     header:SetScript("OnMouseDown", function(_, button) panel:StartDrag(button) end)
-    header:SetScript("OnMouseUp", function() panel:StopDrag() end)
+    header:SetScript("OnMouseUp", function(_, button)
+        local moved = panel.dragMoved
+        panel:StopDrag()
+        if button == "LeftButton" and not moved then panel:ToggleCollapsed() end
+    end)
+
     panel.header = header
     local scroll = CreateFrame("ScrollFrame", nil, panel)
     scroll:SetPoint("TOPLEFT", panel, "TOPLEFT", panel.pad, -(panel.headerH + panel.pad))
@@ -275,16 +315,64 @@ function D4:CreateInstanceLevelPanel(parent, options)
         return btn
     end
 
+    function panel:ShowCollapsedTooltip(owner)
+        if not self.collapsed or not self.activeLabel or self.activeLabel == "" then return end
+        GameTooltip:SetOwner(owner, "ANCHOR_RIGHT")
+        GameTooltip:SetText(self.activeLabel, 1, 0.82, 0)
+        GameTooltip:Show()
+    end
+
+    function panel:LoadCollapsed()
+        if self.collapsed ~= nil then return end
+        self.collapsed = options.getCollapsed and options.getCollapsed() == true or false
+    end
+
+    function panel:SaveCollapsed()
+        if options.setCollapsed ~= nil then options.setCollapsed(self.collapsed == true) end
+    end
+
+    function panel:UpdateCollapsedVisuals()
+        local collapsed = self.collapsed == true
+        self.header.divider:SetShown(not collapsed)
+        self.header.toggle.vBar:SetShown(collapsed)
+        self.scroll:SetShown(not collapsed)
+        self:EnableMouseWheel(not collapsed)
+    end
+
+    function panel:SetCollapsed(collapsed)
+        self.collapsed = collapsed == true
+        self:SaveCollapsed()
+        self:UpdateCollapsedVisuals()
+        if not self.collapsed and GameTooltip and (GameTooltip:IsOwned(self.header) or GameTooltip:IsOwned(self.header.toggle)) then GameTooltip:Hide() end
+        self:Layout()
+    end
+
+    function panel:ToggleCollapsed()
+        self:LoadCollapsed()
+        self:SetCollapsed(not self.collapsed)
+    end
+
     function panel:Layout()
         local count = self.count or 0
         if count <= 0 then return end
-        local step = self.btnH + self.gap
-        local contentH = count * self.btnH + max(0, count - 1) * self.gap
+        self:LoadCollapsed()
+        self:UpdateCollapsedVisuals()
         local viewW = parent:GetWidth() or 400
         local viewH = parent:GetHeight() or 300
+        local maxInnerW = max(60, viewW - self.margin * 2 - self.pad * 2)
+        if self.collapsed then
+            local boxW = min(self.collapsedWidth or 96, maxInnerW + self.pad * 2)
+            self:SetSize(boxW, self.headerH + 2)
+            self:ApplyRatioPosition()
+            if options.getFrameLevel ~= nil then self:SetFrameLevel(options.getFrameLevel()) end
+
+            return
+        end
+
+        local step = self.btnH + self.gap
+        local contentH = count * self.btnH + max(0, count - 1) * self.gap
         local maxScrollH = max(self.btnH, viewH - self.margin * 2 - self.pad * 2 - self.headerH)
         local visibleH = min(contentH, maxScrollH)
-        local maxInnerW = max(60, viewW - self.margin * 2 - self.pad * 2)
         local innerW = min(self.innerWidth or 140, maxInnerW)
         self:SetSize(innerW + self.pad * 2, visibleH + self.pad * 2 + self.headerH)
         self.content:SetSize(innerW, contentH)
@@ -316,6 +404,7 @@ function D4:CreateInstanceLevelPanel(parent, options)
         local count = levels and #levels or 0
         self.count = count
         self.activeIndex = activeIndex or 1
+        self.activeLabel = nil
         local title = options.getTitle and options.getTitle() or "Floors"
         self.header.title:SetText(title)
         local maxW = 0
@@ -330,6 +419,7 @@ function D4:CreateInstanceLevelPanel(parent, options)
             if textW > maxW then maxW = textW end
             local active = i == self.activeIndex
             if active then
+                self.activeLabel = text
                 btn.bg:SetColorTexture(0.85, 0.68, 0.2, 0.28)
                 btn.accent:Show()
                 btn.label:SetTextColor(1, 0.88, 0.35)
@@ -347,8 +437,10 @@ function D4:CreateInstanceLevelPanel(parent, options)
         end
 
         self.measure:SetText(title)
-        local headerW = (self.measure:GetStringWidth() or 0) + 18
+        local titleW = self.measure:GetStringWidth() or 0
+        local headerW = titleW + 34
         if headerW > maxW then maxW = headerW end
+        self.collapsedWidth = max(84, min(200, ceil(titleW) + 46))
         self.innerWidth = max(110, min(200, ceil(maxW) + 20))
         self:Layout()
     end
@@ -732,6 +824,8 @@ function D4:CreateInstanceMap(provider)
             ["onSelect"] = SelectLevel,
             ["getPos"] = provider.getLevelPanelPos,
             ["setPos"] = provider.setLevelPanelPos,
+            ["getCollapsed"] = provider.getLevelPanelCollapsed,
+            ["setCollapsed"] = provider.setLevelPanelCollapsed,
             ["getFrameLevel"] = function() return overlay:GetFrameLevel() + 1000 end,
         })
 
