@@ -8,5 +8,6 @@ data.art[2999] = {"Ruins of Lordaeron", {{2999, nil, ATLAS_FOREVER}}}
 data.art[3065] = {"Hall of the Thanes", {{3065, nil, ATLAS_FOREVER}}}
 data.art[900001] = {"The Drowned City", {{900001, "The Drowned City", ATLAS_FOREVER}, {"900001_2", "Atal'Byzal", ATLAS_FOREVER}}}
 data.art[900002] = {"Krol'dok Stronghold", {{900002, nil, ATLAS_FOREVER}}}
+data.art[3039] = data.art[900002]
 data.art[900003] = {"Alcaz Prison", {{900003, "Main Unit", ATLAS_FOREVER}, {"900003_2", "Maximum Security Unit", ATLAS_FOREVER}}}
 data.art[900005] = {"Shaper's Terrace", {{900005, nil, ATLAS_FOREVER}}}
