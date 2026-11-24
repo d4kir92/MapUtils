@@ -375,6 +375,7 @@ end
 
 function MAP_SIZE.SyncCanvas()
 	if frame.OnFrameSizeChanged == nil or MapUtils:IsGamepadUI() then return end
+	MapUtils:InstallCombatPins()
 	MAP_SIZE.canvasPending = true
 	if not frame:IsVisible() then return end
 	local container = frame.ScrollContainer
@@ -1122,6 +1123,7 @@ if frame ~= nil then
 		end)
 	end
 	frame:HookScript("OnShow", function()
+		MapUtils:InstallCombatPins()
 		Apply()
 		MAP_SIZE.LayoutBorder()
 		MAP_SIZE.CheckCanvas()
@@ -2033,6 +2035,7 @@ end
 
 function SmoothZoom.OnUpdate(container, elapsed)
 	if SmoothZoom.IsGamepad() then return end
+	MapUtils:InstallCombatPins()
 	SmoothZoom.InstallClickHandler()
 	local panning = container.mouseButtonInfo and container.mouseButtonInfo.LeftButton and container.mouseButtonInfo.LeftButton.down
 	local finishedDrag = not panning and SmoothZoom.dragMapID ~= nil and SmoothZoom.dragMapID == container.mapID
@@ -2166,7 +2169,7 @@ local CombatPins = {
 }
 
 function CombatPins.IsGamepad()
-	return C_InputInterfaceStyle ~= nil or InputUtil ~= nil and InputUtil.IsGamepadUIEnabled ~= nil and InputUtil.IsGamepadUIEnabled() == true
+	return InputUtil ~= nil and InputUtil.IsGamepadUIEnabled ~= nil and InputUtil.IsGamepadUIEnabled() == true
 end
 
 function CombatPins.Wait(pin, key, ...)
@@ -2364,6 +2367,7 @@ end
 function MapUtils:CenterWorldMapOnUnit(unit, follow)
 	local container = WheelZoom.container
 	if frame == nil or container == nil or IsLocked() then return false end
+	MapUtils:InstallCombatPins()
 	if follow and (SmoothZoom.anim ~= nil or SmoothZoom.center ~= nil or WheelZoom.pending ~= nil or IsMouseButtonDown("LeftButton")) then return false end
 	local mapID, x, y = MapUtils:GetUnitMapPosition(unit)
 	if mapID == nil then return false end
@@ -2606,7 +2610,7 @@ MapLevelZoom.loader:SetScript("OnEvent", function(sel)
 	SmoothZoom.InstallCursorFix()
 	SmoothZoom.InstallSpokenPlacesDragGuard()
 	C_Timer.After(WheelZoom.installDelay, MapLevelZoom.Install)
-	MapUtils:InstallCombatPins()
+	if C_InputInterfaceStyle == nil then MapUtils:InstallCombatPins() end
 end)
 MapUtils.ProfileTable("SmoothZoom", SmoothZoom)
 MapUtils.ProfileTable("MapLevelZoom", MapLevelZoom)
