@@ -149,9 +149,40 @@ Preset.LIST = {
 	}
 }
 
+function Preset.MarkWhatsNewSeen()
+	if maset == nil or type(MAUTTAB) ~= "table" then return end
+	MAUTTAB.WHATSNEW = MAUTTAB.WHATSNEW or {}
+	MAUTTAB.WHATSNEW.seen = MAUTTAB.WHATSNEW.seen or {}
+	local since = "2026-11-13"
+	for _, element in ipairs(maset.elements or {}) do
+		if element.settingLabel and not element.isCategory and not element.hidden and element.whatsNew ~= false then
+			local added = element.added
+			if type(added) == "number" then added = date("%Y-%m-%d", added) end
+			if type(added) == "string" and added:match("^%d%d%d%d%-%d%d%-%d%d$") and added >= since then
+				local id = tostring(element.added) .. ":" .. element.settingLabel
+				if element.frame and element.frame.slider and element.keywords and element.keywords ~= "" then id = id .. ":" .. element.keywords end
+				local category = element.category
+				local visible = true
+				while category do
+					if category.hidden then
+						visible = false
+						break
+					end
+
+					id = (category.settingLabel or category.key) .. ":" .. id
+					category = category.category
+				end
+
+				if visible then MAUTTAB.WHATSNEW.seen[id] = true end
+			end
+		end
+	end
+end
+
 function Preset.Apply(entry)
 	if entry == nil then return end
 	MAUTTAB = MAUTTAB or {}
+	if MAUTTAB["PRESETSHOWN"] == false then Preset.MarkWhatsNewSeen() end
 	MapUtils:SV(MAUTTAB, "PRESETSHOWN", true)
 	MapUtils:SV(MAUTTAB, "MAPPRESET", entry.key)
 	if entry.zoom ~= nil and MapUtils.IsWorldMapWheelZoomAvailable and MapUtils:IsWorldMapWheelZoomAvailable() then MapUtils:SetMapOption("WORLDMAPZOOM", entry.zoom == true) end
@@ -251,7 +282,10 @@ function Preset.CreateDialog()
 	win:SetScript(
 		"OnHide",
 		function()
-			if MAUTTAB ~= nil and MAUTTAB["PRESETSHOWN"] == false then MapUtils:SV(MAUTTAB, "PRESETSHOWN", true) end
+			if MAUTTAB ~= nil and MAUTTAB["PRESETSHOWN"] == false then
+				Preset.MarkWhatsNewSeen()
+				MapUtils:SV(MAUTTAB, "PRESETSHOWN", true)
+			end
 		end
 	)
 	local intro = win:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
@@ -1060,6 +1094,7 @@ loader:SetScript("OnEvent", function(_, event, name)
 	elseif event == "PLAYER_ENTERING_WORLD" then
 		loader:UnregisterEvent(event)
 		if MAUTTAB ~= nil and MAUTTAB["PRESETSHOWN"] == false then
+			Preset.MarkWhatsNewSeen()
 			Preset.Show(false)
 		elseif MapUtils.WhatsNew ~= nil then
 			MapUtils.WhatsNew:ShowIfNew()
