@@ -207,6 +207,8 @@ Addon.INSTANCEMAPPINS = {
         {"boss", 0.328, 0.602, 4887}, -- Ghamoo-ra
         {"boss", 0.111, 0.400, 4831}, -- Lady Sarevess
         {"boss", 0.542, 0.568, 6243}, -- Gelihast
+        {"boss", 0.615, 0.630, 12902},
+        {"boss", 0.670, 0.660, 12902},
         {"queststart", 0.210, 0.730, 6561}, -- Blackfathom Villainy
     },
     [222] = { -- Blackfathom Deeps 2
@@ -215,8 +217,10 @@ Addon.INSTANCEMAPPINS = {
         {"boss", 0.519, 0.816, 4832},
         {"boss", 0.856, 0.866, 4829},
         {"boss", 0.334, 0.695, 12902},
-        {"boss", 0.407, 0.720, 12876},
-        {"questend", 0.408, 0.793, 6921, hint = "Is underwater"}, -- Amongst the Ruins
+        {"boss", 0.390, 0.220, 12902},
+        {"boss", 0.440, 0.240, 12902},
+        {"boss", 0.437, 0.740, 12876},
+        {"questend", 0.414, 0.753, 6921, hint = "Is underwater"}, -- Amongst the Ruins
     },
     [223] = { -- Blackfathom Deeps 3
         {"level", 0.300, 0.612, 222, true},

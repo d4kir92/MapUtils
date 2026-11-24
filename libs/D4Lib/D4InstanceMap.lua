@@ -289,7 +289,9 @@ function D4:CreateInstanceMap(provider)
                 levelButton:Hide()
                 mapPinKey = nil
                 if mapPinSet ~= nil then mapPinSet:Hide() end
-                WorldMapFrame:SetMapID(mapID)
+                if not (InCombatLockdown ~= nil and InCombatLockdown()) and (WorldMapFrame.GetMapID == nil or WorldMapFrame:GetMapID() ~= mapID) then
+                    WorldMapFrame:SetMapID(mapID)
+                end
                 Refresh()
                 if provider.onReturn ~= nil then provider.onReturn(info) end
                 return
@@ -399,14 +401,17 @@ function D4:CreateInstanceMap(provider)
         end
 
         local questKey = {}
+        local killedKey = {}
         for _, row in ipairs(rows) do
             if row[1] == "queststart" or row[1] == "questend" then
                 local visible = provider.isQuestPinVisible ~= nil and provider.isQuestPinVisible(row) or provider.isQuestPinVisible == nil and D4:IsInstanceQuestPinVisible(row)
                 tinsert(questKey, visible and "1" or "0")
+            elseif row[1] == "boss" and provider.isBossKilled ~= nil then
+                tinsert(killedKey, provider.isBossKilled(row) and "1" or "0")
             end
         end
 
-        local key = format("%s|%.4f|%.1f|%.1f|%d|%s", info.key, scale, overlay.art:GetWidth(), overlay.art:GetHeight(), #rows, table.concat(questKey))
+        local key = format("%s|%.4f|%.1f|%.1f|%d|%s|%s", info.key, scale, overlay.art:GetWidth(), overlay.art:GetHeight(), #rows, table.concat(questKey), table.concat(killedKey))
         if key == mapPinKey then return end
         mapPinKey = key
         if mapPinSet == nil then
@@ -418,6 +423,7 @@ function D4:CreateInstanceMap(provider)
                 ["getLevel"] = function(row) return FindLevelIndex(shownLevels, row[4]) end,
                 ["isEnabled"] = provider.isPinEnabled,
                 ["isQuestVisible"] = provider.isQuestPinVisible,
+                ["isBossKilled"] = provider.isBossKilled,
                 ["setEnabled"] = function(kind, enabled)
                     if provider.setPinEnabled then provider.setPinEnabled(kind, enabled) end
                     mapPinKey = nil

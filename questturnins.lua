@@ -207,6 +207,7 @@ if MapUtils.RegisterRenderLayer ~= nil then MapUtils:RegisterRenderLayer("Quest 
 local entries = {}
 local seen = {}
 local nativeQuests = {current = {}, pending = {}}
+local nativeTurnInOverlays = setmetatable({}, {__mode = "k"})
 local mapTypes = {}
 local zoneChildren = {}
 local dirty = true
@@ -400,7 +401,42 @@ local function CreatePin(canvas)
 	return pin
 end
 
+local function UpdateNativeTurnInPins()
+	if WorldMapFrame == nil or WorldMapFrame.EnumeratePinsByTemplate == nil then return end
+	for pin in WorldMapFrame:EnumeratePinsByTemplate("QuestPinTemplate") do
+		local questID = pin.GetQuestID and pin:GetQuestID() or pin.questID
+		local icon = pin.Display and pin.Display.Icon or pin.Texture
+		local overlay = nativeTurnInOverlays[pin]
+		local kind = 0
+		if questID and not MapUtils:IsSecret(questID) and pin:IsVisible() and pin:GetAlpha() > 0 and C_QuestLog.ReadyForTurnIn(questID) then
+			kind = MapUtils:GetQuestPinKind(questID, nil, true)
+		end
+
+		if kind >= 1 and kind <= 3 and icon ~= nil then
+			if overlay == nil then
+				overlay = (icon:GetParent() or pin):CreateTexture(nil, "OVERLAY", nil, 7)
+				overlay:SetPoint("CENTER", icon, "CENTER")
+				overlay:SetTexCoord(0, 1, 0, 1)
+				nativeTurnInOverlays[pin] = overlay
+			end
+
+			local tex = kind == 3 and MapUtils.QUEST_RAID_TURNIN_ICON or kind == 2 and MapUtils.QUEST_DUNGEON_TURNIN_ICON or MapUtils.QUEST_PVP_TURNIN_ICON
+			local normal = pin.NormalTexture or (pin.GetNormalTexture and pin:GetNormalTexture())
+			local normalH = normal and normal:GetHeight() or 0
+			local size = normalH > 20 and normalH * 0.5 or math.max(14, (pin:GetHeight() or 24) * 0.65)
+			overlay:SetTexture(tex)
+			overlay:SetSize(size, size)
+			overlay:Show()
+			if icon:GetAlpha() ~= 0 then icon:SetAlpha(0) end
+		elseif overlay ~= nil then
+			overlay:Hide()
+			if icon ~= nil and icon:GetAlpha() == 0 then icon:SetAlpha(1) end
+		end
+	end
+end
+
 local function UpdatePins()
+	UpdateNativeTurnInPins()
 	local mapID = WorldMapFrame:GetMapID()
 	local mapType = GetMapType(mapID)
 	local getter = C_CVar and C_CVar.GetCVarBool or GetCVarBool
