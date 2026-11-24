@@ -41,7 +41,7 @@ Preset.LIST = {
 			["PLAYERWIDGET"] = false
 		},
 		["pins"] = {
-			["WORLDMAPPINS"] = true,
+			["WORLDMAPPINS"] = false,
 			["DUNGEONWORLDMAPPINS"] = true,
 			["FLIGHTWORLDMAPPINS"] = true,
 			["VESSELWORLDMAPPINS"] = false,
@@ -49,11 +49,17 @@ Preset.LIST = {
 			["CROSSINGWORLDMAPPINS"] = false,
 			["TOWNPOIS"] = false,
 			["CAPITALPOIS"] = false,
-			["QUESTGIVERWORLDMAPPINS"] = false,
+			["QUESTGIVERWORLDMAPPINS"] = true,
 			["QUESTTURNINWORLDMAPPINS"] = false,
-			["GUILDMEMBERPINS"] = false,
+			["GUILDMEMBERPINS"] = true,
 			["FRIENDMEMBERPINS"] = false,
-			["LIBRARYBOOKWORLDMAPPINS"] = false
+			["LIBRARYBOOKWORLDMAPPINS"] = false,
+			["CONVERGENCEWORLDMAPPINS"] = false
+		},
+		["pinAzeroth"] = {
+			["FLIGHTWORLDMAPPINS"] = false,
+			["GUILDMEMBERPINS"] = true,
+			["QUESTGIVERWORLDMAPPINS"] = true
 		}
 	},
 	{
@@ -87,10 +93,16 @@ Preset.LIST = {
 			["GUILDMEMBERPINS"] = true,
 			["FRIENDMEMBERPINS"] = true,
 			["LIBRARYBOOKWORLDMAPPINS"] = true,
+			["CONVERGENCEWORLDMAPPINS"] = true,
 			["VESSELWORLDMAPPINS"] = false,
 			["CROSSINGWORLDMAPPINS"] = false,
 			["TOWNPOIS"] = false,
 			["CAPITALPOIS"] = false
+		},
+		["pinAzeroth"] = {
+			["FLIGHTWORLDMAPPINS"] = true,
+			["GUILDMEMBERPINS"] = true,
+			["QUESTGIVERWORLDMAPPINS"] = true
 		}
 	},
 	{
@@ -126,7 +138,13 @@ Preset.LIST = {
 			["QUESTTURNINWORLDMAPPINS"] = true,
 			["GUILDMEMBERPINS"] = true,
 			["FRIENDMEMBERPINS"] = true,
-			["LIBRARYBOOKWORLDMAPPINS"] = true
+			["LIBRARYBOOKWORLDMAPPINS"] = true,
+			["CONVERGENCEWORLDMAPPINS"] = true
+		},
+		["pinAzeroth"] = {
+			["FLIGHTWORLDMAPPINS"] = true,
+			["GUILDMEMBERPINS"] = true,
+			["QUESTGIVERWORLDMAPPINS"] = true
 		}
 	}
 }
@@ -163,6 +181,17 @@ function Preset.Apply(entry)
 
 	for key, enabled in pairs(entry.pins or {}) do
 		MapUtils:SetMapOption(key .. "_ENABLED", enabled == true)
+	end
+
+	for key, azeroth in pairs(entry.pinAzeroth or {}) do
+		if key == "GUILDMEMBERPINS" then
+			MapUtils:SV(MAUTTAB, "GUILDMEMBERPINS_ZONE", true)
+			MapUtils:SV(MAUTTAB, "GUILDMEMBERPINS_AZEROTH", azeroth == true)
+			MapUtils:SetGuildOption("GUILDMEMBERPINS", true)
+		else
+			MapUtils:SV(MAUTTAB, key, true)
+			if MapUtils.SetPinAzerothShown ~= nil then MapUtils:SetPinAzerothShown(key, true, azeroth == true) end
+		end
 	end
 
 	if MapUtils.RefreshMapEditElements ~= nil then MapUtils:RefreshMapEditElements() end
