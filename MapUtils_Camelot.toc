@@ -69,6 +69,7 @@ gathernodes.lua
 questturnins.lua
 data\forever\questgivers.lua
 questgivers.lua
+questitems.lua
 guildmembers.lua
 friendmembers.lua
 custommarkers.lua

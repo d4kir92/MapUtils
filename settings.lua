@@ -821,7 +821,7 @@ function MapUtils:InitSetting()
 		AddTooltip(AddCheckbox("FRIENDMEMBERSHARE", true, refreshFriends, nil, "2026-11-18"), "LID_FRIENDMEMBERSHARE", "LID_FRIENDMEMBERSHAREDESC")
 	end
 	if MapUtils.RefreshCustomMarkers then AddTooltip(AddPinCategory("CUSTOMMARKERWORLDMAPPINS", function() MapUtils:RefreshCustomMarkers() end, "LID_CUSTOMMARKERWORLDMAPPINS", "2026-11-13"), "LID_CUSTOMMARKERWORLDMAPPINS", "LID_CUSTOMMARKERWORLDMAPPINSDESC") end
-	if MapUtils:IsForever() or MapUtils.RefreshQuestTurnIns or MapUtils.RefreshQuestGivers then AddCategory("QUESTS", 2, nil, ADDED_1104) end
+	if MapUtils:IsForever() or MapUtils.RefreshQuestTurnIns or MapUtils.RefreshQuestGivers or MapUtils.HasQuestItemTooltip then AddCategory("QUESTS", 2, nil, ADDED_1104) end
 	if MapUtils.RefreshQuestGivers then
 		AddTooltip(AddPinCategory("QUESTGIVERWORLDMAPPINS", function() MapUtils:RefreshQuestGivers() end, "LID_QUESTGIVERWORLDMAPPINS", ADDED_1104), "LID_QUESTGIVERWORLDMAPPINS", "LID_QUESTGIVERWORLDMAPPINSDESC")
 		for _, key in ipairs({"QUESTGIVEREVENT", "QUESTGIVERDAILY", "QUESTGIVERREP", "QUESTGIVERPVP", "QUESTGIVERCLOTH"}) do
@@ -833,6 +833,7 @@ function MapUtils:InitSetting()
 	end
 
 	if MapUtils.RefreshQuestTurnIns then AddPinCategory("QUESTTURNINWORLDMAPPINS", function() MapUtils:RefreshQuestTurnIns() end, "LID_QUESTTURNINWORLDMAPPINS", "2026-10-07") end
+	if MapUtils.HasQuestItemTooltip then AddTooltip(AddCheckbox("QUESTITEMTOOLTIP", true, nil, nil, "2026-11-24"), "LID_QUESTITEMTOOLTIP", "LID_QUESTITEMTOOLTIPDESC") end
 	AddCategory("MAPWINDOW", 2, nil, ADDED_0927)
 	local mover = MapUtils:GetWorldMapMover()
 	for _, key in ipairs({"WORLDMAPMOVE", "WORLDMAPSCALE"}) do
