@@ -38,20 +38,22 @@ end
 local missingMaps = {}
 hooksecurefunc(WorldMapFrame, "Show", function()
 	local mapID = C_Map.GetBestMapForUnit("player")
-	if not mapID then
-		local _, _, _, _, _, _, _, instanceMapID = GetInstanceInfo()
-		if instanceMapID and instanceToMap[instanceMapID] then mapID = instanceToMap[instanceMapID] end
-	end
+	local _, _, _, _, _, _, _, instanceMapID = GetInstanceInfo()
+	if issecretvalue and issecretvalue(instanceMapID) then instanceMapID = nil end
+	if not mapID and instanceMapID and instanceToMap[instanceMapID] then mapID = instanceToMap[instanceMapID] end
 
 	if mapID == nil then return end
 	if dungeonMaps[mapID] == nil and raidMaps[mapID] == nil then
 		local inInstance, instanceType = IsInInstance()
-		if inInstance and missingMaps[mapID] == nil then
-			missingMaps[mapID] = true
+		if inInstance and instanceMapID and instanceData.art[instanceMapID] ~= nil then return end
+		local missingKey = tostring(mapID) .. ":" .. tostring(instanceMapID)
+		if inInstance and missingMaps[missingKey] == nil then
+			missingMaps[missingKey] = true
+			local ids = "zoneID: " .. mapID .. ", instanceID: " .. tostring(instanceMapID)
 			if instanceType == "raid" and raidMaps[mapID] == nil then
-				MapUtils:INFO("Missing Raid Map - zoneID: " .. mapID .. " (Send to Developer: zoneID and RaidName)")
+				MapUtils:INFO("Missing Raid Map - " .. ids .. " (Send to Developer: zoneID, instanceID and RaidName)")
 			elseif instanceType == "party" and dungeonMaps[mapID] == nil then
-				MapUtils:INFO("Missing Dungeon Map - zoneID: " .. mapID .. " (Send to Developer: zoneID and DungeonName)")
+				MapUtils:INFO("Missing Dungeon Map - " .. ids .. " (Send to Developer: zoneID, instanceID and DungeonName)")
 			end
 		end
 		return

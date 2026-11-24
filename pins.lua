@@ -690,8 +690,8 @@ AddDungeon(
 		["foreverOnly"] = true,
 		["lfg"] = 3272,
 		["instance"] = 2999,
-		["minLevel"] = 11,
-		["maxLevel"] = 24,
+		["minLevel"] = 15,
+		["maxLevel"] = 22,
 	},
 	{
 		[1420] = {0.6336, 0.6738},
@@ -704,7 +704,8 @@ AddDungeon(
 		["name"] = "Hall of the Thanes",
 		["foreverOnly"] = true,
 		["instance"] = 3065,
-		["minLevel"] = 10,
+		["minLevel"] = 13,
+		["maxLevel"] = 20,
 	},
 	{
 		[1455] = {0.27864, 0.47695},
@@ -717,7 +718,8 @@ AddDungeon(
 		["foreverOnly"] = true,
 		["entrance"] = "path",
 		["instance"] = 3065,
-		["minLevel"] = 10,
+		["minLevel"] = 13,
+		["maxLevel"] = 20,
 	},
 	{
 		[1455] = {0.43965, 0.51762},
@@ -754,7 +756,7 @@ AddDungeon(
 	{
 		["name"] = "Wailing Caverns",
 		["instanceMap"] = 43,
-		["minLevel"] = 17,
+		["minLevel"] = 15,
 		["maxLevel"] = 24,
 	},
 	{
@@ -766,7 +768,7 @@ AddDungeon(
 	{
 		["name"] = "Shadowfang Keep",
 		["instanceMap"] = 33,
-		["minLevel"] = 22,
+		["minLevel"] = 20,
 		["maxLevel"] = 30,
 	},
 	{
@@ -781,7 +783,7 @@ AddDungeon(
 		["lfg"] = 3271,
 		["instance"] = 2959,
 		["minLevel"] = 28,
-		["maxLevel"] = 33,
+		["maxLevel"] = 35,
 	},
 	{
 		[1416] = {0.08509, 0.59261},
@@ -795,6 +797,8 @@ AddDungeon(
 		["foreverOnly"] = true,
 		["lfg"] = 3274,
 		["instance"] = 2998,
+		["minLevel"] = 26,
+		["maxLevel"] = 33,
 	},
 	{
 		[1437] = {0.47705, 0.56244},
@@ -806,8 +810,8 @@ AddDungeon(
 		["name"] = "The Stockade",
 		["instanceMap"] = 34,
 		["lfg"] = 11,
-		["minLevel"] = 22,
-		["maxLevel"] = 30,
+		["minLevel"] = 24,
+		["maxLevel"] = 32,
 	},
 	{
 		[1453] = {
@@ -859,8 +863,8 @@ AddDungeon(
 	{
 		["name"] = "Scarlet Monastery",
 		["instanceMap"] = 189,
-		["minLevel"] = 34,
-		["maxLevel"] = 45,
+		["minLevel"] = 30,
+		["maxLevel"] = 46,
 	},
 	{
 		[1420] = {0.826, 0.338},
@@ -895,9 +899,10 @@ AddDungeon(
 	{
 		["name"] = "The Drowned City",
 		["foreverOnly"] = true,
+		["instance"] = 2970,
 		["instanceMap"] = 900001,
 		["minLevel"] = 35,
-		["maxLevel"] = 40,
+		["maxLevel"] = 42,
 	},
 	{
 		[1434] = {0.21317, 0.27817},
@@ -908,9 +913,10 @@ AddDungeon(
 	{
 		["name"] = "Krol'dok Stronghold",
 		["foreverOnly"] = true,
+		["instance"] = 3039,
 		["instanceMap"] = 900002,
 		["minLevel"] = 40,
-		["maxLevel"] = 45,
+		["maxLevel"] = 47,
 	},
 	{
 		[2548] = {0.375, 0.375},
@@ -921,9 +927,10 @@ AddDungeon(
 	{
 		["name"] = "Alcaz Prison",
 		["foreverOnly"] = true,
+		["instance"] = 2994,
 		["instanceMap"] = 900003,
 		["minLevel"] = 48,
-		["maxLevel"] = 53,
+		["maxLevel"] = 55,
 	},
 	{
 		[1445] = {0.750, 0.147},
@@ -946,6 +953,7 @@ AddDungeon(
 	{
 		["name"] = "Shaper's Terrace",
 		["foreverOnly"] = true,
+		["instance"] = 3001,
 		["instanceMap"] = 900005,
 		["minLevel"] = 58,
 		["maxLevel"] = 60,
@@ -1009,6 +1017,7 @@ AddDungeon(
 AddDungeon(
 	{
 		["name"] = "Dire Maul (North)",
+		["activity"] = 815,
 		["instanceMap"] = 429,
 		["instanceMapLevel"] = 2,
 		["minLevel"] = 56,
@@ -1022,6 +1031,7 @@ AddDungeon(
 AddDungeon(
 	{
 		["name"] = "Dire Maul (West)",
+		["activity"] = 814,
 		["instanceMap"] = 429,
 		["instanceMapLevel"] = 3,
 		["minLevel"] = 56,
@@ -1035,9 +1045,10 @@ AddDungeon(
 AddDungeon(
 	{
 		["name"] = "Dire Maul (East)",
+		["activity"] = 813,
 		["instanceMap"] = 429,
 		["instanceMapLevel"] = 6,
-		["minLevel"] = 56,
+		["minLevel"] = 54,
 		["maxLevel"] = 60,
 	},
 	{
@@ -1399,6 +1410,7 @@ meetingStones[1434] = {
 		["kind"] = "meetingstone",
 		["name"] = "The Drowned City",
 		["foreverOnly"] = true,
+		["instance"] = 2970,
 		["x"] = 0.21756,
 		["y"] = 0.27748,
 	},
@@ -2085,7 +2097,7 @@ end
 local activityLevels = nil
 local function GetActivityLevels()
 	if activityLevels ~= nil then return activityLevels end
-	local map = {}
+	local map = {byID = {}}
 	if not HasActivityAPI() then
 		activityLevels = map
 
@@ -2094,12 +2106,23 @@ local function GetActivityLevels()
 
 	local count = 0
 	ForEachActivity(
-		function(_, info)
-			local min = info.minLevelSuggestion or 0
+		function(activityID, info)
+			local min = (info.minLevelSuggestion ~= nil and info.minLevelSuggestion > 0) and info.minLevelSuggestion or (info.minLevel or 0)
 			local max = info.maxLevelSuggestion or 0
 			if IsRange(min, max) then
 				local levels = {min, max, info.minLevel, info.shortName or info.fullName}
-				if info.mapID ~= nil and info.mapID > 0 and map[info.mapID] == nil then map[info.mapID] = levels end
+				map.byID[activityID] = levels
+				if info.mapID ~= nil and info.mapID > 0 then
+					local prev = map[info.mapID]
+					if prev == nil then
+						map[info.mapID] = {min, max, info.minLevel, info.shortName or info.fullName}
+					else
+						if min < prev[1] then prev[1] = min end
+						if max > prev[2] then prev[2] = max end
+						if info.minLevel ~= nil and (prev[3] == nil or info.minLevel < prev[3]) then prev[3] = info.minLevel end
+						prev[4] = nil
+					end
+				end
 				if info.shortName ~= nil and info.shortName ~= "" and map[info.shortName] == nil then map[info.shortName] = levels end
 				if info.fullName ~= nil and info.fullName ~= "" and map[info.fullName] == nil then map[info.fullName] = levels end
 				count = count + 1
@@ -2128,7 +2151,9 @@ local function GetDungeonInfo(entry)
 
 	local minLevel, maxLevel = nil, nil
 	local activityMap = GetActivityLevels()
-	local levels = entry.instance ~= nil and activityMap[entry.instance] or nil
+	local levels = entry.activity ~= nil and activityMap.byID[entry.activity] or nil
+	if levels == nil and entry.instance ~= nil then levels = activityMap[entry.instance] end
+	if levels == nil and type(entry.instanceMap) == "number" then levels = activityMap[entry.instanceMap] end
 	if levels == nil and lfgName ~= nil then levels = activityMap[lfgName] end
 	if levels == nil and entry.name ~= nil then levels = activityMap[entry.name] end
 	if levels ~= nil then
