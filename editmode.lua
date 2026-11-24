@@ -861,6 +861,13 @@ function MapUtils:RegisterMapEditElement(element)
 	EditMode.Apply(element)
 end
 
+function MapUtils:RefreshMapEditElements()
+	for _, element in ipairs(EditMode.elements) do
+		EditMode.Apply(element)
+		if element.mover ~= nil then EditMode.Skin(element.mover) end
+	end
+end
+
 map:HookScript("OnShow", EditMode.ApplyAll)
 map:HookScript("OnHide", function() if EditMode.active then MapUtils:SetMapEditMode(false) end end)
 if map.ScrollContainer ~= nil then map.ScrollContainer:HookScript("OnSizeChanged", EditMode.ApplyAll) end

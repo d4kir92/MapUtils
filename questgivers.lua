@@ -619,6 +619,31 @@ function QG.AddWrapped(text, indent, r, g, b)
 	if line ~= "" then GameTooltip:AddLine(indent .. line, r, g, b) end
 end
 
+function QG.GetItemIcon(itemID)
+	local icon = C_Item and C_Item.GetItemIconByID and C_Item.GetItemIconByID(itemID)
+	if icon == nil and GetItemIcon then icon = GetItemIcon(itemID) end
+
+	return icon
+end
+
+function QG.FormatRewardIcons(list)
+	if type(list) ~= "table" then return nil end
+	local parts = {}
+	for i = 1, #list - 1, 2 do
+		local itemID, count = list[i], list[i + 1]
+		local icon = QG.GetItemIcon(itemID)
+		if icon then
+			local entry = format("|T%s:18:18:0:0:64:64:4:60:4:60|t", tostring(icon))
+			if count and count > 1 then entry = entry .. format("|cffffffffx%d|r", count) end
+			tinsert(parts, entry)
+		end
+	end
+
+	if #parts == 0 then return nil end
+
+	return table.concat(parts, " ")
+end
+
 QG.WRAP = 44
 QG.INDENT = "  "
 QG.CHAIN_INDENT = "     "
@@ -629,7 +654,15 @@ function QG.AddQuestDetails(questID, quest)
 	if xp > 0 then tinsert(rewards, format("%s %s", BreakUpLargeNumbers and BreakUpLargeNumbers(xp) or xp, MapUtils:Trans("LID_QUESTXP"))) end
 	local money = QG.GetMoney(questID)
 	if money > 0 and GetCoinTextureString then tinsert(rewards, GetCoinTextureString(money)) end
-	if #rewards > 0 then QG.AddWrapped(format("|cffffd100%s:|r %s", MapUtils:Trans("LID_QUESTREWARD"), table.concat(rewards, "  ")), QG.INDENT, 1, 1, 1) end
+	local fixedIcons = QG.FormatRewardIcons(quest[24])
+	local choiceIcons = QG.FormatRewardIcons(quest[25])
+	local itemRow = fixedIcons and choiceIcons and (fixedIcons .. "  |cff9d9d9d/|r  " .. choiceIcons) or fixedIcons or choiceIcons
+	if #rewards > 0 then
+		QG.AddWrapped(format("|cffffd100%s:|r %s", MapUtils:Trans("LID_QUESTREWARD"), table.concat(rewards, "  ")), QG.INDENT, 1, 1, 1)
+		if itemRow then GameTooltip:AddLine(QG.INDENT .. itemRow, 1, 1, 1) end
+	elseif itemRow then
+		GameTooltip:AddLine(format("%s|cffffd100%s:|r %s", QG.INDENT, MapUtils:Trans("LID_QUESTREWARD"), itemRow), 1, 1, 1)
+	end
 	local reputation = quest[21]
 	if type(reputation) == "table" then
 		local parts = {}

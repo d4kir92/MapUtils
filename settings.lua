@@ -30,7 +30,31 @@ Preset.LIST = {
 		["cityStyle"] = "MAP",
 		["reveal"] = false,
 		["simple"] = false,
-		["fade"] = false
+		["fade"] = false,
+		["widgets"] = {
+			["COORDSWIDGET"] = true,
+			["TOOLTIPWIDGET"] = true,
+			["TOGGLEWIDGET"] = false,
+			["NOTIFYWIDGET"] = false,
+			["MAPSETTINGSWIDGET"] = false,
+			["PARTYWIDGET"] = false,
+			["PLAYERWIDGET"] = false
+		},
+		["pins"] = {
+			["WORLDMAPPINS"] = true,
+			["DUNGEONWORLDMAPPINS"] = true,
+			["FLIGHTWORLDMAPPINS"] = true,
+			["VESSELWORLDMAPPINS"] = false,
+			["MEETINGSTONEWORLDMAPPINS"] = false,
+			["CROSSINGWORLDMAPPINS"] = false,
+			["TOWNPOIS"] = false,
+			["CAPITALPOIS"] = false,
+			["QUESTGIVERWORLDMAPPINS"] = false,
+			["QUESTTURNINWORLDMAPPINS"] = false,
+			["GUILDMEMBERPINS"] = false,
+			["FRIENDMEMBERPINS"] = false,
+			["LIBRARYBOOKWORLDMAPPINS"] = false
+		}
 	},
 	{
 		["key"] = "RETAIL",
@@ -43,7 +67,31 @@ Preset.LIST = {
 		["simple"] = false,
 		["zoom"] = true,
 		["fade"] = true,
-		["zoneLevels"] = true
+		["zoneLevels"] = true,
+		["widgets"] = {
+			["COORDSWIDGET"] = true,
+			["TOOLTIPWIDGET"] = true,
+			["TOGGLEWIDGET"] = true,
+			["NOTIFYWIDGET"] = true,
+			["MAPSETTINGSWIDGET"] = false,
+			["PARTYWIDGET"] = false,
+			["PLAYERWIDGET"] = false
+		},
+		["pins"] = {
+			["WORLDMAPPINS"] = true,
+			["DUNGEONWORLDMAPPINS"] = true,
+			["FLIGHTWORLDMAPPINS"] = true,
+			["MEETINGSTONEWORLDMAPPINS"] = true,
+			["QUESTGIVERWORLDMAPPINS"] = true,
+			["QUESTTURNINWORLDMAPPINS"] = true,
+			["GUILDMEMBERPINS"] = true,
+			["FRIENDMEMBERPINS"] = true,
+			["LIBRARYBOOKWORLDMAPPINS"] = true,
+			["VESSELWORLDMAPPINS"] = false,
+			["CROSSINGWORLDMAPPINS"] = false,
+			["TOWNPOIS"] = false,
+			["CAPITALPOIS"] = false
+		}
 	},
 	{
 		["key"] = "ONEMAP",
@@ -55,7 +103,31 @@ Preset.LIST = {
 		["reveal"] = true,
 		["zoom"] = true,
 		["fade"] = true,
-		["zoneLevels"] = true
+		["zoneLevels"] = true,
+		["widgets"] = {
+			["COORDSWIDGET"] = true,
+			["TOOLTIPWIDGET"] = true,
+			["TOGGLEWIDGET"] = true,
+			["NOTIFYWIDGET"] = true,
+			["MAPSETTINGSWIDGET"] = true,
+			["PARTYWIDGET"] = true,
+			["PLAYERWIDGET"] = true
+		},
+		["pins"] = {
+			["WORLDMAPPINS"] = true,
+			["VESSELWORLDMAPPINS"] = true,
+			["DUNGEONWORLDMAPPINS"] = true,
+			["MEETINGSTONEWORLDMAPPINS"] = true,
+			["FLIGHTWORLDMAPPINS"] = true,
+			["CROSSINGWORLDMAPPINS"] = true,
+			["TOWNPOIS"] = true,
+			["CAPITALPOIS"] = true,
+			["QUESTGIVERWORLDMAPPINS"] = true,
+			["QUESTTURNINWORLDMAPPINS"] = true,
+			["GUILDMEMBERPINS"] = true,
+			["FRIENDMEMBERPINS"] = true,
+			["LIBRARYBOOKWORLDMAPPINS"] = true
+		}
 	}
 }
 
@@ -85,6 +157,25 @@ function Preset.Apply(entry)
 
 	if entry.fade ~= nil then MapUtils:SetMapOption("WORLDMAPFADE", entry.fade == true, function() MapUtils:RefreshWorldMapFrame() end) end
 	if entry.zoneLevels ~= nil then MapUtils:SetMapOption("ZONELEVELS", entry.zoneLevels == true) end
+	for key, shown in pairs(entry.widgets or {}) do
+		MapUtils:SV(MAUTTAB, key .. "_SHOWN", shown == true)
+	end
+
+	for key, enabled in pairs(entry.pins or {}) do
+		MapUtils:SetMapOption(key .. "_ENABLED", enabled == true)
+	end
+
+	if MapUtils.RefreshMapEditElements ~= nil then MapUtils:RefreshMapEditElements() end
+	if MapUtils.RefreshCoords ~= nil then MapUtils:RefreshCoords() end
+	if MapUtils.RefreshPins ~= nil then MapUtils:RefreshPins() end
+	if MapUtils.RefreshTransports ~= nil then MapUtils:RefreshTransports() end
+	if MapUtils.RefreshAreaPOIs ~= nil then MapUtils:RefreshAreaPOIs() end
+	if MapUtils.RefreshQuestGivers ~= nil then MapUtils:RefreshQuestGivers() end
+	if MapUtils.RefreshQuestTurnIns ~= nil then MapUtils:RefreshQuestTurnIns() end
+	if MapUtils.RefreshGuildMembers ~= nil then MapUtils:RefreshGuildMembers() end
+	if MapUtils.RefreshFriendMembers ~= nil then MapUtils:RefreshFriendMembers() end
+	if MapUtils.RefreshLibraryBooks ~= nil then MapUtils:RefreshLibraryBooks() end
+	if MapUtils.RefreshPinToggles ~= nil then MapUtils:RefreshPinToggles() end
 	if maset ~= nil then maset:UpdateDependencies() end
 	if Preset.dialog ~= nil then Preset.dialog:Hide() end
 end
