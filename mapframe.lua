@@ -146,8 +146,12 @@ function MAP_SIZE.ClassicUI()
 	return ClassicUIForeverAPI ~= nil and ClassicUIForeverAPI.IsOn ~= nil and ClassicUIForeverAPI.IsOn("worldMap") == true
 end
 
+function MapUtils:IsGamepadUI()
+	return C_InputInterfaceStyle ~= nil and InputUtil ~= nil and InputUtil.IsGamepadUIEnabled ~= nil and InputUtil.IsGamepadUIEnabled() == true
+end
+
 function MAP_SIZE.CanResize()
-	return not MAP_SIZE.ClassicUI() and frame.minimizedWidth ~= nil and frame.minimizedHeight ~= nil and not IsMaximized()
+	return not MAP_SIZE.ClassicUI() and not MapUtils:IsGamepadUI() and frame.minimizedWidth ~= nil and frame.minimizedHeight ~= nil and not IsMaximized()
 end
 
 function MAP_SIZE.QuestExtra()
@@ -370,7 +374,7 @@ function MAP_SIZE.LayoutCloseButton(custom)
 end
 
 function MAP_SIZE.SyncCanvas()
-	if frame.OnFrameSizeChanged == nil then return end
+	if frame.OnFrameSizeChanged == nil or MapUtils:IsGamepadUI() then return end
 	MAP_SIZE.canvasPending = true
 	if not frame:IsVisible() then return end
 	local container = frame.ScrollContainer
@@ -1324,6 +1328,7 @@ function MapLevelZoom.Target(container, snap, delta)
 end
 
 function MapLevelZoom.OnMouseWheel(container, delta)
+	if MapUtils:IsGamepadUI() then return end
 	local snap = MapLevelZoom.snap
 	if snap == nil or snap.mapID == nil or snap.mapID ~= container.mapID or container.zoomLevels == nil then return end
 	if not MapUtils:IsOneMap() or InCombatLockdown() then return end
@@ -1800,6 +1805,7 @@ function MapUtils:GetOneMapTargetAt(host, x, y)
 end
 
 function SmoothZoom.OnCanvasClick(map, button, x, y)
+	if SmoothZoom.IsGamepad() then return false end
 	if button == "RightButton" and MapUtils:IsOneMap() and not (MapUtils.IsInstanceMapShown ~= nil and MapUtils:IsInstanceMapShown()) then return SmoothZoom.GlideOut(WheelZoom.container) end
 	if button ~= "LeftButton" or not MapUtils:IsOneMap() or MapUtils.GetZoneDetailContinents == nil then return false end
 	if MapUtils.IsInstanceMapShown ~= nil and MapUtils:IsInstanceMapShown() then return false end
@@ -2015,11 +2021,19 @@ function SmoothZoom.SyncCanPan(container)
 end
 
 function SmoothZoom.IsGamepad()
-	return C_InputInterfaceStyle ~= nil and InputUtil ~= nil and InputUtil.IsGamepadUIEnabled ~= nil and InputUtil.IsGamepadUIEnabled() == true
+	return MapUtils:IsGamepadUI()
+end
+
+function SmoothZoom.InstallClickHandler()
+	if SmoothZoom.clickHandlerInstalled or frame == nil or frame.AddCanvasClickHandler == nil then return end
+	if not MapUtils:IsOneMap() or SmoothZoom.IsGamepad() then return end
+	SmoothZoom.clickHandlerInstalled = true
+	frame:AddCanvasClickHandler(SmoothZoom.OnCanvasClick, 100)
 end
 
 function SmoothZoom.OnUpdate(container, elapsed)
 	if SmoothZoom.IsGamepad() then return end
+	SmoothZoom.InstallClickHandler()
 	local panning = container.mouseButtonInfo and container.mouseButtonInfo.LeftButton and container.mouseButtonInfo.LeftButton.down
 	local finishedDrag = not panning and SmoothZoom.dragMapID ~= nil and SmoothZoom.dragMapID == container.mapID
 	if panning then
@@ -2100,6 +2114,7 @@ function MapUtils:IsSmoothZooming()
 end
 
 function SmoothZoom.OnMouseWheel(container, delta)
+	if SmoothZoom.IsGamepad() then return end
 	if not MapUtils:IsOneMap() or container.zoomLevels == nil or container.mapID == nil then return end
 	if WheelZoom.installed and (not IsEnabled("WORLDMAPZOOM") or WheelZoom.foreignTime == GetTime()) then return end
 	if MapUtils.IsInstanceMapShown ~= nil and MapUtils:IsInstanceMapShown() then return end
@@ -2452,18 +2467,9 @@ function MapLevelZoom.Install()
 	container:HookScript("OnMouseWheel", MapLevelZoom.OnMouseWheel)
 	container:HookScript("OnUpdate", MapUtils.Profile("mapframe SmoothZoom OnUpdate", SmoothZoom.OnUpdate))
 	container:HookScript("OnMouseWheel", SmoothZoom.OnMouseWheel)
-	if frame ~= nil and frame.AddCanvasClickHandler ~= nil then frame:AddCanvasClickHandler(SmoothZoom.OnCanvasClick, 100) end
 end
 
 local MapView = {}
-function MapView.ReleaseMap()
-	if C_InputInterfaceStyle == nil or not MapUtils:IsForever() or frame == nil or frame.mapID == nil or MapUtil == nil or MapUtil.GetDisplayableMapForPlayer == nil then return end
-	local released = MapUtil.GetDisplayableMapForPlayer() == 947 and 1414 or 947
-	if frame:GetMapID() == released then return end
-	frame.mapID = released
-	if WheelZoom.container ~= nil then WheelZoom.container.zoomTarget = nil end
-end
-
 function MapView.Save()
 	local container = WheelZoom.container
 	local mode = MapUtils:GetMapViewMode()
@@ -2587,7 +2593,6 @@ if frame ~= nil and WheelZoom.container ~= nil then
 	frame:HookScript("OnHide", function()
 		MapView.pending = nil
 		MapView.Save()
-		MapView.ReleaseMap()
 	end)
 
 	frame:HookScript("OnShow", MapView.Restore)
