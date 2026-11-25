@@ -195,10 +195,10 @@ end
 function ZoneInfo.CursorPosition()
 	local container = WorldMapFrame.ScrollContainer
 	if container == nil or WorldMapFrame.GetNormalizedCursorPosition == nil or container.GetCanvasScale == nil or container.Child == nil then return nil end
-	local scale = container:GetCanvasScale()
+	local scale = MapUtils:GetCanvasScale(container)
 	if scale == nil or scale <= 0 or container.Child:GetLeft() == nil or container.Child:GetTop() == nil then return nil end
 
-	return WorldMapFrame:GetNormalizedCursorPosition()
+	return MapUtils:GetCanvasCursorPosition(container)
 end
 
 function ZoneInfo.GetZoneID(mapID)

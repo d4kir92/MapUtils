@@ -2929,7 +2929,7 @@ function PinCache.CullWorldPins(child, w, h, baseLevel, layoutChanged)
 	local scroll = WorldMapFrame.ScrollContainer
 	local left, right, top, bottom
 	if scroll ~= nil and scroll.GetCurrentScrollX ~= nil and scroll.GetCurrentScrollY ~= nil then
-		local x, y = scroll:GetCurrentScrollX(), scroll:GetCurrentScrollY()
+		local x, y = MapUtils:GetCanvasScroll(scroll)
 		if x ~= nil and y ~= nil then
 			local ratio = scroll:GetEffectiveScale() / child:GetEffectiveScale()
 			local width = (scroll:GetWidth() / 2 + 32) * ratio
@@ -3178,8 +3178,7 @@ function PinCache.PollWorldPins()
 	if child == nil then return end
 	local scroll = WorldMapFrame.ScrollContainer
 	local view = PinCache.worldView
-	local x = scroll and scroll.GetCurrentScrollX and scroll:GetCurrentScrollX()
-	local y = scroll and scroll.GetCurrentScrollY and scroll:GetCurrentScrollY()
+	local x, y = MapUtils:GetCanvasScroll(scroll)
 	local width, height = 0, 0
 	if scroll ~= nil then width, height = scroll:GetSize() end
 	local now = GetTime()

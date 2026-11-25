@@ -179,8 +179,9 @@ Profiler.mapTypeNames = {[0] = "cosmic", [1] = "world", [2] = "continent", [3] =
 function Profiler.GetStateKey()
 	if WorldMapFrame == nil or not WorldMapFrame:IsShown() then return "map closed", false end
 	local scroll = WorldMapFrame.ScrollContainer
-	local scale = scroll:GetCanvasScale() or 0
-	local x, y = scroll:GetCurrentScrollX() or 0, scroll:GetCurrentScrollY() or 0
+	local scale = MapUtils:GetCanvasScale(scroll) or 0
+	local sx, sy = MapUtils:GetCanvasScroll(scroll)
+	local x, y = sx or 0, sy or 0
 	local mapID = WorldMapFrame:GetMapID()
 	local last = Profiler.lastView
 	local action = "still"
@@ -1248,7 +1249,7 @@ function Profiler.BenchContext()
 	local info = mapID and C_Map.GetMapInfo(mapID)
 	local width, height = scroll:GetSize()
 
-	return format("map %s (%s), canvas scale %.3f, view %.0fx%.0f, one map %s, flavor %s, build %s", tostring(mapID), info and info.name or "?", scroll:GetCanvasScale() or 0, width or 0, height or 0, tostring(MapUtils.IsOneMap ~= nil and MapUtils:IsOneMap()), tostring(MapUtils.GetFlavor and MapUtils:GetFlavor()), tostring(GetBuildInfo()))
+	return format("map %s (%s), canvas scale %.3f, view %.0fx%.0f, one map %s, flavor %s, build %s", tostring(mapID), info and info.name or "?", MapUtils:GetCanvasScale(scroll) or 0, width or 0, height or 0, tostring(MapUtils.IsOneMap ~= nil and MapUtils:IsOneMap()), tostring(MapUtils.GetFlavor and MapUtils:GetFlavor()), tostring(GetBuildInfo()))
 end
 
 function Profiler.BenchFinish(bench, aborted)

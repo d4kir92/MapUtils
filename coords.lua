@@ -191,7 +191,7 @@ local function RefreshCursor(scroll, width, height, scrollScale, scrollLeft, scr
 	local cx, cy = GetCursorPosition()
 	if not viewChanged and cx == last.cx and cy == last.cy then return end
 	last.cx, last.cy = cx, cy
-	local x, y = scroll:GetNormalizedCursorPosition()
+	local x, y = MapUtils:GetCanvasCursorPosition(scroll)
 	local px, py = (cx / scrollScale - scrollLeft) / width, (scrollTop - cy / scrollScale) / height
 	if px >= 0 and px <= 1 and py >= 0 and py <= 1 then
 		ShowCoords("cursor", x, y, px, py, width, height, -0.1)

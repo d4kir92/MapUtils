@@ -1225,9 +1225,10 @@ function base.cull.Run()
 	local active = container:IsShown() and container.built ~= nil
 	local changed, effective
 	if active then
-		local scale = scroll:GetCanvasScale() or 0
+		local scale = MapUtils:GetCanvasScale(scroll) or 0
 		local width, height = scroll:GetSize()
-		local x, y = scroll:GetCurrentScrollX() or 0, scroll:GetCurrentScrollY() or 0
+		local sx, sy = MapUtils:GetCanvasScroll(scroll)
+		local x, y = sx or 0, sy or 0
 		effective = container:GetEffectiveScale()
 		changed = base.Changed(cull.view, true, scale, width, height, container.signature, effective)
 		local threshold = cull.margin
@@ -1483,9 +1484,9 @@ function base.fade.Targets()
 	local host = WorldMapFrame:GetMapID()
 	local hostLeft, hostRight, hostTop, hostBottom = GetSpaceRect(host)
 	local scroll = WorldMapFrame.ScrollContainer
-	local scale = scroll:GetCanvasScale()
+	local scale = MapUtils:GetCanvasScale(scroll)
 	local width, height = scroll.Child:GetSize()
-	local x, y = scroll:GetCurrentScrollX(), scroll:GetCurrentScrollY()
+	local x, y = MapUtils:GetCanvasScroll(scroll)
 	if hostLeft == nil or hostRight <= hostLeft or hostBottom <= hostTop or x == nil or y == nil or scale == nil or scale <= 0 or width == nil or width <= 0 or height == nil or height <= 0 then return 1, 0 end
 	local viewWidth, viewHeight = scroll:GetWidth() / (scale * width), scroll:GetHeight() / (scale * height)
 	if viewWidth <= 0 or viewHeight <= 0 then return 1, 0 end
@@ -2218,7 +2219,7 @@ function MinimapLayer.UpdateCityDetail(force)
 	local world = container:IsShown() and container.built == MODE_FULL and not container.cityMode
 	local cityStart, cityEnd = MapUtils:GetTerrainFadeThresholds(true)
 	local terrainFrame = MinimapLayer.frame
-	local changed = base.Changed(MinimapLayer.cityState, host, scroll:GetCanvasScale() or 0, width or 0, height or 0, world, container:IsShown(), GetEmbeddedCityStyle(host) or false, cityStart or 0, cityEnd or 0, terrainFrame and terrainFrame:GetAlpha() or 0, container.signature or false)
+	local changed = base.Changed(MinimapLayer.cityState, host, MapUtils:GetCanvasScale(scroll) or 0, width or 0, height or 0, world, container:IsShown(), GetEmbeddedCityStyle(host) or false, cityStart or 0, cityEnd or 0, terrainFrame and terrainFrame:GetAlpha() or 0, container.signature or false)
 	if not force and not changed then return end
 	local embeddedStyle = GetEmbeddedCityStyle(host)
 	for mapID, city in pairs(cities) do
@@ -2247,7 +2248,7 @@ function MinimapLayer.UpdateCityDetail(force)
 			if detailStyle == "TERRAIN" then
 				alpha = MinimapLayer.maxAlpha
 			elseif onCityMap or embedded then
-				local tilePixels = detail.frame:GetWidth() * MinimapLayer.tile / 1024 * scroll:GetCanvasScale()
+				local tilePixels = detail.frame:GetWidth() * MinimapLayer.tile / 1024 * MapUtils:GetCanvasScale(scroll)
 				alpha = MinimapLayer.maxAlpha * math.max(0, math.min(1, MinimapLayer.GetTerrainShare(tilePixels, cityStart, cityEnd)))
 			elseif terrainFrame then
 				alpha = terrainFrame:GetAlpha()
@@ -2282,8 +2283,8 @@ function MinimapLayer.Update()
 	local fogTint = MapUtils:GetSelectedRevealTint()
 	local scrollContainer = WorldMapFrame.ScrollContainer
 	local hostLeft, hostRight, hostTop, hostBottom = GetHostRect(host)
-	local scale = scrollContainer:GetCanvasScale()
-	local x, y = scrollContainer:GetCurrentScrollX(), scrollContainer:GetCurrentScrollY()
+	local scale = MapUtils:GetCanvasScale(scrollContainer)
+	local x, y = MapUtils:GetCanvasScroll(scrollContainer)
 	local width, height = scrollContainer.Child:GetSize()
 	if hostLeft == nil or x == nil or y == nil or scale == nil or scale <= 0 or width == nil or width <= 0 or height == nil or height <= 0 then return end
 	MinimapLayer.UpdateExploration(host)
@@ -2485,7 +2486,7 @@ function MapUtils:PrintMinimapTileDebug()
 	MinimapLayer.debugLines = {}
 	MinimapLayer.DebugLine(format("Tiles: host %s, flavor %s, style %s, mode %s, space %s", tostring(host), tostring(MapUtils.GetRevealFlavor and MapUtils:GetRevealFlavor()), tostring(style), GetMode(host), tostring(container and container.space)))
 	if container == nil then return end
-	MinimapLayer.DebugLine(format("container shown %s, cityMode %s, hostRect %s, scale %s, frame alpha %s", tostring(container:IsShown()), tostring(container.cityMode), tostring(GetSpaceRect(host) ~= nil), scrollContainer and format("%.3f", scrollContainer:GetCanvasScale()) or "?", MinimapLayer.frame and format("%.2f", MinimapLayer.frame:GetAlpha()) or "?"))
+	MinimapLayer.DebugLine(format("container shown %s, cityMode %s, hostRect %s, scale %s, frame alpha %s", tostring(container:IsShown()), tostring(container.cityMode), tostring(GetSpaceRect(host) ~= nil), scrollContainer and format("%.3f", MapUtils:GetCanvasScale(scrollContainer) or 0) or "?", MinimapLayer.frame and format("%.2f", MinimapLayer.frame:GetAlpha()) or "?"))
 	for _, continentID in ipairs(CONTINENTS) do
 		local entry = base.continents[continentID]
 		if entry ~= nil and entry.drawn then

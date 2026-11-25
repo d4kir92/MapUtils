@@ -464,7 +464,7 @@ function CM.OnContainerMouseUp(container, button)
 	if button ~= "MiddleButton" or container.GetNormalizedCursorPosition == nil then return end
 	local mapID = WorldMapFrame:GetMapID()
 	if not CM.IsShown(mapID) then return end
-	local x, y = container:GetNormalizedCursorPosition()
+	local x, y = MapUtils:GetCanvasCursorPosition(container)
 	if x == nil or y == nil then return end
 	local continent, wx, wy = CM.ToWorld(mapID, x, y)
 	CM.OpenDialog(nil, {
@@ -477,6 +477,10 @@ function CM.OnContainerMouseUp(container, button)
 		name = "",
 		icon = CM.defaultIcon
 	})
+end
+
+function MapUtils:OnCustomMarkerMouseUp(container, button)
+	CM.OnContainerMouseUp(container, button)
 end
 
 tinsert(MapUtils.CanvasPinLists, CM.pins)

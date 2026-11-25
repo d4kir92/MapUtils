@@ -1280,8 +1280,8 @@ function MapLevelZoom.OnUpdate(container)
 	end
 
 	snap.mapID = container.mapID
-	snap.scale = container:GetCanvasScale()
-	snap.target = container.targetScale
+	snap.scale = MapUtils:GetCanvasScale(container)
+	snap.target = MapUtils:GetCanvasTargetScale(container)
 end
 
 function MapLevelZoom.AtScale(snap, scale)
@@ -1356,8 +1356,8 @@ local SmoothZoom = {
 	panOpenShare = 0.55,
 	worldRoomZoom = 2,
 	worldMapID = 947,
-	enterArea = 2,
-	leaveArea = 3.3,
+	enterArea = 1.5,
+	leaveArea = 2.0,
 	enterContinentArea = 1.1,
 	cityEnterShare = 0.5,
 	cityCoreShare = 0.5,
@@ -1379,6 +1379,62 @@ function MapUtils:IsOneMap()
 	if MAUTTAB["ONEMAP"] == nil then MAUTTAB["ONEMAP"] = true end
 
 	return MAUTTAB["ONEMAP"] == true
+end
+
+function SmoothZoom.IsTaintFree()
+	return MapUtils:IsForever()
+end
+
+function SmoothZoom.GetScale(container)
+	if container == nil then return nil end
+	if SmoothZoom.IsTaintFree() and container.Child ~= nil then return container.Child:GetScale() end
+
+	return container:GetCanvasScale()
+end
+
+function SmoothZoom.GetScroll(container)
+	if container == nil then return nil, nil end
+	if SmoothZoom.IsTaintFree() and container.Child ~= nil then
+		local scale = container.Child:GetScale()
+		local childW, childH = container.Child:GetSize()
+		local viewW, viewH = container:GetSize()
+		if scale == nil or scale <= 0 or childW == nil or childW <= 0 or childH == nil or childH <= 0 then return nil, nil end
+
+		return (container:GetHorizontalScroll() + viewW * 0.5 / scale) / childW, (container:GetVerticalScroll() + viewH * 0.5 / scale) / childH
+	end
+
+	return container:GetCurrentScrollX(), container:GetCurrentScrollY()
+end
+
+function MapUtils:GetCanvasScale(container)
+	return SmoothZoom.GetScale(container or WheelZoom.container or (WorldMapFrame and WorldMapFrame.ScrollContainer))
+end
+
+function MapUtils:GetCanvasTargetScale(container)
+	container = container or WheelZoom.container or (WorldMapFrame and WorldMapFrame.ScrollContainer)
+	if container == nil then return nil end
+	if SmoothZoom.IsTaintFree() then return SmoothZoom.anim and SmoothZoom.anim.target or SmoothZoom.GetScale(container) end
+
+	return container.targetScale
+end
+
+function MapUtils:GetCanvasScroll(container)
+	return SmoothZoom.GetScroll(container or WheelZoom.container or (WorldMapFrame and WorldMapFrame.ScrollContainer))
+end
+
+function MapUtils:GetCanvasCursorPosition(container)
+	container = container or WheelZoom.container or (WorldMapFrame and WorldMapFrame.ScrollContainer)
+	if container == nil then return nil, nil end
+	if SmoothZoom.IsTaintFree() then
+		local x, y = SmoothZoom.CanvasCursor(container)
+		if x == nil or y == nil then return nil, nil end
+
+		return Clamp(x, 0, 1), Clamp(y, 0, 1)
+	end
+
+	if container.GetNormalizedCursorPosition ~= nil then return container:GetNormalizedCursorPosition() end
+
+	return nil, nil
 end
 
 function SmoothZoom.IsSpace(mapID)
@@ -1427,7 +1483,8 @@ end
 function SmoothZoom.GetDeepestScale(container, x, y)
 	local host = container.mapID
 	local left, right, top, bottom = MapUtils:GetZoneDetailSpaceRect(host)
-	x, y = x or container:GetCurrentScrollX(), y or container:GetCurrentScrollY()
+	local sx, sy = SmoothZoom.GetScroll(container)
+	x, y = x or sx, y or sy
 	if left == nil or x == nil or y == nil or right <= left or bottom <= top then return nil end
 	local space = MapUtils:GetZoneDetailSpace(host)
 	local preferred = MapUtils:GetZoneDetailContinent(host)
@@ -1540,6 +1597,7 @@ function SmoothZoom.GetExtents(container, scale)
 end
 
 function SmoothZoom.WidenExtents(container)
+	if SmoothZoom.IsTaintFree() then return end
 	if not MapUtils:IsOneMap() or container.mapID == nil then return end
 	local scale = container:GetCanvasScale()
 	local width, height = container:GetSize()
@@ -1551,6 +1609,104 @@ function SmoothZoom.WidenExtents(container)
 	cache[1], cache[2], cache[3], cache[4] = container.scrollXExtentsMin, container.scrollXExtentsMax, container.scrollYExtentsMin, container.scrollYExtentsMax
 end
 
+function SmoothZoom.RescalePin(pin, canvas, canvasW, canvasH, scale, zoomPercent, globalPinScale)
+	local pinScale = (1 / scale) * Lerp(pin.startScale, pin.endScale, Clamp((pin.scaleFactor or 1) * zoomPercent, 0, 1))
+	if not (pin.IsIgnoringGlobalPinScale ~= nil and pin:IsIgnoringGlobalPinScale()) then pinScale = pinScale * globalPinScale end
+	if pinScale <= 0 or math.abs((pin:GetScale() or 0) - pinScale) <= 0.0005 then return end
+	pin:SetScale(pinScale)
+	if pin.normalizedX == nil or pin.normalizedY == nil then return end
+	local px, py = pin.normalizedX, pin.normalizedY
+	if pin.GetNudgeVector ~= nil then
+		local nx, ny = pin:GetNudgeVector()
+		if nx ~= nil and ny ~= nil then
+			local f = (pin.GetNudgeFactor and pin:GetNudgeFactor() or 0) * (pin.GetNudgeTargetFactor and pin:GetNudgeTargetFactor() or 0) * (pin.GetNudgeZoomFactor and pin:GetNudgeZoomFactor() or 0)
+			px, py = px + nx * f, py + ny * f
+		end
+	end
+
+	pin:ClearAllPoints()
+	pin:SetPoint("CENTER", canvas, "TOPLEFT", (canvasW * px) / pinScale, -(canvasH * py) / pinScale)
+end
+
+SmoothZoom.defaultUnitPinSizes = {
+	["player"] = 27,
+	["party"] = 11,
+	["raid"] = 11 * 0.75,
+}
+
+function SmoothZoom.RescaleUnitPin(pin, scale)
+	local sizes = pin.dataProvider and pin.dataProvider.unitPinSizes or SmoothZoom.defaultUnitPinSizes
+	for unit, size in pairs(sizes) do
+		if size > 0 then pin:SetPinSize(unit, size / scale) end
+	end
+
+	if pin.SetPlayerPingScale ~= nil then pin:SetPlayerPingScale(0.65 / scale) end
+end
+
+function SmoothZoom.RescaleBlizzardPins(container, scale)
+	if frame == nil or frame.pinPools == nil or scale == nil or scale <= 0 then return end
+	local canvas = container.Child
+	if canvas == nil then return end
+	local canvasW, canvasH = canvas:GetSize()
+	if canvasW == nil or canvasW <= 0 or canvasH == nil or canvasH <= 0 then return end
+	local minScale = container.GetScaleForMinZoom and container:GetScaleForMinZoom() or scale
+	local maxScale = container.GetScaleForMaxZoom and container:GetScaleForMaxZoom() or scale
+	local zoomPercent = maxScale > minScale and Clamp((scale - minScale) / (maxScale - minScale), 0, 1) or 0
+	local globalPinScale = frame.GetGlobalPinScale and frame:GetGlobalPinScale() or 1
+	local inCombat = InCombatLockdown()
+	for _, pool in pairs(frame.pinPools) do
+		for pin in pool:EnumerateActive() do
+			if not inCombat or pin.IsProtected == nil or not pin:IsProtected() then
+				if pin.SetPinSize ~= nil then
+					SmoothZoom.RescaleUnitPin(pin, scale)
+				elseif pin.startScale ~= nil and pin.endScale ~= nil and pin.insetIndex == nil then
+					SmoothZoom.RescalePin(pin, canvas, canvasW, canvasH, scale, zoomPercent, globalPinScale)
+				end
+			end
+		end
+	end
+end
+
+function SmoothZoom.ApplyCView(container, scale, x, y, childW, childH, viewW, viewH)
+	container.Child:SetScale(scale)
+	if childW ~= nil and childW > 0 and childH ~= nil and childH > 0 then
+		container:SetHorizontalScroll(x * childW - (viewW * 0.5) / scale)
+		container:SetVerticalScroll(y * childH - (viewH * 0.5) / scale)
+	end
+
+	SmoothZoom.RescaleBlizzardPins(container, scale)
+end
+
+function SmoothZoom.EnforceView(container)
+	if not SmoothZoom.IsTaintFree() then return end
+	local view = SmoothZoom.view
+	if view == nil then return end
+	if not MapUtils:IsOneMap() or SmoothZoom.IsGamepad() or container.mapID ~= view.mapID then
+		SmoothZoom.view = nil
+
+		return
+	end
+
+	local viewW, viewH = container:GetSize()
+	if viewW ~= view.width or viewH ~= view.height then
+		SmoothZoom.view = nil
+
+		return
+	end
+
+	local child = container.Child
+	if child == nil then return end
+	local childW, childH = child:GetSize()
+	if childW == nil or childW <= 0 or childH == nil or childH <= 0 then return end
+	local curScale = child:GetScale()
+	local targetH = view.x * childW - (viewW * 0.5) / view.scale
+	local targetV = view.y * childH - (viewH * 0.5) / view.scale
+	if math.abs((curScale or 0) - view.scale) > 0.0001 or math.abs((container:GetHorizontalScroll() or 0) - targetH) > 0.05 or math.abs((container:GetVerticalScroll() or 0) - targetV) > 0.05 then
+		SmoothZoom.ApplyCView(container, view.scale, view.x, view.y, childW, childH, viewW, viewH)
+		if MapUtils.RescaleCanvasPins ~= nil then MapUtils:RescaleCanvasPins() end
+	end
+end
+
 function SmoothZoom.SetView(container, scale, x, y, targetScale, targetX, targetY, preserveCityScale)
 	local minScale = SmoothZoom.GetMinScale(container)
 	local maxScale = SmoothZoom.IsSpace(container.mapID) and math.max(scale, targetScale) or SmoothZoom.GetMaxScale(container)
@@ -1558,6 +1714,30 @@ function SmoothZoom.SetView(container, scale, x, y, targetScale, targetX, target
 	if preserveCityScale or SmoothZoom.IsSpace(container.mapID) then maxScale = math.max(maxScale, scale, targetScale) end
 	scale = Clamp(scale, minScale, maxScale)
 	targetScale = Clamp(targetScale, minScale, maxScale)
+	if SmoothZoom.IsTaintFree() then
+		local minX, maxX, minY, maxY = SmoothZoom.GetExtents(container, scale)
+		x = Clamp(x, minX, maxX)
+		y = Clamp(y, minY, maxY)
+		local childW, childH = container.Child:GetSize()
+		local viewW, viewH = container:GetSize()
+		SmoothZoom.ApplyCView(container, scale, x, y, childW, childH, viewW, viewH)
+		SmoothZoom.view = {
+			["mapID"] = container.mapID,
+			["scale"] = scale,
+			["x"] = x,
+			["y"] = y,
+			["width"] = viewW,
+			["height"] = viewH,
+		}
+		if MapUtils.RescaleCanvasPins ~= nil then MapUtils:RescaleCanvasPins() end
+		if SmoothZoom.viewMapID ~= container.mapID then
+			SmoothZoom.viewMapID = container.mapID
+			if MapUtils.UpdateZoneDetailView ~= nil then MapUtils:UpdateZoneDetailView() end
+		end
+
+		return
+	end
+
 	container.currentScale = scale
 	container.targetScale = targetScale
 	container.zoomTarget = targetScale
@@ -1592,10 +1772,11 @@ function SmoothZoom.Switch(container, target, keepCurrentView)
 	local city = MapUtils:GetZoneDetailCityZone(target) ~= nil
 	local function mapX(value) return toLeft + (value - fromLeft) / (fromRight - fromLeft) * (toRight - toLeft) end
 	local function mapY(value) return toTop + (value - fromTop) / (fromBottom - fromTop) * (toBottom - toTop) end
-	local scale = container:GetCanvasScale()
-	local x, y = container:GetCurrentScrollX() or 0.5, container:GetCurrentScrollY() or 0.5
-	local targetScale = container.targetScale or scale
-	local targetX, targetY = container.targetScrollX or x, container.targetScrollY or y
+	local scale = SmoothZoom.GetScale(container)
+	local sx, sy = SmoothZoom.GetScroll(container)
+	local x, y = sx or 0.5, sy or 0.5
+	local targetScale = SmoothZoom.IsTaintFree() and scale or (container.targetScale or scale)
+	local targetX, targetY = SmoothZoom.IsTaintFree() and x or (container.targetScrollX or x), SmoothZoom.IsTaintFree() and y or (container.targetScrollY or y)
 	if keepCurrentView or SmoothZoom.anim ~= nil then targetScale, targetX, targetY = scale, x, y end
 	MapLevelZoom.lastSwitch = GetTime()
 	WheelZoom.pending = nil
@@ -1637,6 +1818,7 @@ end
 
 function SmoothZoom.IsSettled(container)
 	if SmoothZoom.anim ~= nil then return false end
+	if SmoothZoom.IsTaintFree() then return SmoothZoom.drag == nil end
 	if container.mouseButtonInfo and container.mouseButtonInfo.LeftButton and container.mouseButtonInfo.LeftButton.down then return false end
 	local scale = container:GetCanvasScale()
 	if container.targetScale ~= nil and math.abs(container.targetScale - scale) > scale * SmoothZoom.settleEpsilon then return false end
@@ -1657,8 +1839,8 @@ end
 function SmoothZoom.PickMap(container)
 	local host = container.mapID
 	local left, right, top, bottom = MapUtils:GetZoneDetailSpaceRect(host)
-	local scale = container:GetCanvasScale()
-	local x, y = container:GetCurrentScrollX(), container:GetCurrentScrollY()
+	local scale = SmoothZoom.GetScale(container)
+	local x, y = SmoothZoom.GetScroll(container)
 	local width, height = container.Child:GetSize()
 	if left == nil or x == nil or y == nil or scale <= 0 or width == nil or width <= 0 or height == nil or height <= 0 then return nil end
 	local spaceWidth, spaceHeight = right - left, bottom - top
@@ -1694,13 +1876,13 @@ function SmoothZoom.PickMap(container)
 	if l == nil or r <= l or b <= t then return pick end
 	local cover = (host ~= continent and host ~= space) and 1 or SmoothZoom.zoneEnterCover
 	local continentVisible = viewWidth >= (r - l) * cover and viewHeight >= (b - t) * cover
-	if zone ~= nil and zone.mapID ~= continent and zone.mapType == Enum.UIMapType.Zone and SmoothZoom.IsSpace(zone.mapID) and not continentVisible
+	if zone ~= nil and zone.mapID ~= continent and zone.mapType == Enum.UIMapType.Zone and SmoothZoom.IsSpace(zone.mapID) and not continentVisible and Fits(zone.mapID, false)
 		and (not SmoothZoom.zoomingOut or zone.mapID == host or MapUtils:GetZoneDetailCityZone(zone.mapID) == nil) then
 		pick = zone.mapID
 	end
 	if pick == continent and zone ~= nil and not continentVisible and MapUtils.GetZoneDetailCityZone ~= nil then
 		local around = MapUtils:GetZoneDetailCityZone(zone.mapID)
-		if around ~= nil and SmoothZoom.IsSpace(around) then pick = around end
+		if around ~= nil and SmoothZoom.IsSpace(around) and Fits(around, false) then pick = around end
 	end
 	local city = zone ~= nil and MapUtils.GetZoneDetailCityZone ~= nil and MapUtils:GetZoneDetailCityZone(zone.mapID) ~= nil and zone.mapID or nil
 	if city == nil and pick ~= continent then
@@ -1730,7 +1912,7 @@ function SmoothZoom.PickMap(container)
 				local sampleY = v + math.sin(angle) * viewHeight * radius
 				if sampleX >= l and sampleX <= r and sampleY >= t and sampleY <= b then
 					local nearby = SmoothZoom.ZoneAt(continent, space, sampleX, sampleY, l, r, t, b)
-					if nearby ~= nil and nearby.mapType == Enum.UIMapType.Zone and SmoothZoom.IsSpace(nearby.mapID) and MapUtils:GetZoneDetailCityZone(nearby.mapID) == nil then return nearby.mapID end
+					if nearby ~= nil and nearby.mapType == Enum.UIMapType.Zone and SmoothZoom.IsSpace(nearby.mapID) and MapUtils:GetZoneDetailCityZone(nearby.mapID) == nil and Fits(nearby.mapID, false) then return nearby.mapID end
 				end
 			end
 		end
@@ -1831,12 +2013,13 @@ end
 function SmoothZoom.Glide(container, toScale, toX, toY, onDone)
 	if container == nil or toScale == nil or toScale <= 0 then return false end
 	SmoothZoom.anim = nil
+	local sx, sy = SmoothZoom.GetScroll(container)
 	SmoothZoom.center = {
 		["mapID"] = container.mapID,
-		["fromScale"] = container:GetCanvasScale(),
+		["fromScale"] = SmoothZoom.GetScale(container),
 		["toScale"] = toScale,
-		["fromX"] = container:GetCurrentScrollX() or 0.5,
-		["fromY"] = container:GetCurrentScrollY() or 0.5,
+		["fromX"] = sx or 0.5,
+		["fromY"] = sy or 0.5,
 		["toX"] = toX,
 		["toY"] = toY,
 		["time"] = 0,
@@ -1929,7 +2112,7 @@ function MapUtils:GlideToMap(mapID, x, y)
 	local minScale = container:GetScaleForMinZoom()
 	if x == nil or y == nil then return SmoothZoom.Glide(container, minScale, 0.5, 0.5) end
 
-	return SmoothZoom.Glide(container, math.max(container:GetCanvasScale(), minScale), x, y)
+	return SmoothZoom.Glide(container, math.max(SmoothZoom.GetScale(container), minScale), x, y)
 end
 
 function SmoothZoom.CheckPick(container, finishedDrag)
@@ -1955,12 +2138,12 @@ function SmoothZoom.Step(container, elapsed)
 		return
 	end
 
-	local scale = anim.scale or container:GetCanvasScale()
-	local panning = container.mouseButtonInfo and container.mouseButtonInfo.LeftButton and container.mouseButtonInfo.LeftButton.down or false
+	local scale = anim.scale or SmoothZoom.GetScale(container)
+	local panning = SmoothZoom.IsTaintFree() and SmoothZoom.drag ~= nil or container.mouseButtonInfo and container.mouseButtonInfo.LeftButton and container.mouseButtonInfo.LeftButton.down or false
 	if panning then
 		local offsetX, offsetY = SmoothZoom.CursorOffset(container)
 		if offsetX ~= nil then
-			local x, y = container:GetCurrentScrollX(), container:GetCurrentScrollY()
+			local x, y = SmoothZoom.GetScroll(container)
 			if not anim.dragging and x ~= nil and y ~= nil then anim.anchorX, anim.anchorY = x + offsetX / scale, y + offsetY / scale end
 			anim.offsetX, anim.offsetY = offsetX, offsetY
 		end
@@ -1994,6 +2177,7 @@ function SmoothZoom.Step(container, elapsed)
 end
 
 function SmoothZoom.SyncWheelMode(container)
+	if SmoothZoom.IsTaintFree() then return end
 	if container.SetMouseWheelZoomMode == nil or MAP_CANVAS_MOUSE_WHEEL_ZOOM_BEHAVIOR_NONE == nil then return end
 	if MapUtils:IsOneMap() then
 		if container.mouseWheelZoomMode ~= MAP_CANVAS_MOUSE_WHEEL_ZOOM_BEHAVIOR_NONE then
@@ -2011,6 +2195,7 @@ function SmoothZoom.CanPan(container)
 end
 
 function SmoothZoom.SyncCanPan(container)
+	if SmoothZoom.IsTaintFree() then return end
 	if MapUtils:IsOneMap() then
 		if container.CanPan ~= SmoothZoom.CanPan then
 			SmoothZoom.blizzardCanPan = container.CanPan
@@ -2027,17 +2212,154 @@ function SmoothZoom.IsGamepad()
 end
 
 function SmoothZoom.InstallClickHandler()
+	if SmoothZoom.IsTaintFree() then return end
 	if SmoothZoom.clickHandlerInstalled or frame == nil or frame.AddCanvasClickHandler == nil then return end
 	if not MapUtils:IsOneMap() or SmoothZoom.IsGamepad() then return end
 	SmoothZoom.clickHandlerInstalled = true
 	frame:AddCanvasClickHandler(SmoothZoom.OnCanvasClick, 100)
 end
 
-function SmoothZoom.OnUpdate(container, elapsed)
+function SmoothZoom.OnCatcherMouseUp(container, button)
 	if SmoothZoom.IsGamepad() then return end
+	if button == "LeftButton" then
+		local drag = SmoothZoom.drag
+		SmoothZoom.drag = nil
+		if drag == nil or drag.dragged then return end
+		local cx, cy = SmoothZoom.CanvasCursor(container)
+		if IsControlKeyDown() and C_Map.CanSetUserWaypointOnMap ~= nil and UiMapPoint ~= nil and container.mapID ~= nil and C_Map.CanSetUserWaypointOnMap(container.mapID) and cx ~= nil and cy ~= nil and cx >= 0 and cx <= 1 and cy >= 0 and cy <= 1 then
+			C_Map.SetUserWaypoint(UiMapPoint.CreateFromCoordinates(container.mapID, cx, cy))
+		else
+			SmoothZoom.OnCanvasClick(frame, "LeftButton", cx, cy)
+		end
+
+		return
+	end
+
+	if button == "RightButton" then
+		local rd = SmoothZoom.rightDown
+		SmoothZoom.rightDown = nil
+		if rd == nil then return end
+		local cx, cy = SmoothZoom.ScaledCursorPosition(container)
+		local dx, dy = cx - rd.startX, cy - rd.startY
+		if dx * dx + dy * dy > 20 then return end
+		if MapUtils.IsInstanceMapShown ~= nil and MapUtils:IsInstanceMapShown() then
+			MapUtils:ToggleInstanceMap()
+		elseif not SmoothZoom.OnCanvasClick(frame, "RightButton") then
+			local info = container.mapID and C_Map.GetMapInfo(container.mapID)
+			if info ~= nil and info.parentMapID ~= nil and info.parentMapID > 0 then MapUtils:SetWorldMapID(info.parentMapID) end
+		end
+
+		return
+	end
+
+	if button == "MiddleButton" and MapUtils.OnCustomMarkerMouseUp ~= nil then MapUtils:OnCustomMarkerMouseUp(container, button) end
+end
+
+function SmoothZoom.SyncCatcher(container)
+	if not SmoothZoom.IsTaintFree() then return end
+	local want = MapUtils:IsOneMap() and not SmoothZoom.IsGamepad()
+	local catcher = SmoothZoom.catcher
+	if not want then
+		if catcher ~= nil then catcher:Hide() end
+		SmoothZoom.drag = nil
+		SmoothZoom.rightDown = nil
+
+		return
+	end
+
+	if catcher == nil then
+		local parent = container.Child or container
+		catcher = CreateFrame("Frame", nil, parent)
+		catcher:SetPoint("TOPLEFT", parent, "TOPLEFT", -4000, 4000)
+		catcher:SetPoint("BOTTOMRIGHT", parent, "BOTTOMRIGHT", 4000, -4000)
+		catcher:EnableMouse(true)
+		catcher:EnableMouseWheel(true)
+		catcher:SetScript("OnMouseWheel", function(_, delta)
+			MapLevelZoom.OnMouseWheel(container, delta)
+			SmoothZoom.OnMouseWheel(container, delta)
+		end)
+		catcher:SetScript("OnMouseDown", function(_, button)
+			if SmoothZoom.IsGamepad() then return end
+			local cx, cy = SmoothZoom.ScaledCursorPosition(container)
+			if button == "LeftButton" then
+				SmoothZoom.drag = {
+					["startX"] = cx,
+					["startY"] = cy,
+					["lastX"] = cx,
+					["lastY"] = cy,
+					["dragged"] = false,
+					["mapID"] = container.mapID,
+				}
+			elseif button == "RightButton" then
+				SmoothZoom.rightDown = {
+					["startX"] = cx,
+					["startY"] = cy,
+				}
+			end
+		end)
+		catcher:SetScript("OnMouseUp", function(_, button) SmoothZoom.OnCatcherMouseUp(container, button) end)
+		catcher:SetScript("OnHide", function()
+			SmoothZoom.drag = nil
+			SmoothZoom.rightDown = nil
+		end)
+		SmoothZoom.catcher = catcher
+	end
+
+	local childLevel = container.Child and container.Child:GetFrameLevel() or container:GetFrameLevel()
+	local targetLevel = childLevel + 1
+	if catcher:GetFrameLevel() ~= targetLevel then catcher:SetFrameLevel(targetLevel) end
+	if not catcher:IsShown() then catcher:Show() end
+end
+
+function SmoothZoom.StepDrag(container)
+	local drag = SmoothZoom.drag
+	if drag == nil then return false end
+	if not IsMouseButtonDown("LeftButton") or drag.mapID ~= container.mapID then
+		SmoothZoom.drag = nil
+
+		return false
+	end
+
+	local cx, cy = SmoothZoom.ScaledCursorPosition(container)
+	if not drag.dragged then
+		local dx, dy = cx - drag.startX, cy - drag.startY
+		if dx * dx + dy * dy > 20 then drag.dragged = true end
+	end
+
+	if drag.dragged and (cx ~= drag.lastX or cy ~= drag.lastY) then
+		local scale = SmoothZoom.GetScale(container)
+		local childW, childH = container.Child:GetSize()
+		local sx, sy = SmoothZoom.GetScroll(container)
+		if scale ~= nil and scale > 0 and childW ~= nil and childW > 0 and childH ~= nil and childH > 0 and sx ~= nil and sy ~= nil then
+			local nx = sx + (drag.lastX - cx) / (childW * scale)
+			local ny = sy + (cy - drag.lastY) / (childH * scale)
+			local city = MapUtils.GetZoneDetailCityZone ~= nil and MapUtils:GetZoneDetailCityZone(container.mapID) ~= nil
+			SmoothZoom.SetView(container, scale, nx, ny, scale, nx, ny, city)
+		end
+	end
+
+	drag.lastX, drag.lastY = cx, cy
+
+	return drag.dragged
+end
+
+function SmoothZoom.OnUpdate(container, elapsed)
+	if SmoothZoom.IsGamepad() then
+		SmoothZoom.SyncCatcher(container)
+
+		return
+	end
+
 	MapUtils:InstallCombatPins()
 	SmoothZoom.InstallClickHandler()
-	local panning = container.mouseButtonInfo and container.mouseButtonInfo.LeftButton and container.mouseButtonInfo.LeftButton.down
+	SmoothZoom.SyncCatcher(container)
+	SmoothZoom.EnforceView(container)
+	local panning
+	if SmoothZoom.IsTaintFree() then
+		panning = SmoothZoom.StepDrag(container)
+	else
+		panning = container.mouseButtonInfo and container.mouseButtonInfo.LeftButton and container.mouseButtonInfo.LeftButton.down
+	end
 	local finishedDrag = not panning and SmoothZoom.dragMapID ~= nil and SmoothZoom.dragMapID == container.mapID
 	if panning then
 		SmoothZoom.dragMapID = container.mapID
@@ -2065,6 +2387,14 @@ function SmoothZoom.OnUpdate(container, elapsed)
 		return
 	end
 
+	if SmoothZoom.IsTaintFree() and MapUtils:IsOneMap() then
+		local now = GetTime()
+		if now - (SmoothZoom.lastPinRescale or 0) >= 0.1 then
+			SmoothZoom.lastPinRescale = now
+			SmoothZoom.RescaleBlizzardPins(container, SmoothZoom.GetScale(container))
+		end
+	end
+
 	SmoothZoom.CheckPick(container, finishedDrag)
 end
 
@@ -2080,8 +2410,8 @@ function SmoothZoom.CursorOffset(container)
 end
 
 function SmoothZoom.CursorAnchor(container)
-	local scale = container:GetCanvasScale()
-	local scrollX, scrollY = container:GetCurrentScrollX(), container:GetCurrentScrollY()
+	local scale = SmoothZoom.GetScale(container)
+	local scrollX, scrollY = SmoothZoom.GetScroll(container)
 	if scrollX == nil or scrollY == nil or scale == nil or scale <= 0 then return nil end
 	local playerX, playerY = MapUtils:GetFollowZoomAnchor(container)
 	if playerX ~= nil then return playerX, playerY, scale, scrollX, scrollY end
@@ -2107,9 +2437,46 @@ function MapUtils:GetOneMapZoomPercent()
 	local left, right = MapUtils:GetZoneDetailSpaceRect(container.mapID)
 	local width, view = container.Child:GetWidth(), container:GetWidth()
 	if left == nil or right <= left or width == nil or width <= 0 or view == nil or view <= 0 then return nil end
-	local share = container:GetCanvasScale() * width * (right - left) / view
+	local share = SmoothZoom.GetScale(container) * width * (right - left) / view
 
 	return Clamp(math.log(math.max(share, 1)) / math.log(SmoothZoom.pinZoomRange), 0, 1)
+end
+
+function MapUtils:GetZoomDebugText(container)
+	container = container or WheelZoom.container or (WorldMapFrame and WorldMapFrame.ScrollContainer)
+	if container == nil then return nil end
+	local scale = SmoothZoom.GetScale(container)
+	if scale == nil or scale <= 0 then return nil end
+	local minScale = container.zoomLevels ~= nil and SmoothZoom.GetMinScale(container) or (container.GetScaleForMinZoom and container:GetScaleForMinZoom())
+	local zoom = minScale ~= nil and minScale > 0 and (scale / minScale) or 1
+	local text = format("Zoom: %.2fx (scale %.3f)", zoom, scale)
+	local host = container.mapID
+	if not MapUtils:IsOneMap() or not SmoothZoom.IsSpace(host) then return text end
+	local left, right, top, bottom = MapUtils:GetZoneDetailSpaceRect(host)
+	local x, y = SmoothZoom.GetScroll(container)
+	local width, height = container.Child:GetSize()
+	if left == nil or x == nil or y == nil or width == nil or width <= 0 or height == nil or height <= 0 then return text end
+	local spaceWidth, spaceHeight = right - left, bottom - top
+	local u, v = (x - left) / spaceWidth, (y - top) / spaceHeight
+	local viewWidth = container:GetWidth() / (scale * width) / spaceWidth
+	local viewHeight = container:GetHeight() / (scale * height) / spaceHeight
+	local space = MapUtils:GetZoneDetailSpace(host)
+	local continent, zone = SmoothZoom.ContinentAt(space, u, v, MapUtils:GetZoneDetailContinent(host))
+	local function AreaRatio(id)
+		if id == nil then return nil end
+		local l, r, t, b = SmoothZoom.RectOn(id, space)
+		if l == nil or r <= l or b <= t then return nil end
+
+		return (viewWidth / (r - l)) * (viewHeight / (b - t))
+	end
+
+	local cRatio = AreaRatio(continent)
+	local zRatio = AreaRatio(zone and zone.mapID)
+	if cRatio ~= nil or zRatio ~= nil then
+		text = text .. format(" | Area C:%s Z:%s", cRatio and format("%.2f", cRatio) or "-", zRatio and format("%.2f", zRatio) or "-")
+	end
+
+	return text
 end
 
 function MapUtils:IsSmoothZooming()
@@ -2123,18 +2490,20 @@ function SmoothZoom.OnMouseWheel(container, delta)
 	if MapUtils.IsInstanceMapShown ~= nil and MapUtils:IsInstanceMapShown() then return end
 	SmoothZoom.userMoved = true
 	SmoothZoom.zoomingOut = delta < 0
-	local currentX, currentY = container:GetCurrentScrollX(), container:GetCurrentScrollY()
-	if currentX ~= nil and currentY ~= nil then
-		container.targetScale = container:GetCanvasScale()
-		container.zoomTarget = container.targetScale
-		container.targetScrollX, container.targetScrollY = currentX, currentY
+	if not SmoothZoom.IsTaintFree() then
+		local currentX, currentY = container:GetCurrentScrollX(), container:GetCurrentScrollY()
+		if currentX ~= nil and currentY ~= nil then
+			container.targetScale = container:GetCanvasScale()
+			container.zoomTarget = container.targetScale
+			container.targetScrollX, container.targetScrollY = currentX, currentY
+		end
 	end
 
 	local anim = SmoothZoom.anim
 	if anim ~= nil and anim.mapID ~= container.mapID then anim = nil end
-	local base = anim and anim.target or container:GetCanvasScale()
-	local before = container:GetCanvasScale()
-	if SmoothZoom.LeaveCity(container, delta, base) then base = base * container:GetCanvasScale() / before end
+	local base = anim and anim.target or SmoothZoom.GetScale(container)
+	local before = SmoothZoom.GetScale(container)
+	if SmoothZoom.LeaveCity(container, delta, base) then base = base * SmoothZoom.GetScale(container) / before end
 	local cursorX, cursorY, scale, scrollX, scrollY = SmoothZoom.CursorAnchor(container)
 	if cursorX == nil then return end
 	local minScale, maxScale = SmoothZoom.GetMinScale(container), SmoothZoom.GetMaxScale(container, cursorX, cursorY)
@@ -2144,9 +2513,12 @@ function SmoothZoom.OnMouseWheel(container, delta)
 	local target = Clamp(base * SmoothZoom.factor ^ delta, minScale, maxScale)
 	if target <= 0 then return end
 	WheelZoom.pending = nil
-	container.targetScale = scale
-	container.zoomTarget = scale
-	container.targetScrollX, container.targetScrollY = scrollX, scrollY
+	if not SmoothZoom.IsTaintFree() then
+		container.targetScale = scale
+		container.zoomTarget = scale
+		container.targetScrollX, container.targetScrollY = scrollX, scrollY
+	end
+
 	SmoothZoom.anim = {
 		["mapID"] = container.mapID,
 		["target"] = target,
@@ -2307,7 +2679,7 @@ end
 
 function SmoothZoom.CanvasCursor(container)
 	local child = container and container.Child
-	local scale = container and container:GetCanvasScale()
+	local scale = SmoothZoom.GetScale(container)
 	local left, top = child and child:GetLeft(), child and child:GetTop()
 	local width, height = child and child:GetWidth(), child and child:GetHeight()
 	if scale == nil or scale <= 0 or left == nil or top == nil or width == nil or width <= 0 or height == nil or height <= 0 then return nil end
@@ -2391,7 +2763,8 @@ function MapUtils:CenterWorldMapOnUnit(unit, follow)
 	end
 
 	local instant = follow and shown == mapID
-	if instant and math.abs(container:GetNormalizedHorizontalScroll() - x) < 0.0001 and math.abs(container:GetNormalizedVerticalScroll() - y) < 0.0001 then return true end
+	local curX, curY = SmoothZoom.GetScroll(container)
+	if instant and curX ~= nil and curY ~= nil and math.abs(curX - x) < 0.0001 and math.abs(curY - y) < 0.0001 then return true end
 	SmoothZoom.anim = nil
 	SmoothZoom.center = nil
 	WheelZoom.pending = nil
@@ -2409,13 +2782,14 @@ function MapUtils:CenterWorldMapOnUnit(unit, follow)
 		if frame:GetMapID() ~= mapID then return false end
 	end
 
-	local scale = container:GetCanvasScale()
+	local scale = SmoothZoom.GetScale(container)
+	local fromX, fromY = SmoothZoom.GetScroll(container)
 	local center = {
 		["mapID"] = mapID,
 		["fromScale"] = scale,
 		["toScale"] = scale,
-		["fromX"] = container:GetNormalizedHorizontalScroll(),
-		["fromY"] = container:GetNormalizedVerticalScroll(),
+		["fromX"] = fromX or 0.5,
+		["fromY"] = fromY or 0.5,
 		["toX"] = x,
 		["toY"] = y,
 		["time"] = 0,
@@ -2428,11 +2802,10 @@ function MapUtils:CenterWorldMapOnUnit(unit, follow)
 		center.oneMap = true
 		if switched then
 			center.glide = true
-			center.fromX, center.fromY = container:GetCurrentScrollX() or center.fromX, container:GetCurrentScrollY() or center.fromY
 			if not follow then center.toScale = math.max(scale, container:GetScaleForMinZoom()) end
 		end
 	else
-		if container.InstantPanAndZoom == nil then return false end
+		if not SmoothZoom.IsTaintFree() and container.InstantPanAndZoom == nil then return false end
 		local minScale = container.GetScaleForMinZoom and container:GetScaleForMinZoom()
 		local maxScale = container.GetScaleForMaxZoom and container:GetScaleForMaxZoom()
 		if not follow and minScale ~= nil and maxScale ~= nil and scale <= minScale + SCALE_EPSILON then center.toScale = maxScale end
@@ -2461,7 +2834,7 @@ function SmoothZoom.StepCenter(container, elapsed)
 	local x = center.fromX + (center.toX - center.fromX) * share
 	local y = center.fromY + (center.toY - center.fromY) * share
 	if t >= 1 then SmoothZoom.center = nil end
-	if center.oneMap then
+	if center.oneMap or SmoothZoom.IsTaintFree() then
 		SmoothZoom.SetView(container, scale, x, y, scale, x, y, center.glide)
 		SmoothZoom.ShowLoadedArt()
 		if MapUtils.UpdateWorldPinsNow ~= nil then MapUtils.UpdateWorldPinsNow() end
@@ -2494,9 +2867,14 @@ function MapView.Save()
 		return
 	end
 
-	local scale = container.targetScale or container:GetCanvasScale()
-	local x = container.targetScrollX or container:GetCurrentScrollX()
-	local y = container.targetScrollY or container:GetCurrentScrollY()
+	local scale = SmoothZoom.IsTaintFree() and SmoothZoom.GetScale(container) or (container.targetScale or container:GetCanvasScale())
+	local x, y
+	if SmoothZoom.IsTaintFree() then
+		x, y = SmoothZoom.GetScroll(container)
+	else
+		x = container.targetScrollX or container:GetCurrentScrollX()
+		y = container.targetScrollY or container:GetCurrentScrollY()
+	end
 	local anim = SmoothZoom.anim
 	if anim ~= nil and anim.mapID == container.mapID and anim.target ~= nil and anim.target > 0 then
 		scale = anim.target
@@ -2608,6 +2986,7 @@ if frame ~= nil and WheelZoom.container ~= nil then
 	frame:HookScript("OnHide", function()
 		MapView.pending = nil
 		MapView.Save()
+		SmoothZoom.view = nil
 	end)
 
 	frame:HookScript("OnShow", MapView.Restore)

@@ -24,7 +24,7 @@ local function GetCursorMapPos()
 	if WorldMapFrame == nil then return nil end
 	local container = WorldMapFrame.ScrollContainer
 	if container == nil or container.GetNormalizedCursorPosition == nil then return nil end
-	local x, y = container:GetNormalizedCursorPosition()
+	local x, y = MapUtils:GetCanvasCursorPosition(container)
 	if x == nil or y == nil then return nil end
 	if x < 0 or x > 1 or y < 0 or y > 1 then return nil end
 
@@ -53,7 +53,9 @@ local function Update()
 	local cx, cy = GetCursorPosition()
 	local masks = MapUtils:GetMapMaskFilenamesAtCursor(maskMapID, cx, cy)
 	local filenames = #masks > 0 and table.concat(masks, "\n") or "-"
-	display.text:SetText(format("uiMapID: %s\n%.3f, %.3f\nMasks (%s)\n%s", tostring(mapID), x * 100, y * 100, tostring(maskMapID), filenames))
+	local zoomText = MapUtils.GetZoomDebugText ~= nil and MapUtils:GetZoomDebugText(WorldMapFrame.ScrollContainer)
+	local zoomLine = zoomText ~= nil and ("\n" .. zoomText) or ""
+	display.text:SetText(format("uiMapID: %s\n%.3f, %.3f%s\nMasks (%s)\n%s", tostring(mapID), x * 100, y * 100, zoomLine, tostring(maskMapID), filenames))
 	display:SetSize(display.text:GetStringWidth(), display.text:GetStringHeight())
 	local scale = UIParent:GetEffectiveScale()
 	display:ClearAllPoints()
