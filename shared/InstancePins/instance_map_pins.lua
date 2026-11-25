@@ -15,6 +15,7 @@ Addon.INSTANCEMAPPINS = {
     [900001002] = {
         {"level", 0.300, 0.770, 900001, true},
         {"level", 0.680, 0.130, 900001, true},
+        {"boss", 0.669, 0.553, 263886}, -- Primeval Elemental
     },
     [220005] = {
         {"marker", 0.400, 0.500, "Interface\\AddOns\\AzerothCompendium\\media\\serpentstatue", label = "3", tip = "Southwest"},
@@ -27,6 +28,7 @@ Addon.INSTANCEMAPPINS = {
     [220004] = {
         {"boss", 0.609, 0.722, 8580}, -- Atal'alarion <Guardian of the Idol>
         {"questend", 0.610, 0.660, 3447}, -- Secret of the Circle
+        {"questend", 0.500, 0.460, 3447}, -- Secret of the Circle
     },
     [220003] = {
         {"boss", 0.361, 0.535, 5714}, -- Loro
@@ -41,7 +43,6 @@ Addon.INSTANCEMAPPINS = {
         {"boss", 0.349, 0.538, 260202}, -- Deathless Marrow
         {"boss", 0.516, 0.700, 258924}, -- Var'Taka
         {"boss", 0.558, 0.340, 260042}, -- Captain Dreadrise
-        {"boss", 0.605, 0.640, 263886}, -- Primeval Elemental
         {"boss", 0.700, 0.541, 258905}, -- Zul'Alai
         {"entrance", 0.845, 0.522},
         {"boss", 0.435, 0.530, 264177}, -- Gill

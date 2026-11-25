@@ -213,7 +213,6 @@ Addon.INSTANCEPININFO = {
 		[4438] = {"Razorfen Spearhide", 30, 6078, 1},
 		[4542] = {"High Inquisitor Fairbanks", 40, 2605, 1, "Hochinquisitor Fairbanks"},
 		[4543] = {"Bloodmage Thalnos", 34, 11396, 1, "Blutmagier Thalnos"},
-		[4627] = {"Arugal's Voidwalker", 25, 1131, 0},
 		[4829] = {"Aku'mai", 28, 2837, 1},
 		[4830] = {"Old Serra'kis", 26, 1816, 1},
 		[4831] = {"Lady Sarevess", 25, 4979, 1},
