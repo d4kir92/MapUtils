@@ -384,7 +384,7 @@ local function CreatePin(canvas)
 	pin:SetScript("OnClick", function(self, button)
 		if button == "RightButton" then
 			local info = C_Map.GetMapInfo(WorldMapFrame:GetMapID())
-			if info and info.parentMapID and info.parentMapID > 0 then WorldMapFrame:SetMapID(info.parentMapID) end
+			if info and info.parentMapID and info.parentMapID > 0 then MapUtils:SetWorldMapID(info.parentMapID) end
 		else
 			local entry = self.entry
 			if C_QuestLog.AddQuestWatch and (QuestUtils_IsQuestWatched == nil or not QuestUtils_IsQuestWatched(entry.questID)) then C_QuestLog.AddQuestWatch(entry.questID) end
@@ -395,7 +395,7 @@ local function CreatePin(canvas)
 				C_QuestLog.SetSelectedQuest(entry.questID)
 			end
 
-			WorldMapFrame:SetMapID(entry.mapID)
+			MapUtils:SetWorldMapID(entry.mapID)
 		end
 	end)
 	return pin

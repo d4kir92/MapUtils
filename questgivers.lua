@@ -800,7 +800,7 @@ end
 function QG.OnClick(pin, button)
 	if button == "RightButton" then
 		local info = C_Map.GetMapInfo(WorldMapFrame:GetMapID())
-		if info and info.parentMapID and info.parentMapID > 0 then WorldMapFrame:SetMapID(info.parentMapID) end
+		if info and info.parentMapID and info.parentMapID > 0 then MapUtils:SetWorldMapID(info.parentMapID) end
 
 		return
 	end

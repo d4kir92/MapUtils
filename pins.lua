@@ -2607,7 +2607,7 @@ local function OnPinClick(pin, button)
 				if route ~= nil and other.name == route.dest then destX, destY = other.x, other.y end
 			end
 
-			if MapUtils.GlideToMap == nil or not MapUtils:GlideToMap(destMapID, destX, destY) then WorldMapFrame:SetMapID(destMapID) end
+			if MapUtils.GlideToMap == nil or not MapUtils:GlideToMap(destMapID, destX, destY) then MapUtils:SetWorldMapID(destMapID) end
 		elseif button == "RightButton" and entry.kind == "dungeon" and (entry.instanceMap or entry.instance) ~= nil and MapUtils.IsInstanceMapEnabled ~= nil and MapUtils:IsInstanceMapEnabled() then
 			MapUtils:ShowInstanceMap(entry.instanceMap or entry.instance, entry.instanceMapLevel)
 		end

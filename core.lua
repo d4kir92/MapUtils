@@ -60,7 +60,7 @@ hooksecurefunc(WorldMapFrame, "Show", function()
 	end
 
 	if not IsArtEnabled(mapID) then return end
-	if WorldMapFrame:GetMapID() ~= mapID then WorldMapFrame:SetMapID(mapID) end
+	if WorldMapFrame:GetMapID() ~= mapID then MapUtils:SetWorldMapID(mapID) end
 end)
 
 local oldGetMapArtLayers = C_Map.GetMapArtLayers

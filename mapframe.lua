@@ -1342,7 +1342,7 @@ function MapLevelZoom.OnMouseWheel(container, delta)
 	if target == nil or C_Map.GetMapInfo(target) == nil then return end
 	MapLevelZoom.lastSwitch = GetTime()
 	WheelZoom.pending = nil
-	frame:SetMapID(target)
+	MapUtils:SetWorldMapID(target)
 end
 
 local SmoothZoom = {
@@ -1601,7 +1601,7 @@ function SmoothZoom.Switch(container, target, keepCurrentView)
 	WheelZoom.pending = nil
 	WheelZoom.own = true
 	MapUtils.zoneSwitching = true
-	frame:SetMapID(target)
+	MapUtils:SetWorldMapID(target)
 	MapUtils.zoneSwitching = false
 	WheelZoom.own = false
 	if container.mapID ~= target then
@@ -1821,7 +1821,7 @@ function SmoothZoom.OnCanvasClick(map, button, x, y)
 	MapLevelZoom.lastSwitch = GetTime()
 	WheelZoom.pending = nil
 	if not SmoothZoom.GlideInto(WheelZoom.container, target) then
-		map:SetMapID(target)
+		MapUtils:SetWorldMapID(target, map)
 		if map:GetMapID() == target then SmoothZoom.CenterOnMap(WheelZoom.container) end
 	end
 
@@ -1890,7 +1890,7 @@ function SmoothZoom.GlideInto(container, target)
 		function()
 			if not SmoothZoom.Switch(container, target, true) then
 				MapLevelZoom.lastSwitch = GetTime()
-				frame:SetMapID(target)
+				MapUtils:SetWorldMapID(target)
 			end
 
 			SmoothZoom.userMoved = false
@@ -2159,6 +2159,17 @@ function SmoothZoom.OnMouseWheel(container, delta)
 	}
 end
 
+function MapUtils:SetWorldMapID(mapID, map)
+	map = map or WorldMapFrame
+	if map == nil or mapID == nil then return end
+	if map == WorldMapFrame and MapUtils:IsForever() and C_Map.OpenWorldMap ~= nil and map:IsShown() then
+		C_Map.OpenWorldMap(mapID)
+		if map:GetMapID() == mapID then return end
+	end
+
+	map:SetMapID(mapID)
+end
+
 local CombatPins = {
 	waiting = setmetatable({}, {
 		__mode = "k"
@@ -2393,7 +2404,7 @@ function MapUtils:CenterWorldMapOnUnit(unit, follow)
 	if frame:GetMapID() ~= mapID then
 		MapLevelZoom.lastSwitch = GetTime()
 		WheelZoom.own = true
-		frame:SetMapID(mapID)
+		MapUtils:SetWorldMapID(mapID)
 		WheelZoom.own = false
 		if frame:GetMapID() ~= mapID then return false end
 	end
@@ -2557,7 +2568,7 @@ function MapView.Apply()
 	if container.mapID ~= saved.mapID then
 		MapLevelZoom.lastSwitch = GetTime()
 		WheelZoom.own = true
-		frame:SetMapID(saved.mapID)
+		MapUtils:SetWorldMapID(saved.mapID)
 		WheelZoom.own = false
 	end
 
