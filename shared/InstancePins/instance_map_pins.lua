@@ -271,6 +271,7 @@ Addon.INSTANCEMAPPINS = {
         {"boss", 0.484, 0.451, 4842}, -- Earthcaller Halmgar
         {"queststart", 0.370, 0.308, 1142}, -- Mortality Wanes
         {"queststart", 0.370, 0.332, 1144}, -- Willix the Importer
+        {"boss", 0.610, 0.280, 4438}, -- Razorfen Spearhide
     },
     [300] = { -- Razorfen Downs
         {"entrance", 0.237, 0.190},
@@ -463,7 +464,7 @@ Addon.INSTANCEMAPPINS = {
     },
     [227] = { -- Gnomeregan - The Dormitory
         {"level", 0.245, 0.580, 228},
-        {"level", 0.430, 0.830, 226},
+        {"level", 0.430, 0.830, 228},
         {"level", 0.640, 0.580, 226, true},
         {"boss", 0.755, 0.450, 7079},
         {"boss", 0.242, 0.678, 6235},
