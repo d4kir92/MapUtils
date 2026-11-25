@@ -1,94 +1,61 @@
 local _, MapUtils = ...
 local zoneLevels = {}
-zoneLevels[1411] = {1, 10}
-zoneLevels[1412] = {1, 10}
-zoneLevels[1413] = {10, 33}
-zoneLevels[1416] = {27, 39}
-zoneLevels[1417] = {30, 40}
-zoneLevels[1418] = {36, 45}
-zoneLevels[1419] = {46, 63}
-zoneLevels[1420] = {1, 12}
-zoneLevels[1421] = {10, 20}
-zoneLevels[1422] = {46, 57}
-zoneLevels[1423] = {54, 59}
-zoneLevels[1424] = {20, 31}
-zoneLevels[1425] = {41, 49}
+zoneLevels[1411] = {1, 12}
+zoneLevels[1412] = {1, 12}
+zoneLevels[1413] = {10, 30}
+zoneLevels[1416] = {34, 40}
+zoneLevels[1417] = {30, 44}
+zoneLevels[1418] = {{35, 45}, {50, 54}}
+zoneLevels[1419] = {47, 60}
+zoneLevels[1420] = {{1, 13}, {53, 60}}
+zoneLevels[1421] = {10, 24}
+zoneLevels[1422] = {52, 60}
+zoneLevels[1423] = {55, 60}
+zoneLevels[1424] = {20, 45}
+zoneLevels[1425] = {43, 51}
 zoneLevels[1426] = {1, 12}
-zoneLevels[1427] = {43, 56}
-zoneLevels[1428] = {50, 59}
-zoneLevels[1429] = {1, 10}
-zoneLevels[1430] = {50, 60}
-zoneLevels[1431] = {10, 30}
-zoneLevels[1432] = {10, 18}
-zoneLevels[1433] = {15, 25}
-zoneLevels[1434] = {30, 50}
-zoneLevels[1435] = {36, 43}
-zoneLevels[1436] = {9, 18}
-zoneLevels[1437] = {20, 30}
-zoneLevels[1438] = {1, 11}
-zoneLevels[1439] = {11, 19}
-zoneLevels[1440] = {19, 30}
-zoneLevels[1441] = {24, 35}
-zoneLevels[1442] = {15, 25}
-zoneLevels[1443] = {30, 39}
-zoneLevels[1444] = {41, 60}
-zoneLevels[1445] = {36, 61}
-zoneLevels[1446] = {40, 50}
-zoneLevels[1447] = {42, 55}
-zoneLevels[1448] = {47, 54}
-zoneLevels[1449] = {48, 55}
-zoneLevels[1450] = {15, 15}
-zoneLevels[1451] = {55, 59}
-zoneLevels[1452] = {55, 60}
-zoneLevels[2482] = {60, 60}
-zoneLevels[2521] = {1, 12}
-zoneLevels[2548] = {35, 45}
-zoneLevels[2652] = {35, 45}
-local zoneRecLevels = {}
-zoneRecLevels[1411] = 1
-zoneRecLevels[1412] = 1
-zoneRecLevels[1413] = 11
-zoneRecLevels[1416] = 28
-zoneRecLevels[1417] = 31
-zoneRecLevels[1418] = 37
-zoneRecLevels[1419] = 47
-zoneRecLevels[1420] = 1
-zoneRecLevels[1421] = 11
-zoneRecLevels[1422] = 47
-zoneRecLevels[1423] = 55
-zoneRecLevels[1424] = 21
-zoneRecLevels[1425] = 42
-zoneRecLevels[1426] = 1
-zoneRecLevels[1427] = 44
-zoneRecLevels[1428] = 51
-zoneRecLevels[1429] = 1
-zoneRecLevels[1430] = 51
-zoneRecLevels[1431] = 11
-zoneRecLevels[1432] = 11
-zoneRecLevels[1433] = 16
-zoneRecLevels[1434] = 31
-zoneRecLevels[1435] = 37
-zoneRecLevels[1436] = 10
-zoneRecLevels[1437] = 21
-zoneRecLevels[1438] = 1
-zoneRecLevels[1439] = 12
-zoneRecLevels[1440] = 20
-zoneRecLevels[1441] = 25
-zoneRecLevels[1442] = 16
-zoneRecLevels[1443] = 31
-zoneRecLevels[1444] = 42
-zoneRecLevels[1445] = 37
-zoneRecLevels[1446] = 41
-zoneRecLevels[1447] = 43
-zoneRecLevels[1448] = 48
-zoneRecLevels[1449] = 49
-zoneRecLevels[1450] = 15
-zoneRecLevels[1451] = 56
-zoneRecLevels[1452] = 56
-zoneRecLevels[2482] = 60
-zoneRecLevels[2521] = 1
-zoneRecLevels[2548] = 36
-zoneRecLevels[2652] = 36
+zoneLevels[1427] = {45, 52}
+zoneLevels[1428] = {50, 60}
+zoneLevels[1429] = {1, 11}
+zoneLevels[1430] = {55, 60}
+zoneLevels[1431] = {{18, 35}, {42, 45}}
+zoneLevels[1432] = {10, 23}
+zoneLevels[1433] = {14, 27}
+zoneLevels[1434] = {{30, 50}, {60, 60}}
+zoneLevels[1435] = {{35, 45}, {50, 60}}
+zoneLevels[1436] = {10, 20}
+zoneLevels[1437] = {18, 35}
+zoneLevels[1438] = {1, 12}
+zoneLevels[1439] = {10, 22}
+zoneLevels[1440] = {18, 32}
+zoneLevels[1441] = {{25, 37}, {41, 47}}
+zoneLevels[1442] = {18, 30}
+zoneLevels[1443] = {31, 40}
+zoneLevels[1444] = {42, 52}
+zoneLevels[1445] = {{35, 45}, {60, 60}}
+zoneLevels[1446] = {{41, 54}, {60, 60}}
+zoneLevels[1447] = {{47, 55}, {60, 60}}
+zoneLevels[1448] = {48, 60}
+zoneLevels[1449] = {51, 56}
+zoneLevels[1450] = {{10, 16}, {55, 60}}
+zoneLevels[1451] = {55, 60}
+zoneLevels[1452] = {52, 60}
+if MapUtils:IsForever() then
+	zoneLevels[1416] = {34, 41}
+	zoneLevels[1426] = {1, 13}
+	zoneLevels[1435] = {{34, 45}, {50, 60}}
+	zoneLevels[1441] = {{25, 38}, {41, 47}}
+	zoneLevels[1442] = {18, 32}
+	zoneLevels[1443] = {31, 45}
+	zoneLevels[1445] = {{35, 45}, {53, 53}, {60, 60}}
+	zoneLevels[1446] = {{40, 54}, {60, 60}}
+	zoneLevels[1447] = {47, 60}
+	zoneLevels[1450] = {{10, 20}, {55, 60}}
+	zoneLevels[2482] = {55, 60}
+	zoneLevels[2521] = {1, 13}
+	zoneLevels[2548] = {36, 47}
+	zoneLevels[2652] = {38, 45}
+end
 local zoneFishing = {}
 zoneFishing[1411] = "1"
 zoneFishing[1412] = "1"
@@ -137,6 +104,26 @@ local function GetRangeText(levels)
 	if levels[1] == levels[2] then return tostring(levels[1]) end
 
 	return format("%d-%d", levels[1], levels[2])
+end
+
+local function FormatLevels(levels)
+	if type(levels[1]) == "table" then
+		local parts = {}
+		for _, range in ipairs(levels) do
+			tinsert(parts, format("%s%s|r", MapUtils:GetLevelColorCode(range[1], range[2]), GetRangeText(range)))
+		end
+
+		return format("(%s)", table.concat(parts, ", "))
+	end
+
+	return format("%s(%s)|r", MapUtils:GetLevelColorCode(levels[1], levels[2]), GetRangeText(levels))
+end
+
+local function GetStartLevel(levels)
+	if levels == nil then return nil end
+	if type(levels[1]) == "table" then return levels[1][1] end
+
+	return levels[1]
 end
 
 local ZoneInfo = {
@@ -242,7 +229,7 @@ function ZoneInfo.GetTitle(zoneID, levelsOn)
 	local name = info and info.name
 	if name == nil or name == "" then return nil end
 	local levels = zoneID and (zoneLevels[zoneID] or ZoneInfo.GetBlizzardLevels(zoneID))
-	if levelsOn and levels ~= nil then name = format("%s %s(%s)|r", name, MapUtils:GetLevelColorCode(levels[1], levels[2]), GetRangeText(levels)) end
+	if levelsOn and levels ~= nil then name = format("%s %s", name, FormatLevels(levels)) end
 
 	return name
 end
@@ -287,7 +274,7 @@ end
 function ZoneInfo.GetLines(zoneID, recOn, fishingOn, areaName)
 	local lines = {}
 	if areaName ~= nil then tinsert(lines, ZoneInfo.Colorize(areaName, AREA_NAME_FONT_COLOR)) end
-	local rec = zoneRecLevels[zoneID]
+	local rec = GetStartLevel(zoneLevels[zoneID])
 	if recOn and rec ~= nil then tinsert(lines, MapUtils:Trans("LID_RECOMMENDEDSTARTLEVEL", nil, rec)) end
 	local fishing = zoneFishing[zoneID]
 	if fishingOn and fishing ~= nil then tinsert(lines, ZoneInfo.fishingIcon .. MapUtils:Trans("LID_FISHINGLEVEL", nil, fishing)) end
@@ -332,7 +319,7 @@ end
 
 function ZoneInfo.GetSample()
 	local levels = {10, 20}
-	local title = format("%s %s(%s)|r", MapUtils:Trans("LID_ZONENAMESAMPLE"), MapUtils:GetLevelColorCode(levels[1], levels[2]), GetRangeText(levels))
+	local title = format("%s %s", MapUtils:Trans("LID_ZONENAMESAMPLE"), FormatLevels(levels))
 	local lines = {MapUtils:Trans("LID_RECOMMENDEDSTARTLEVEL", nil, levels[1]), ZoneInfo.fishingIcon .. MapUtils:Trans("LID_FISHINGLEVEL", nil, "75")}
 	if MapUtils.GetLegacyProgressLines ~= nil and MapUtils:GetConfig("LEGACYPROGRESS", true) == true then
 		tinsert(lines, MapUtils:Trans("LID_LEGACYEXPLORED", nil, 5, 12))
