@@ -178,7 +178,6 @@ Addon.INSTANCEMAPPINS = {
         {"level", 0.526, 0.872, 312},
         {"boss", 0.544, 0.537, 4274}, -- Fenrus the Devourer
         {"questend", 0.624, 0.436, 1013}, -- The Book of Ur
-        {"boss", 0.500, 0.480, 4627}, -- Arugal's Voidwalker
         {"boss", 0.545, 0.537, 46963}, -- Lord Walden
     },
     [315] = { -- Shadowfang Keep 6
