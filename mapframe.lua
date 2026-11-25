@@ -2260,7 +2260,7 @@ function CombatPins.Flush()
 end
 
 function MapUtils:InstallCombatPins()
-	if CombatPins.installed or frame == nil or CombatPins.IsGamepad() then return end
+	if CombatPins.installed or frame == nil or MapUtils:IsForever() or CombatPins.IsGamepad() then return end
 	CombatPins.passthrough = MapCanvasPinMixin and MapCanvasPinMixin.CheckMouseButtonPassthrough
 	if type(CombatPins.passthrough) ~= "function" then return end
 	local propagation = SuperTrackablePinMixin and SuperTrackablePinMixin.UpdateMousePropagation
