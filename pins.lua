@@ -2453,10 +2453,15 @@ local function GetWaypointKey()
 end
 
 local function IsSameEntry(a, b)
-	if a == b then return true end
+	if a == b or a.source == b or b.source == a then return true end
 	if a.kind ~= b.kind then return false end
 	if a.kind == "flight" then return a.nodeID ~= nil and a.nodeID == b.nodeID end
 	if a.kind == "dungeon" or a.kind == "meetingstone" then return a.instance ~= nil and a.instance == b.instance end
+	if a.kind == "librarybook" then
+		local sa, sb = a.source or a, b.source or b
+
+		return sa.x == sb.x and sa.y == sb.y and (a.sourceMapID == nil or b.sourceMapID == nil or a.sourceMapID == b.sourceMapID)
+	end
 
 	return false
 end
