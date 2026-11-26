@@ -1643,6 +1643,88 @@ function SmoothZoom.RescaleUnitPin(pin, scale)
 	if pin.SetPlayerPingScale ~= nil then pin:SetPlayerPingScale(0.65 / scale) end
 end
 
+function SmoothZoom.RescaleExternalPin(pin, parent, parentW, parentH, scale, zoomPercent, globalPinScale)
+	local pinScale = (1 / scale) * Lerp(pin.startScale, pin.endScale, Clamp((pin.scaleFactor or 1) * zoomPercent, 0, 1))
+	if pin.IsIgnoringGlobalPinScale ~= nil and not pin:IsIgnoringGlobalPinScale() then pinScale = pinScale * globalPinScale end
+	if pinScale <= 0 or math.abs((pin:GetScale() or 0) - pinScale) <= 0.0005 then return end
+	pin:SetScale(pinScale)
+	local px, py = pin.normalizedX, pin.normalizedY
+	if px == nil or py == nil then px, py = pin.x, pin.y end
+	if type(px) ~= "number" or type(py) ~= "number" then return end
+	if pin.GetNudgeVector ~= nil then
+		local nx, ny = pin:GetNudgeVector()
+		if nx ~= nil and ny ~= nil then
+			local f = (pin.GetNudgeFactor and pin:GetNudgeFactor() or 0) * (pin.GetNudgeTargetFactor and pin:GetNudgeTargetFactor() or 0) * (pin.GetNudgeZoomFactor and pin:GetNudgeZoomFactor() or 0)
+			px, py = px + nx * f, py + ny * f
+		end
+	end
+
+	pin:ClearAllPoints()
+	pin:SetPoint("CENTER", parent, "TOPLEFT", (parentW * px) / pinScale, -(parentH * py) / pinScale)
+end
+
+function SmoothZoom.ScanExternalChildren(canvas)
+	local numChildren = canvas.GetNumChildren and canvas:GetNumChildren() or 0
+	if SmoothZoom.externalCanvas == canvas and SmoothZoom.externalChildCount == numChildren then return end
+	SmoothZoom.externalCanvas = canvas
+	SmoothZoom.externalChildCount = numChildren
+	local pins, containers = SmoothZoom.externalPins, SmoothZoom.externalContainers
+	if pins == nil then
+		pins, containers = {}, {}
+		SmoothZoom.externalPins, SmoothZoom.externalContainers = pins, containers
+	else
+		wipe(pins)
+		wipe(containers)
+	end
+
+	local children = {canvas:GetChildren()}
+	for i = 1, #children do
+		local child = children[i]
+		if child ~= nil and child ~= SmoothZoom.catcher and child.owningMap == nil and not (child.IsForbidden ~= nil and child:IsForbidden()) then
+			if type(child.startScale) == "number" and type(child.endScale) == "number" and child.insetIndex == nil then
+				pins[#pins + 1] = child
+			elseif child.startScale == nil and child.GetObjectType ~= nil and child:GetObjectType() == "Frame" and child.GetNumChildren ~= nil then
+				containers[#containers + 1] = child
+			end
+		end
+	end
+end
+
+function SmoothZoom.RescaleContainerPins(parent, scale, zoomPercent, globalPinScale, inCombat)
+	local parentW, parentH = parent:GetSize()
+	if parentW == nil or parentW <= 0 or parentH == nil or parentH <= 0 then return end
+	local children = {parent:GetChildren()}
+	for i = 1, #children do
+		local pin = children[i]
+		if pin ~= nil and pin:IsShown() and not (pin.IsForbidden ~= nil and pin:IsForbidden()) and (not inCombat or pin.IsProtected == nil or not pin:IsProtected()) and type(pin.startScale) == "number" and type(pin.endScale) == "number" and pin.insetIndex == nil then
+			SmoothZoom.RescaleExternalPin(pin, parent, parentW, parentH, scale, zoomPercent, globalPinScale)
+		end
+	end
+end
+
+function SmoothZoom.RescaleExternalPins(canvas, canvasW, canvasH, scale, zoomPercent, globalPinScale, inCombat)
+	SmoothZoom.ScanExternalChildren(canvas)
+	local pins = SmoothZoom.externalPins
+	if pins ~= nil then
+		for i = 1, #pins do
+			local pin = pins[i]
+			if pin:IsShown() and (not inCombat or pin.IsProtected == nil or not pin:IsProtected()) and type(pin.startScale) == "number" and type(pin.endScale) == "number" and pin.insetIndex == nil then
+				SmoothZoom.RescaleExternalPin(pin, canvas, canvasW, canvasH, scale, zoomPercent, globalPinScale)
+			end
+		end
+	end
+
+	local containers = SmoothZoom.externalContainers
+	if containers ~= nil then
+		for i = 1, #containers do
+			local container = containers[i]
+			if container:IsShown() and not (container.IsForbidden ~= nil and container:IsForbidden()) and container:GetNumChildren() > 0 then
+				SmoothZoom.RescaleContainerPins(container, scale, zoomPercent, globalPinScale, inCombat)
+			end
+		end
+	end
+end
+
 function SmoothZoom.RescaleBlizzardPins(container, scale)
 	if frame == nil or frame.pinPools == nil or scale == nil or scale <= 0 then return end
 	local canvas = container.Child
@@ -1665,6 +1747,8 @@ function SmoothZoom.RescaleBlizzardPins(container, scale)
 			end
 		end
 	end
+
+	SmoothZoom.RescaleExternalPins(canvas, canvasW, canvasH, scale, zoomPercent, globalPinScale, inCombat)
 end
 
 function SmoothZoom.ApplyCView(container, scale, x, y, childW, childH, viewW, viewH)
