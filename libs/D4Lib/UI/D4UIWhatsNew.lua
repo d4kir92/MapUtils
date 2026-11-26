@@ -82,9 +82,6 @@ function D4:CreateUIWhatsNew(tab)
             func = function(value)
                 source:SetChecked(value)
                 if options.func then options.func(value, source) end
-                for _, row in pairs(rows) do
-                    if row.source and row.source ~= source then row.control:SetChecked(row.source:GetChecked()) end
-                end
             end
         })
         return {control = control, source = source, element = control.uiElement}
@@ -191,7 +188,7 @@ function D4:CreateUIWhatsNew(tab)
             row.setting = entry.setting
             if row.source then row.control:SetChecked(row.source:GetChecked()) end
             if row.sliderSource then row.control.slider:SetValue(row.sliderSource.value) end
-            Place(entry.id, row, #categories + (tonumber(entry.setting.indent) or 0), parent)
+            Place(entry.id, row, #categories, parent)
         end
         table.sort(win.elements, function(left, right) return (left.noticeOrder or math.huge) < (right.noticeOrder or math.huge) end)
 
