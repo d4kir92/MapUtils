@@ -526,6 +526,28 @@ function D4:CreateInstanceMap(provider)
     }
 
     local Refresh = nil
+    local posArrow = nil
+    local function HidePosArrow()
+        if D4.HideInstancePosArrow ~= nil then D4:HideInstancePosArrow(posArrow, "D4InstanceMap") end
+    end
+
+    local function UpdatePosArrow(info)
+        if D4.UpdateInstancePosArrow == nil then return end
+        if overlay == nil or info == nil or overlay._muPlanShown == true then
+            HidePosArrow()
+            return
+        end
+
+        local enabled = provider.isPlayerPosEnabled == nil or provider.isPlayerPosEnabled()
+        if not enabled then
+            HidePosArrow()
+            return
+        end
+
+        if posArrow == nil then posArrow = D4:CreateInstancePosArrow(overlay, overlay:GetFrameLevel() + 700) end
+        D4:UpdateInstancePosArrow(posArrow, overlay.art, info.file, "D4InstanceMap", true)
+    end
+
     local function ApplyView()
         if overlay == nil then return end
         local width = view.baseWidth * view.zoom
@@ -537,6 +559,7 @@ function D4:CreateInstanceMap(provider)
         overlay.art:SetSize(width, height)
         overlay.art:ClearAllPoints()
         overlay.art:SetPoint("CENTER", overlay, "CENTER", view.x, view.y)
+        if shownLevels ~= nil and shownIndex ~= nil then UpdatePosArrow(shownLevels[shownIndex]) end
     end
 
     local function ResetView()
@@ -1132,6 +1155,7 @@ function D4:CreateInstanceMap(provider)
             shownInstance = nil
             view.file = nil
             HideMapPins()
+            HidePosArrow()
             if overlay ~= nil then
                 overlay:Hide()
                 HideLevelControls()
@@ -1194,6 +1218,7 @@ function D4:CreateInstanceMap(provider)
         end
 
         if not overlay:IsShown() then overlay:Show() end
+        UpdatePosArrow(info)
     end
 
     function map:Show(instances, level)
@@ -1255,6 +1280,7 @@ function D4:CreateInstanceMap(provider)
             sel.elapsed = 0
             Refresh()
         end)
+        updater:SetScript("OnHide", HidePosArrow)
     end
 
     return map

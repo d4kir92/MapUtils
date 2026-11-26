@@ -2,20 +2,15 @@ local _, MapUtils = ...
 local WATCH_INTERVAL = 0.05
 local MAX_ZOOM = 8
 local ARROW_SIZE = 24
-local POS_MAX_AGE = 3.0
 local IM = {
 	["plan"] = nil,
 	["planOverlay"] = nil,
 	["btn"] = nil,
 	["btnOverlay"] = nil,
 	["arrow"] = nil,
-	["arrowParent"] = nil,
 	["arrowPx"] = nil,
 	["arrowPy"] = nil,
-	["arrowMode"] = nil,
 	["arrowRot"] = nil,
-	["arrowArtX"] = nil,
-	["arrowArtY"] = nil,
 	["cachedOverlay"] = nil,
 	["btnOn"] = nil,
 	["tiles"] = {},
@@ -125,48 +120,42 @@ local function FindRawOverlay()
 	return nil, nil
 end
 
-local function GetCurrentInstanceID()
-	if IsInInstance == nil or GetInstanceInfo == nil then return nil end
-	local inInst = IsInInstance()
-	if not inInst then return nil end
-	local instID = select(8, GetInstanceInfo())
-	if IsSecret(instID) or type(instID) ~= "number" or instID <= 0 then return nil end
-	return instID
-end
-
-local function EnsureArrow(parent, level)
+local function EnsurePlanArrow(plan)
 	local a = IM.arrow
 	if a == nil then
-		a = CreateFrame("Frame", nil, parent)
-		a:SetSize(ARROW_SIZE, ARROW_SIZE)
-		a:EnableMouse(false)
-		local tex = a:CreateTexture(nil, "OVERLAY")
-		tex:SetAllPoints(a)
-		tex:SetTexture("Interface\\Minimap\\MinimapArrow")
-		a.tex = tex
-		a:Hide()
+		if MapUtils.CreateInstancePosArrow ~= nil then
+			a = MapUtils:CreateInstancePosArrow(plan, plan.canvas:GetFrameLevel() + 20, ARROW_SIZE)
+		else
+			a = CreateFrame("Frame", nil, plan)
+			a:SetSize(ARROW_SIZE, ARROW_SIZE)
+			a:EnableMouse(false)
+			a:SetFrameLevel(plan.canvas:GetFrameLevel() + 20)
+			local tex = a:CreateTexture(nil, "OVERLAY")
+			tex:SetAllPoints(a)
+			tex:SetTexture("Interface\\Minimap\\MinimapArrow")
+			a.tex = tex
+			a:Hide()
+		end
 		IM.arrow = a
-		IM.arrowParent = parent
-	elseif IM.arrowParent ~= parent then
-		a:SetParent(parent)
-		IM.arrowParent = parent
+	else
+		a:SetFrameLevel(plan.canvas:GetFrameLevel() + 20)
 	end
-	a:SetFrameLevel(level)
 	return a
 end
 
-local function HideArrow()
-	if IM.arrow ~= nil then IM.arrow:Hide() end
+local function HidePlanArrow()
+	if MapUtils.HideInstancePosArrow ~= nil then
+		MapUtils:HideInstancePosArrow(IM.arrow, "MapUtils_Minimap")
+	elseif IM.arrow ~= nil then
+		IM.arrow:Hide()
+	end
 	IM.arrowPx = nil
 	IM.arrowPy = nil
-	IM.arrowMode = nil
 	IM.arrowRot = nil
-	IM.arrowArtX = nil
-	IM.arrowArtY = nil
 end
 
 local function PlacePlanArrow(mapData)
-	if IM.arrow == nil or IM.arrowMode ~= "plan" or IM.arrowPx == nil or IM.plan == nil or mapData == nil or IM.baseW <= 0 then return end
+	if IM.arrow == nil or IM.arrowPx == nil or IM.plan == nil or mapData == nil or IM.baseW <= 0 then return end
 	local tileScale = (IM.baseW * IM.zoom) / mapData.w
 	IM.arrow:ClearAllPoints()
 	IM.arrow:SetPoint("CENTER", IM.plan.canvas, "TOPLEFT", IM.arrowPx * tileScale, -IM.arrowPy * tileScale)
@@ -452,111 +441,48 @@ local function AnchorToggleButton(btn, overlay)
 end
 
 local function HideVisuals()
+	if IM.planOverlay ~= nil then IM.planOverlay._muPlanShown = false end
 	if IM.plan ~= nil then IM.plan:Hide() end
 	if IM.btn ~= nil then IM.btn:Hide() end
-	HideArrow()
-	if MapUtils.StopInstancePosition ~= nil then MapUtils:StopInstancePosition() end
+	HidePlanArrow()
 	IM.activeInst = nil
 	IM.activeFloor = nil
 	IM.activeKey = nil
 	IM.drag = nil
 end
 
-local function UpdatePlayerArrow(overlay, artKey, mapData, mmInstID)
-	local playerInst = GetCurrentInstanceID()
-	local artBounds = MapUtils.GetInstanceArtBounds ~= nil and MapUtils:GetInstanceArtBounds(artKey) or nil
-	local overlayInst = mmInstID or (artBounds ~= nil and artBounds[1] or nil)
-	local enabled = MapUtils.IsInstancePositionEnabled ~= nil and MapUtils:IsInstancePositionEnabled()
-	if overlay == nil or playerInst == nil or overlayInst ~= playerInst or not enabled then
-		HideArrow()
-		if MapUtils.StopInstancePosition ~= nil then MapUtils:StopInstancePosition() end
-		return
-	end
-
-	local wx, wy, heading, age
-	if UnitPosition ~= nil then
-		local nx, ny = UnitPosition("player")
-		if not IsSecret(nx) and not IsSecret(ny) and type(nx) == "number" and type(ny) == "number" then
-			wx, wy, age = nx, ny, 0
-			if MapUtils.StopInstancePosition ~= nil then MapUtils:StopInstancePosition() end
-		end
-	end
-	if wx == nil then
-		if MapUtils.StartInstancePosition ~= nil then MapUtils:StartInstancePosition(playerInst) end
-		if MapUtils.GetInstancePosition ~= nil then
-			local fx, fy, _, fhead, fage = MapUtils:GetInstancePosition()
-			if fx ~= nil and fage ~= nil and fage <= POS_MAX_AGE then
-				wx, wy, heading, age = fx, fy, fhead, fage
-			end
-		end
-	end
-	if wx == nil or age == nil then
-		HideArrow()
-		return
-	end
-
-	local facing = nil
-	if GetPlayerFacing ~= nil then
-		local f = GetPlayerFacing()
-		if not IsSecret(f) and type(f) == "number" then facing = f end
-	end
-	if facing == nil then facing = heading end
-
+local function UpdatePlanArrow(mapData, instID)
+	local enabled = MapUtils:GetConfig("INSTANCEPLAYERPOS", true) ~= false
 	local planShown = IM.plan ~= nil and IM.plan:IsShown() and mapData ~= nil and mapData.wx ~= nil and mapData.wy ~= nil and mapData.ps ~= nil and IM.baseW > 0
-	if planShown then
-		local px = (mapData.wy - wy) * mapData.ps
-		local py = (mapData.wx - wx) * mapData.ps
-		if px < -48 or px > mapData.w + 48 or py < -48 or py > mapData.h + 48 then
-			HideArrow()
-			return
-		end
-		local a = EnsureArrow(IM.plan, IM.plan.canvas:GetFrameLevel() + 20)
-		local moved = IM.arrowMode ~= "plan" or IM.arrowPx == nil or math.abs(px - IM.arrowPx) > 0.05 or math.abs(py - IM.arrowPy) > 0.05
-		IM.arrowMode = "plan"
-		IM.arrowPx = px
-		IM.arrowPy = py
-		if facing ~= nil and (IM.arrowRot == nil or math.abs(facing - IM.arrowRot) > 0.005) then
-			IM.arrowRot = facing
-			a.tex:SetRotation(facing)
-		end
-		if moved then PlacePlanArrow(mapData) end
-		if not a:IsShown() then a:Show() end
+	if not planShown or not enabled or MapUtils.GetLiveInstancePosition == nil then
+		HidePlanArrow()
 		return
 	end
-
-	if overlay.art ~= nil and artBounds ~= nil then
-		local dx = artBounds[3] - artBounds[2]
-		local dy = artBounds[5] - artBounds[4]
-		local aw = overlay.art:GetWidth() or 0
-		local ah = overlay.art:GetHeight() or 0
-		if dx > 0 and dy > 0 and aw > 0 and ah > 0 then
-			local u = (artBounds[5] - wy) / dy
-			local v = (artBounds[3] - wx) / dx
-			if u >= -0.06 and u <= 1.06 and v >= -0.06 and v <= 1.06 then
-				local a = EnsureArrow(overlay, overlay:GetFrameLevel() + 700)
-				local ax = u * aw
-				local ay = -v * ah
-				local moved = IM.arrowMode ~= "art" or IM.arrowArtX == nil or math.abs(ax - IM.arrowArtX) > 0.05 or math.abs(ay - IM.arrowArtY) > 0.05
-				IM.arrowMode = "art"
-				IM.arrowPx = nil
-				IM.arrowPy = nil
-				IM.arrowArtX = ax
-				IM.arrowArtY = ay
-				if facing ~= nil and (IM.arrowRot == nil or math.abs(facing - IM.arrowRot) > 0.005) then
-					IM.arrowRot = facing
-					a.tex:SetRotation(facing)
-				end
-				if moved then
-					a:ClearAllPoints()
-					a:SetPoint("CENTER", overlay.art, "TOPLEFT", ax, ay)
-				end
-				if not a:IsShown() then a:Show() end
-				return
-			end
-		end
+	local wx, wy, _, facing = MapUtils:GetLiveInstancePosition("MapUtils_Minimap", instID, true)
+	if wx == nil then
+		if IM.arrow ~= nil and IM.arrow:IsShown() then IM.arrow:Hide() end
+		IM.arrowPx = nil
+		IM.arrowPy = nil
+		return
 	end
-
-	HideArrow()
+	local px = (mapData.wy - wy) * mapData.ps
+	local py = (mapData.wx - wx) * mapData.ps
+	if px < -48 or px > mapData.w + 48 or py < -48 or py > mapData.h + 48 then
+		if IM.arrow ~= nil and IM.arrow:IsShown() then IM.arrow:Hide() end
+		IM.arrowPx = nil
+		IM.arrowPy = nil
+		return
+	end
+	local a = EnsurePlanArrow(IM.plan)
+	local moved = IM.arrowPx == nil or math.abs(px - IM.arrowPx) > 0.05 or math.abs(py - IM.arrowPy) > 0.05
+	IM.arrowPx = px
+	IM.arrowPy = py
+	if facing ~= nil and (IM.arrowRot == nil or math.abs(facing - IM.arrowRot) > 0.005) then
+		IM.arrowRot = facing
+		a.tex:SetRotation(facing)
+	end
+	if moved then PlacePlanArrow(mapData) end
+	if not a:IsShown() then a:Show() end
 end
 
 Refresh = function()
@@ -568,13 +494,14 @@ Refresh = function()
 	local instID, floorIdx = MatchOverlayData(artKey)
 	local mapData = GetMapData(instID)
 	if mapData == nil then
+		overlay._muPlanShown = false
 		if IM.plan ~= nil then IM.plan:Hide() end
 		if IM.btn ~= nil then IM.btn:Hide() end
+		HidePlanArrow()
 		IM.activeInst = nil
 		IM.activeFloor = nil
 		IM.activeKey = artKey
 		IM.drag = nil
-		UpdatePlayerArrow(overlay, artKey, nil, nil)
 		return
 	end
 
@@ -607,22 +534,26 @@ Refresh = function()
 	if IsMinimapViewOn() then
 		local plan = EnsurePlan(overlay, instID, mapData)
 		local wasHidden = not plan:IsShown()
+		overlay._muPlanShown = true
 		plan:Show()
 		if floorChanged or wasHidden then
 			ApplyFloorStyling(floorIdx)
 		end
 		LayoutPlan(overlay, mapData, floorIdx, floorChanged or wasHidden)
-	elseif IM.plan ~= nil then
-		IM.plan:Hide()
-		IM.drag = nil
+		UpdatePlanArrow(mapData, instID)
+	else
+		overlay._muPlanShown = false
+		if IM.plan ~= nil then
+			IM.plan:Hide()
+			IM.drag = nil
+		end
+		HidePlanArrow()
 	end
-	UpdatePlayerArrow(overlay, artKey, mapData, instID)
 end
 
 function MapUtils:RefreshInstancePosition()
-	if MapUtils.IsInstancePositionEnabled == nil or not MapUtils:IsInstancePositionEnabled() then
-		HideArrow()
-		if MapUtils.StopInstancePosition ~= nil then MapUtils:StopInstancePosition() end
+	if MapUtils:GetConfig("INSTANCEPLAYERPOS", true) == false then
+		HidePlanArrow()
 		return
 	end
 	Refresh()
@@ -645,10 +576,7 @@ end
 local ev = CreateFrame("Frame")
 ev:RegisterEvent("PLAYER_LOGIN")
 ev:RegisterEvent("PLAYER_ENTERING_WORLD")
-ev:SetScript("OnEvent", function(_, event)
+ev:SetScript("OnEvent", function()
 	InstallWatcher()
-	if event == "PLAYER_ENTERING_WORLD" and GetCurrentInstanceID() == nil and MapUtils.StopInstancePosition ~= nil then
-		MapUtils:StopInstancePosition()
-	end
 	Refresh()
 end)

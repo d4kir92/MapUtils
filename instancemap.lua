@@ -126,6 +126,7 @@ local instanceMap = MapUtils:CreateInstanceMap(
 		["isQuestPinVisible"] = function(row) return MapUtils:IsDebug() or MapUtils:IsInstanceQuestPinVisible(row) end,
 		["getQuestKindText"] = function(row) return MapUtils:Trans(row[1] == "queststart" and "LID_MAPPINQUESTSTART" or "LID_MAPPINQUESTEND") end,
 		["isPinEnabled"] = function(kind) return MapUtils:IsDebug() or MapUtils:GetConfig("INSTANCEPINS_" .. strupper(kind), true) ~= false end,
+		["isPlayerPosEnabled"] = function() return MapUtils:GetConfig("INSTANCEPLAYERPOS", true) ~= false end,
 		["setPinEnabled"] = function(kind, enabled) MapUtils:SetSharedOption("INSTANCEPINS_" .. strupper(kind), enabled) end,
 		["getBossScale"] = function() return tonumber(MapUtils:GetConfig("INSTANCEPINS_BOSSSCALE", 1)) or 1 end,
 		["setBossScale"] = function(value) MapUtils:SetMapOption("INSTANCEPINS_BOSSSCALE", value) end,

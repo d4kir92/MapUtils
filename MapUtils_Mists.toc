@@ -34,6 +34,10 @@
 ## IconTexture: 134269
 
 libs\D4Lib\D4Lib.xml
+shared\InstanceMap\instance_pos.lua
+shared\InstanceMap\instance_pos_data.lua
+shared\InstancePins\instance_pins.lua
+shared\InstanceMap\instance_map.lua
 
 locale\enUS.lua
 locale\deDE.lua
@@ -52,7 +56,6 @@ profiler.lua
 flavor.lua
 data\classic\instances.lua
 data\classic\instanceminimap.lua
-data\classic\instancepos.lua
 data\tbc\instances.lua
 data\wrath\instances.lua
 data\cata\instances.lua
@@ -76,7 +79,6 @@ shared\InstancePins\instance_map_pins.lua
 shared\InstancePins\instance_pin_info.lua
 instancepinrows.lua
 instancemap.lua
-instancepos.lua
 instanceminimap.lua
 mapframe.lua
 editmode.lua

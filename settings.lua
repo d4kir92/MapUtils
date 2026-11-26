@@ -12,7 +12,7 @@ local ADDED_1017 = "2026-10-17"
 local ADDED_1019 = "2026-10-19"
 local ADDED_1022 = "2026-10-22"
 local ADDED_1104 = "2026-11-04"
-local SHARED_KEYS = {"DUNGEONWORLDMAPPINS", "MEETINGSTONEWORLDMAPPINS", "DUNGEONMINIMAPPINS", "MEETINGSTONEMINIMAPPINS", "INSTANCEPINS_BOSS", "INSTANCEPINS_ITEM", "INSTANCEPINS_QUEST", "INSTANCEPINS_ENTRANCE", "INSTANCEPINS_LEVEL"}
+local SHARED_KEYS = {"DUNGEONWORLDMAPPINS", "MEETINGSTONEWORLDMAPPINS", "DUNGEONMINIMAPPINS", "MEETINGSTONEMINIMAPPINS", "INSTANCEPINS_BOSS", "INSTANCEPINS_ITEM", "INSTANCEPINS_QUEST", "INSTANCEPINS_ENTRANCE", "INSTANCEPINS_LEVEL", "INSTANCEPLAYERPOS"}
 local maset = nil
 local sharedCheckboxes = {}
 local cvarCheckboxes = {}
@@ -397,6 +397,7 @@ function MapUtils:OnSharedOptionChanged(key, value)
 	if sharedCheckboxes[key] ~= nil then sharedCheckboxes[key]:SetChecked(value) end
 	MapUtils:RefreshPins()
 	if MapUtils.RefreshInstanceMap ~= nil then MapUtils:RefreshInstanceMap() end
+	if MapUtils.RefreshInstancePosition ~= nil then MapUtils:RefreshInstancePosition() end
 end
 
 function MapUtils:SetSharedOption(key, value)
@@ -530,6 +531,7 @@ local function AddSharedCheckbox(key, label, added)
 			["func"] = function(value) MapUtils:SetSharedOption(key, value) end
 		}
 	)
+	return sharedCheckboxes[key]
 end
 
 local function GetCVarValue(cvar)
@@ -996,17 +998,7 @@ function MapUtils:InitSetting()
 			end, nil, "2026-11-22"
 		)
 		if MapUtils.IsInstancePositionAvailable ~= nil and MapUtils:IsInstancePositionAvailable() then
-			AddTooltip(
-				AddCheckbox(
-					"INSTANCEPLAYERPOS",
-					true,
-					function()
-						if MapUtils.RefreshInstancePosition ~= nil then MapUtils:RefreshInstancePosition() end
-					end, nil, "2026-11-26"
-				),
-				"LID_INSTANCEPLAYERPOS",
-				"LID_INSTANCEPLAYERPOSDESC"
-			)
+			AddTooltip(AddSharedCheckbox("INSTANCEPLAYERPOS", "LID_INSTANCEPLAYERPOS", "2026-11-26"), "LID_INSTANCEPLAYERPOS", "LID_INSTANCEPLAYERPOSDESC")
 		end
 		AddSharedCheckbox("INSTANCEPINS_BOSS", "LID_SHOWBOSSPINS", ADDED_1004)
 		AddSharedCheckbox("INSTANCEPINS_ITEM", "LID_SHOWQUESTITEMPINS", ADDED_1004)

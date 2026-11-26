@@ -1,6 +1,6 @@
-local _, MapUtils = ...
-MapUtils.INSTANCEPOS = MapUtils.INSTANCEPOS or {}
-local IP = MapUtils.INSTANCEPOS
+local _, Addon = ...
+Addon.INSTANCEPOS = Addon.INSTANCEPOS or {}
+local IP = Addon.INSTANCEPOS
 IP.nodes = {
 	[2] = {-8832.77, 478.62, 109.62, 1},
 	[4] = {-10628.89, 1036.68, 34.06, 1},
@@ -137,3 +137,4 @@ IP.art = {
 	["320"] = {531, -8703.5, -8051.8, 1538.07, 2515.63},
 	["321"] = {531, -8720.17, -8335.13, 1738.07, 2315.63},
 }
+if Addon.RegisterInstancePosData ~= nil then Addon:RegisterInstancePosData(IP) end

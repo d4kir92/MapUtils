@@ -1,4 +1,5 @@
-local _, MapUtils = ...
+local _, D4 = ...
+local VERSION = 1
 local TAXI_PIN = Enum and Enum.SuperTrackingMapPinType and Enum.SuperTrackingMapPinType.TaxiNode or 2
 local TRACK = Enum and Enum.SuperTrackingType or {}
 local TRACK_QUEST = TRACK.Quest or 0
@@ -6,6 +7,8 @@ local TRACK_WAYPOINT = TRACK.UserWaypoint or 1
 local TRACK_CONTENT = TRACK.Content or 4
 local TRACK_PIN = TRACK.MapPin or 6
 local TRACK_VIGNETTE = TRACK.Vignette or 7
+local ARROW_SIZE = 24
+local POS_MAX_AGE = 3.0
 local CFG = {
 	["activeCount"] = 5,
 	["minFix"] = 4,
@@ -42,74 +45,88 @@ local CFG = {
 	["ageWeight"] = 3,
 	["zBufSize"] = 5,
 }
-local POS = {
-	["active"] = false,
-	["instID"] = nil,
-	["phase"] = 0,
-	["activeCount"] = 0,
-	["slots"] = {},
-	["pool"] = {},
-	["poolCount"] = 0,
-	["ours"] = {},
-	["bad"] = {},
-	["work"] = {},
-	["zBuf"] = {0, 0, 0, 0, 0},
-	["zSorted"] = {0, 0, 0, 0, 0},
-	["zCount"] = 0,
-	["zHead"] = 0,
-	["curIdx"] = 1,
-	["prevSlot"] = nil,
-	["pending"] = false,
-	["switchAt"] = 0,
-	["switchedAt"] = 0,
-	["lastSwitch"] = 0,
-	["pinChecked"] = false,
-	["pinRefused"] = false,
-	["outranked"] = false,
-	["settle"] = CFG.settleBase,
-	["acqStart"] = 0,
-	["acqFrom"] = 0,
-	["acquiredAt"] = 0,
-	["uncert"] = 0,
-	["interval"] = 0,
-	["lastDist"] = 0,
-	["lastTime"] = 0,
-	["lastAnchorID"] = 0,
-	["misses"] = 0,
-	["rejects"] = 0,
-	["lastOk"] = 0,
-	["moving"] = false,
-	["motionSince"] = 0,
-	["settleLeft"] = 0,
-	["nextSleepPing"] = 0,
-	["blockedUntil"] = 0,
-	["elapsed"] = 0,
-	["fix"] = {
-		["valid"] = false,
-		["confirmed"] = false,
-		["x"] = 0,
-		["y"] = 0,
-		["z"] = 0,
-		["zMed"] = 0,
-		["vx"] = 0,
-		["vy"] = 0,
-		["heading"] = nil,
-		["time"] = 0,
-		["residual"] = 999,
-		["count"] = 0,
-	},
-	["saved"] = {
-		["has"] = false,
-		["quest"] = 0,
-		["waypoint"] = false,
-		["contentType"] = nil,
-		["contentID"] = nil,
-		["vignette"] = nil,
-		["pinType"] = nil,
-		["pinID"] = nil,
-		["priority"] = nil,
-	},
-}
+local reg = _G["D4_InstancePos"]
+if reg == nil then
+	reg = {
+		["version"] = 0,
+		["data"] = nil,
+		["leases"] = {},
+		["driver"] = nil,
+		["motionFrame"] = nil,
+		["pos"] = {
+			["active"] = false,
+			["instID"] = nil,
+			["phase"] = 0,
+			["activeCount"] = 0,
+			["slots"] = {},
+			["pool"] = {},
+			["poolCount"] = 0,
+			["ours"] = {},
+			["bad"] = {},
+			["work"] = {},
+			["zBuf"] = {0, 0, 0, 0, 0},
+			["zSorted"] = {0, 0, 0, 0, 0},
+			["zCount"] = 0,
+			["zHead"] = 0,
+			["curIdx"] = 1,
+			["prevSlot"] = nil,
+			["pending"] = false,
+			["switchAt"] = 0,
+			["switchedAt"] = 0,
+			["lastSwitch"] = 0,
+			["pinChecked"] = false,
+			["pinRefused"] = false,
+			["outranked"] = false,
+			["settle"] = CFG.settleBase,
+			["acqStart"] = 0,
+			["acqFrom"] = 0,
+			["acquiredAt"] = 0,
+			["uncert"] = 0,
+			["interval"] = 0,
+			["lastDist"] = 0,
+			["lastTime"] = 0,
+			["lastAnchorID"] = 0,
+			["misses"] = 0,
+			["rejects"] = 0,
+			["lastOk"] = 0,
+			["moving"] = false,
+			["motionSince"] = 0,
+			["settleLeft"] = 0,
+			["nextSleepPing"] = 0,
+			["blockedUntil"] = 0,
+			["stopAt"] = 0,
+			["elapsed"] = 0,
+			["fix"] = {
+				["valid"] = false,
+				["confirmed"] = false,
+				["x"] = 0,
+				["y"] = 0,
+				["z"] = 0,
+				["zMed"] = 0,
+				["vx"] = 0,
+				["vy"] = 0,
+				["heading"] = nil,
+				["time"] = 0,
+				["residual"] = 999,
+				["count"] = 0,
+			},
+			["saved"] = {
+				["has"] = false,
+				["quest"] = 0,
+				["waypoint"] = false,
+				["contentType"] = nil,
+				["contentID"] = nil,
+				["vignette"] = nil,
+				["pinType"] = nil,
+				["pinID"] = nil,
+				["priority"] = nil,
+			},
+		},
+	}
+	_G["D4_InstancePos"] = reg
+end
+
+local POS = reg.pos
 
 local function IsSecret(v)
 	return issecretvalue ~= nil and issecretvalue(v) == true
@@ -119,6 +136,25 @@ local function IsPlayerMoving()
 	if GetUnitSpeed == nil then return false end
 	local s = GetUnitSpeed("player")
 	return not IsSecret(s) and type(s) == "number" and s > 0
+end
+
+local function GetCurrentInstanceID()
+	if IsInInstance == nil or GetInstanceInfo == nil then return nil end
+	local inInst = IsInInstance()
+	if not inInst then return nil end
+	local instID = select(8, GetInstanceInfo())
+	if IsSecret(instID) or type(instID) ~= "number" or instID <= 0 then return nil end
+	return instID
+end
+
+local function ExtractArtKey(artKey)
+	if artKey == nil then return nil end
+	local s = tostring(artKey)
+	if strfind(s, "[\\/]") ~= nil then
+		s = strmatch(s, "([^\\/]+)$") or s
+	end
+	s = gsub(s, "%.[^%.]+$", "")
+	return s
 end
 
 local function Dist3(slot, x, y, z)
@@ -170,9 +206,7 @@ local function PushHeight(z)
 	local head = (POS.zHead % CFG.zBufSize) + 1
 	POS.zHead = head
 	POS.zBuf[head] = z
-	if POS.zCount < CFG.zBufSize then
-		POS.zCount = POS.zCount + 1
-	end
+	if POS.zCount < CFG.zBufSize then POS.zCount = POS.zCount + 1 end
 	local n = POS.zCount
 	local s = POS.zSorted
 	for i = 1, n do
@@ -336,9 +370,7 @@ local function UpdateVelocity(now)
 	end
 	f.vx = vx
 	f.vy = vy
-	if speed >= CFG.headingSpeed then
-		f.heading = math.atan2(vy, vx)
-	end
+	if speed >= CFG.headingSpeed then f.heading = math.atan2(vy, vx) end
 end
 
 local function AcceptFix(x, y, z, residual, count, now)
@@ -391,9 +423,7 @@ local function Solve(now)
 	if res <= CFG.residualLimit + POS.uncert * 0.5 then
 		AcceptFix(x, y, z, res, n, now)
 		if not POS.moving then
-			if POS.settleLeft > 0 then
-				POS.settleLeft = POS.settleLeft - 1
-			end
+			if POS.settleLeft > 0 then POS.settleLeft = POS.settleLeft - 1 end
 			if POS.settleLeft <= 0 and POS.fix.confirmed and res <= CFG.sleepResidual then
 				POS.phase = 3
 				POS.fix.vx = 0
@@ -432,14 +462,12 @@ local function CountEnabledSlots()
 end
 
 local function SwapFromPool(idx, markBad)
-	if POS.poolCount <= 0 then return false end
-	local store = MapUtils.INSTANCEPOS
-	if store == nil or store.nodes == nil then return false end
+	if POS.poolCount <= 0 or reg.data == nil or reg.data.nodes == nil then return false end
 	local slot = POS.slots[idx]
 	local oldID = slot.id
 	local nextID = table.remove(POS.pool, 1)
 	POS.poolCount = POS.poolCount - 1
-	local node = store.nodes[nextID]
+	local node = reg.data.nodes[nextID]
 	if node == nil then return false end
 	if markBad then
 		POS.bad[oldID] = true
@@ -485,9 +513,7 @@ local function SwitchSlot(idx, now)
 	POS.pinRefused = false
 	POS.outranked = false
 	local ok = pcall(C_SuperTrack.SetSuperTrackedMapPin, TAXI_PIN, POS.slots[idx].id)
-	if not ok then
-		POS.blockedUntil = now + 2
-	end
+	if not ok then POS.blockedUntil = now + 2 end
 	POS.switchedAt = now
 	POS.lastSwitch = now
 end
@@ -495,15 +521,11 @@ end
 local function CheckPinRefused(slot)
 	if C_SuperTrack.GetSuperTrackedMapPin ~= nil then
 		local ok, kind, id = pcall(C_SuperTrack.GetSuperTrackedMapPin)
-		if ok and id ~= nil and (kind ~= TAXI_PIN or id ~= slot.id) then
-			return true, false
-		end
+		if ok and id ~= nil and (kind ~= TAXI_PIN or id ~= slot.id) then return true, false end
 	end
 	if C_SuperTrack.GetHighestPrioritySuperTrackingType ~= nil then
 		local ok, top = pcall(C_SuperTrack.GetHighestPrioritySuperTrackingType)
-		if ok and top ~= nil and top ~= TRACK_PIN then
-			return true, true
-		end
+		if ok and top ~= nil and top ~= TRACK_PIN then return true, true end
 	end
 	return false, false
 end
@@ -547,9 +569,7 @@ local function RecordReading(slot, dist, now)
 end
 
 local function RecordMiss(slot, now)
-	if slot.misses == 0 then
-		slot.missedAt = now
-	end
+	if slot.misses == 0 then slot.missedAt = now end
 	slot.misses = slot.misses + 1
 	POS.misses = POS.misses + 1
 	if slot.misses >= 2 then
@@ -566,9 +586,7 @@ local function RecordMiss(slot, now)
 			slot.misses = 0
 		end
 	end
-	if POS.phase ~= 1 and POS.misses >= CFG.missesLose then
-		LoseFix(now)
-	end
+	if POS.phase ~= 1 and POS.misses >= CFG.missesLose then LoseFix(now) end
 end
 
 local function ReadDistance()
@@ -620,9 +638,7 @@ local function Step(now)
 		return
 	end
 	if POS.pending then
-		if now >= POS.switchAt then
-			SwitchSlot(NextSlotIndex(), now)
-		end
+		if now >= POS.switchAt then SwitchSlot(NextSlotIndex(), now) end
 		return
 	end
 	local slot = POS.slots[POS.curIdx]
@@ -644,16 +660,12 @@ local function Step(now)
 	end
 	if POS.pinRefused then
 		outcome = "miss"
-		if POS.outranked then
-			POS.blockedUntil = now + 1.2
-		end
+		if POS.outranked then POS.blockedUntil = now + 1.2 end
 	elseif POS.phase == 1 or not POS.fix.valid then
 		if d > 0 and waited >= POS.settle then
 			local since = POS.lastTime > 0 and (now - POS.lastTime) or nil
 			if since ~= nil and since < CFG.sameWindow and POS.lastAnchorID ~= slot.id and math.abs(d - POS.lastDist) <= (CFG.sameDist + CFG.sameDrift * since) then
-				if waited >= POS.settle + CFG.timeout then
-					outcome = "miss"
-				end
+				if waited >= POS.settle + CFG.timeout then outcome = "miss" end
 			else
 				outcome = "reading"
 			end
@@ -681,9 +693,7 @@ local function Step(now)
 	if outcome == "reading" then
 		RecordReading(slot, d, now)
 		Solve(now)
-		if POS.phase == 2 and POS.rejects >= CFG.rejectsLose then
-			LoseFix(now)
-		end
+		if POS.phase == 2 and POS.rejects >= CFG.rejectsLose then LoseFix(now) end
 	elseif outcome == "miss" then
 		RecordMiss(slot, now)
 	end
@@ -692,21 +702,15 @@ local function Step(now)
 	POS.pending = true
 	local fast = POS.moving or POS.phase == 1 or POS.fix.vx ~= 0 or POS.fix.vy ~= 0
 	POS.switchAt = math.max(now, POS.lastSwitch + (fast and CFG.movingGap or CFG.idleGap))
-	if now >= POS.switchAt then
-		SwitchSlot(NextSlotIndex(), now)
-	end
+	if now >= POS.switchAt then SwitchSlot(NextSlotIndex(), now) end
 end
 
 local function SetMarkerAlpha(visible)
 	local frame = SuperTrackedFrame
 	local states = Enum and Enum.NavigationState
 	if type(frame) ~= "table" or frame.SetTargetAlphaForState == nil or states == nil then return end
-	if states.Occluded ~= nil then
-		pcall(frame.SetTargetAlphaForState, frame, states.Occluded, visible and 0.6 or 0)
-	end
-	if states.InRange ~= nil then
-		pcall(frame.SetTargetAlphaForState, frame, states.InRange, visible and 1 or 0)
-	end
+	if states.Occluded ~= nil then pcall(frame.SetTargetAlphaForState, frame, states.Occluded, visible and 0.6 or 0) end
+	if states.InRange ~= nil then pcall(frame.SetTargetAlphaForState, frame, states.InRange, visible and 1 or 0) end
 end
 
 local function SaveSuperTrack()
@@ -780,22 +784,16 @@ local function RestoreSuperTrack()
 	local st = C_SuperTrack
 	if st ~= nil and st.GetSuperTrackedMapPin ~= nil and st.ClearSuperTrackedMapPin ~= nil then
 		local ok, pt, pid = pcall(st.GetSuperTrackedMapPin)
-		if ok and pt == TAXI_PIN and POS.ours[pid] then
-			pcall(st.ClearSuperTrackedMapPin)
-		end
+		if ok and pt == TAXI_PIN and POS.ours[pid] then pcall(st.ClearSuperTrackedMapPin) end
 	end
 	local sv = POS.saved
 	if not sv.has then return end
 	sv.has = false
 	local order = {TRACK_QUEST, TRACK_WAYPOINT, TRACK_CONTENT, TRACK_VIGNETTE, TRACK_PIN}
 	for i = 1, #order do
-		if order[i] ~= sv.priority then
-			RestoreEntry(order[i])
-		end
+		if order[i] ~= sv.priority then RestoreEntry(order[i]) end
 	end
-	if sv.priority ~= nil then
-		RestoreEntry(sv.priority)
-	end
+	if sv.priority ~= nil then RestoreEntry(sv.priority) end
 end
 
 local function PlayerFactionBit()
@@ -807,7 +805,7 @@ local function PlayerFactionBit()
 end
 
 local function BuildAnchorOrder(instID)
-	local store = MapUtils.INSTANCEPOS
+	local store = reg.data
 	if store == nil or store.nodes == nil then return 0 end
 	local raw = (store.anchors ~= nil and store.anchors[instID]) or store.fallback
 	if raw == nil then return 0 end
@@ -831,8 +829,7 @@ local function BuildAnchorOrder(instID)
 			end
 		end
 	end
-	local total = #pref + #alt + #late
-	if total < CFG.minFix then return 0 end
+	if (#pref + #alt + #late) < CFG.minFix then return 0 end
 	wipe(POS.ours)
 	wipe(POS.pool)
 	POS.poolCount = 0
@@ -858,73 +855,75 @@ local function BuildAnchorOrder(instID)
 	return POS.activeCount
 end
 
-local driver = CreateFrame("Frame")
-driver:Hide()
-driver:SetScript("OnUpdate", function(_, elapsed)
-	local step = POS.phase == 3 and CFG.stepSleep or CFG.stepActive
-	POS.elapsed = POS.elapsed + elapsed
-	if POS.elapsed < step then return end
-	POS.elapsed = 0
-	local now = GetTime()
-	if now < POS.blockedUntil then return end
-	local ok = pcall(Step, now)
-	if not ok then
-		POS.blockedUntil = now + 1.5
+local impl = {}
+local function EnsureFrames()
+	if reg.driver == nil then
+		local drv = CreateFrame("Frame")
+		drv:Hide()
+		drv:SetScript("OnUpdate", function(_, elapsed)
+			local step = (POS.phase == 3 and POS.stopAt == 0) and CFG.stepSleep or CFG.stepActive
+			POS.elapsed = POS.elapsed + elapsed
+			if POS.elapsed < step then return end
+			POS.elapsed = 0
+			local now = GetTime()
+			if POS.stopAt > 0 then
+				if now >= POS.stopAt then impl.Stop() end
+				return
+			end
+			if now < POS.blockedUntil then return end
+			local ok = pcall(Step, now)
+			if not ok then POS.blockedUntil = now + 1.5 end
+		end)
+		reg.driver = drv
 	end
-end)
-
-local motionFrame = CreateFrame("Frame")
-motionFrame:RegisterEvent("PLAYER_STARTED_MOVING")
-motionFrame:RegisterEvent("PLAYER_STOPPED_MOVING")
-motionFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
-motionFrame:RegisterEvent("ZONE_CHANGED_INDOORS")
-motionFrame:RegisterEvent("ZONE_CHANGED")
-motionFrame:SetScript("OnEvent", function(_, event)
-	local now = GetTime()
-	if event == "PLAYER_STARTED_MOVING" then
-		POS.moving = true
-		ResetMotion(now)
-		if POS.active and POS.phase == 3 then
-			POS.phase = 2
-			POS.settleLeft = 0
-			POS.elapsed = CFG.stepActive
-			SwitchSlot(NextSlotIndex(), now)
-		end
-	elseif event == "PLAYER_STOPPED_MOVING" then
-		POS.moving = false
-		ResetMotion(now)
-		if POS.active and POS.phase == 2 then
-			POS.settleLeft = POS.activeCount
-		end
-	elseif POS.active and POS.phase == 3 then
-		POS.nextSleepPing = now
+	if reg.motionFrame == nil then
+		local mf = CreateFrame("Frame")
+		mf:RegisterEvent("PLAYER_STARTED_MOVING")
+		mf:RegisterEvent("PLAYER_STOPPED_MOVING")
+		mf:RegisterEvent("PLAYER_ENTERING_WORLD")
+		mf:RegisterEvent("ZONE_CHANGED_INDOORS")
+		mf:RegisterEvent("ZONE_CHANGED")
+		mf:SetScript("OnEvent", function(_, event)
+			local now = GetTime()
+			if event == "PLAYER_STARTED_MOVING" then
+				POS.moving = true
+				ResetMotion(now)
+				if POS.active and POS.phase == 3 then
+					POS.phase = 2
+					POS.settleLeft = 0
+					POS.elapsed = CFG.stepActive
+					SwitchSlot(NextSlotIndex(), now)
+				end
+			elseif event == "PLAYER_STOPPED_MOVING" then
+				POS.moving = false
+				ResetMotion(now)
+				if POS.active and POS.phase == 2 then POS.settleLeft = POS.activeCount end
+			elseif event == "PLAYER_ENTERING_WORLD" then
+				if GetCurrentInstanceID() == nil then
+					wipe(reg.leases)
+					impl.Stop()
+				elseif POS.active and POS.phase == 3 then
+					POS.nextSleepPing = now
+				end
+			elseif POS.active and POS.phase == 3 then
+				POS.nextSleepPing = now
+			end
+		end)
+		reg.motionFrame = mf
 	end
-end)
-
-function MapUtils:IsInstancePositionAvailable()
-	return C_SuperTrack ~= nil and C_SuperTrack.SetSuperTrackedMapPin ~= nil and C_Navigation ~= nil and C_Navigation.GetDistance ~= nil and MapUtils.INSTANCEPOS ~= nil
 end
 
-function MapUtils:IsInstancePositionEnabled()
-	return MapUtils:IsInstancePositionAvailable() and MapUtils:GetConfig("INSTANCEPLAYERPOS", true) ~= false
+function impl.IsAvailable()
+	return C_SuperTrack ~= nil and C_SuperTrack.SetSuperTrackedMapPin ~= nil and C_Navigation ~= nil and C_Navigation.GetDistance ~= nil and reg.data ~= nil
 end
 
-function MapUtils:IsInstancePositionScanning()
-	return POS.active == true
-end
-
-function MapUtils:GetInstanceArtBounds(artKey)
-	local store = MapUtils.INSTANCEPOS
-	if store == nil or store.art == nil or artKey == nil then return nil end
-	return store.art[tostring(artKey)]
-end
-
-function MapUtils:StartInstancePosition(instID)
-	if not MapUtils:IsInstancePositionEnabled() or instID == nil then return false end
+function impl.Start(instID)
+	if not impl.IsAvailable() or instID == nil then return false end
 	if POS.active and POS.instID == instID then return true end
-	if POS.active then MapUtils:StopInstancePosition() end
+	if POS.active then impl.Stop() end
 	if BuildAnchorOrder(instID) < CFG.minFix then return false end
 
+	EnsureFrames()
 	SaveSuperTrack()
 	SetMarkerAlpha(false)
 	local now = GetTime()
@@ -945,6 +944,7 @@ function MapUtils:StartInstancePosition(instID)
 	POS.lastOk = 0
 	POS.moving = IsPlayerMoving()
 	POS.blockedUntil = 0
+	POS.stopAt = 0
 	POS.elapsed = 0
 	POS.settleLeft = 0
 	POS.zCount = 0
@@ -959,23 +959,52 @@ function MapUtils:StartInstancePosition(instID)
 	POS.curIdx = 1
 	POS.prevSlot = nil
 	SwitchSlot(1, now)
-	driver:Show()
+	reg.driver:Show()
 	return true
 end
 
-function MapUtils:StopInstancePosition()
+function impl.Stop()
+	POS.stopAt = 0
 	if not POS.active then return end
 	POS.active = false
 	POS.instID = nil
 	POS.phase = 0
-	driver:Hide()
+	if reg.driver ~= nil then reg.driver:Hide() end
 	POS.fix.valid = false
 	POS.fix.confirmed = false
 	RestoreSuperTrack()
 	SetMarkerAlpha(true)
 end
 
-function MapUtils:GetInstancePosition()
+function impl.Request(ownerKey, instID)
+	if ownerKey == nil or instID == nil then return false end
+	if not impl.IsAvailable() then return false end
+	reg.leases[ownerKey] = instID
+	POS.stopAt = 0
+	return impl.Start(instID)
+end
+
+function impl.Release(ownerKey)
+	if ownerKey == nil or reg.leases[ownerKey] == nil then return end
+	reg.leases[ownerKey] = nil
+	local nextInst = nil
+	for _, id in pairs(reg.leases) do
+		nextInst = id
+		break
+	end
+	if nextInst == nil then
+		if POS.active and GetCurrentInstanceID() == POS.instID then
+			POS.stopAt = GetTime() + 0.2
+		else
+			impl.Stop()
+		end
+	elseif POS.instID ~= nextInst then
+		POS.stopAt = 0
+		impl.Start(nextInst)
+	end
+end
+
+function impl.Get()
 	if not POS.active or not POS.fix.valid or not POS.fix.confirmed then return nil end
 	local now = GetTime()
 	local x, y = EstimatePos(now)
@@ -983,15 +1012,165 @@ function MapUtils:GetInstancePosition()
 	return x, y, f.zMed, f.heading, now - f.time, f.residual, POS.phase
 end
 
-function MapUtils:PrintInstancePositionStatus()
-	local avail = MapUtils:IsInstancePositionAvailable()
-	local enabled = MapUtils:IsInstancePositionEnabled()
+function impl.GetArtBounds(artKey)
+	local store = reg.data
+	if store == nil or store.art == nil or artKey == nil then return nil end
+	local key = ExtractArtKey(artKey)
+	if key == nil then return nil end
+	return store.art[key]
+end
+
+function impl.GetLive(ownerKey, instID, enabled)
+	local curInst = GetCurrentInstanceID()
+	if curInst == nil or instID == nil or curInst ~= instID or enabled == false then
+		impl.Release(ownerKey)
+		return nil
+	end
+	local wx, wy, wz, heading, age
+	if UnitPosition ~= nil then
+		local nx, ny = UnitPosition("player")
+		if not IsSecret(nx) and not IsSecret(ny) and type(nx) == "number" and type(ny) == "number" then
+			impl.Release(ownerKey)
+			wx, wy, age = nx, ny, 0
+		end
+	end
+	if wx == nil then
+		impl.Request(ownerKey, curInst)
+		local fx, fy, fz, fhead, fage = impl.Get()
+		if fx ~= nil and fage ~= nil and fage <= POS_MAX_AGE then
+			wx, wy, wz, heading, age = fx, fy, fz, fhead, fage
+		end
+	end
+	if wx == nil then return nil end
+	local facing = nil
+	if GetPlayerFacing ~= nil then
+		local f = GetPlayerFacing()
+		if not IsSecret(f) and type(f) == "number" then facing = f end
+	end
+	if facing == nil then facing = heading end
+	return wx, wy, wz, facing, age
+end
+
+if reg.version < VERSION then
+	reg.version = VERSION
+	reg.impl = impl
+end
+
+function D4:RegisterInstancePosData(data)
+	if type(data) == "table" then reg.data = data end
+end
+
+function D4:IsInstancePositionAvailable()
+	return reg.impl.IsAvailable()
+end
+
+function D4:IsInstancePositionScanning()
+	return POS.active == true
+end
+
+function D4:RequestInstancePosition(ownerKey, instID)
+	return reg.impl.Request(ownerKey, instID)
+end
+
+function D4:ReleaseInstancePosition(ownerKey)
+	reg.impl.Release(ownerKey)
+end
+
+function D4:GetInstancePosition()
+	return reg.impl.Get()
+end
+
+function D4:GetInstanceArtBounds(artKey)
+	return reg.impl.GetArtBounds(artKey)
+end
+
+function D4:GetLiveInstancePosition(ownerKey, instID, enabled)
+	return reg.impl.GetLive(ownerKey, instID, enabled)
+end
+
+function D4:CreateInstancePosArrow(parent, level, size)
+	local a = CreateFrame("Frame", nil, parent)
+	local sz = size or ARROW_SIZE
+	a:SetSize(sz, sz)
+	a:EnableMouse(false)
+	if level ~= nil then a:SetFrameLevel(level) end
+	local tex = a:CreateTexture(nil, "OVERLAY")
+	tex:SetAllPoints(a)
+	tex:SetTexture("Interface\\Minimap\\MinimapArrow")
+	a.tex = tex
+	a:Hide()
+	return a
+end
+
+function D4:HideInstancePosArrow(arrow, ownerKey)
+	if arrow ~= nil then
+		if arrow:IsShown() then arrow:Hide() end
+		arrow._d4X = nil
+		arrow._d4Y = nil
+		arrow._d4Rot = nil
+	end
+	if ownerKey ~= nil then reg.impl.Release(ownerKey) end
+end
+
+function D4:UpdateInstancePosArrow(arrow, artTex, artKey, ownerKey, enabled)
+	if arrow == nil or artTex == nil or enabled == false then
+		D4:HideInstancePosArrow(arrow, ownerKey)
+		return false
+	end
+	local bounds = reg.impl.GetArtBounds(artKey)
+	if bounds == nil then
+		D4:HideInstancePosArrow(arrow, ownerKey)
+		return false
+	end
+	local wx, wy, _, facing = reg.impl.GetLive(ownerKey, bounds[1], enabled)
+	if wx == nil then
+		if arrow:IsShown() then arrow:Hide() end
+		arrow._d4X = nil
+		arrow._d4Y = nil
+		return false
+	end
+	local dx = bounds[3] - bounds[2]
+	local dy = bounds[5] - bounds[4]
+	local aw = artTex:GetWidth() or 0
+	local ah = artTex:GetHeight() or 0
+	if dx <= 0 or dy <= 0 or aw <= 0 or ah <= 0 then
+		if arrow:IsShown() then arrow:Hide() end
+		return false
+	end
+	local u = (bounds[5] - wy) / dy
+	local v = (bounds[3] - wx) / dx
+	if u < -0.06 or u > 1.06 or v < -0.06 or v > 1.06 then
+		if arrow:IsShown() then arrow:Hide() end
+		arrow._d4X = nil
+		arrow._d4Y = nil
+		return false
+	end
+	local ax = u * aw
+	local ay = -v * ah
+	if arrow._d4X == nil or math.abs(ax - arrow._d4X) > 0.05 or math.abs(ay - arrow._d4Y) > 0.05 then
+		arrow._d4X = ax
+		arrow._d4Y = ay
+		arrow:ClearAllPoints()
+		arrow:SetPoint("CENTER", artTex, "TOPLEFT", ax, ay)
+	end
+	if facing ~= nil and (arrow._d4Rot == nil or math.abs(facing - arrow._d4Rot) > 0.005) then
+		arrow._d4Rot = facing
+		arrow.tex:SetRotation(facing)
+	end
+	if not arrow:IsShown() then arrow:Show() end
+	return true
+end
+
+function D4:PrintInstancePositionStatus()
+	local avail = reg.impl.IsAvailable()
 	local phaseNames = {[0] = "idle", [1] = "acquiring", [2] = "tracking", [3] = "sleeping"}
 	local pName = phaseNames[POS.phase] or tostring(POS.phase)
+	local leaseList = {}
+	for k in pairs(reg.leases) do leaseList[#leaseList + 1] = k end
 	local f = POS.fix
 	if f.valid then
-		MapUtils:INFO(format("InstancePos: avail=%s enabled=%s active=%s phase=%s inst=%s xyz=(%.1f, %.1f, %.1f) res=%.2f confirmed=%s", tostring(avail), tostring(enabled), tostring(POS.active), pName, tostring(POS.instID), f.x, f.y, f.zMed, f.residual, tostring(f.confirmed)))
+		self:INFO(format("InstancePos: avail=%s active=%s phase=%s inst=%s leases=[%s] xyz=(%.1f, %.1f, %.1f) res=%.2f confirmed=%s", tostring(avail), tostring(POS.active), pName, tostring(POS.instID), table.concat(leaseList, ","), f.x, f.y, f.zMed, f.residual, tostring(f.confirmed)))
 	else
-		MapUtils:INFO(format("InstancePos: avail=%s enabled=%s active=%s phase=%s inst=%s (no fix)", tostring(avail), tostring(enabled), tostring(POS.active), pName, tostring(POS.instID)))
+		self:INFO(format("InstancePos: avail=%s active=%s phase=%s inst=%s leases=[%s] (no fix)", tostring(avail), tostring(POS.active), pName, tostring(POS.instID), table.concat(leaseList, ",")))
 	end
 end
