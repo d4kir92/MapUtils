@@ -688,6 +688,8 @@ local function HandleSlash(args)
 		MapUtils:RunRenderBenchmark()
 	elseif sub == "pos" then
 		MapUtils:PrintPlayerPosition()
+	elseif sub == "instpos" and MapUtils.PrintInstancePositionStatus ~= nil then
+		MapUtils:PrintInstancePositionStatus()
 	elseif sub == "fade" then
 		MapUtils:PrintFadeDebug()
 	elseif sub == "preload" and MapUtils.TogglePreloadVisible ~= nil then
@@ -993,6 +995,19 @@ function MapUtils:InitSetting()
 				if not MapUtils:IsInstanceMapEnabled() and MapUtils:IsInstanceMapShown() then MapUtils:ToggleInstanceMap() end
 			end, nil, "2026-11-22"
 		)
+		if MapUtils.IsInstancePositionAvailable ~= nil and MapUtils:IsInstancePositionAvailable() then
+			AddTooltip(
+				AddCheckbox(
+					"INSTANCEPLAYERPOS",
+					true,
+					function()
+						if MapUtils.RefreshInstancePosition ~= nil then MapUtils:RefreshInstancePosition() end
+					end, nil, "2026-11-26"
+				),
+				"LID_INSTANCEPLAYERPOS",
+				"LID_INSTANCEPLAYERPOSDESC"
+			)
+		end
 		AddSharedCheckbox("INSTANCEPINS_BOSS", "LID_SHOWBOSSPINS", ADDED_1004)
 		AddSharedCheckbox("INSTANCEPINS_ITEM", "LID_SHOWQUESTITEMPINS", ADDED_1004)
 		AddSharedCheckbox("INSTANCEPINS_QUEST", "LID_SHOWQUESTPINS", "2026-11-15")

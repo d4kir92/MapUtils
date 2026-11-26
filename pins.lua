@@ -3480,6 +3480,7 @@ MapUtils:RegisterWaypointMarker(function(mapID, x, y)
 	return false
 end)
 MapUtils:RegisterWaypointCallback(function()
+	if MapUtils.IsInstancePositionScanning ~= nil and MapUtils:IsInstancePositionScanning() then return end
 	waypointCache.valid = false
 	waypointCache.key = nil
 	wipe(waypointCache.positions)
@@ -3961,6 +3962,7 @@ function MapUtils:HookWaypointDistance()
 	local updating = false
 	local function UpdateDistance()
 		if updating or MapUtils:GetConfig("WAYPOINTDISTANCE", "METERS") == "YARDS" then return end
+		if MapUtils.IsInstancePositionScanning ~= nil and MapUtils:IsInstancePositionScanning() then return end
 		local original = text:GetText()
 		if issecretvalue and issecretvalue(original) then return end
 		if original == nil or original == "" then return end
@@ -3985,6 +3987,7 @@ local function FixSuperTrackedFrame()
 	if superTrackedFixed or frame == nil then return superTrackedFixed end
 	superTrackedFixed = true
 	local function ShouldForceAlpha()
+		if MapUtils.IsInstancePositionScanning ~= nil and MapUtils:IsInstancePositionScanning() then return false end
 		if not MapUtils:IsWaypointTracked() and not MapUtils:GetConfig("ALWAYSSHOWWAYPOINT", false) then return false end
 		if C_Navigation == nil or C_Navigation.GetDistance == nil then return false end
 		local distance = C_Navigation.GetDistance() or 0
@@ -3997,6 +4000,7 @@ local function FixSuperTrackedFrame()
 		local original = frame[key]
 		if original ~= nil then
 			frame[key] = function(self, ...)
+				if MapUtils.IsInstancePositionScanning ~= nil and MapUtils:IsInstancePositionScanning() then return 0 end
 				local alpha = original(self, ...)
 				if alpha == 0 and ShouldForceAlpha() then return SUPERTRACKED_ALPHA end
 
