@@ -51,6 +51,7 @@ locale\names.lua
 profiler.lua
 flavor.lua
 data\classic\instances.lua
+data\classic\instanceminimap.lua
 data\tbc\instances.lua
 data\classic\transports.lua
 data\tbc\transports.lua
@@ -74,6 +75,7 @@ shared\InstancePins\instance_map_pins.lua
 shared\InstancePins\instance_pin_info.lua
 instancepinrows.lua
 instancemap.lua
+instanceminimap.lua
 mapframe.lua
 editmode.lua
 widgets.lua
