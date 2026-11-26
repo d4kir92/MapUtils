@@ -1363,6 +1363,8 @@ local SmoothZoom = {
 	cityCoreShare = 0.5,
 	cityZoomCoreShare = 0.85,
 	zoneEnterCover = 0.95,
+	zoneSwitchLead = 0.25,
+	zoneSampleGrid = 5,
 	leaveContinentArea = 1.8,
 	minZoomPick = 1.02,
 	checkInterval = 0.1,
@@ -1920,6 +1922,76 @@ function SmoothZoom.RectOn(mapID, space)
 	return C_Map.GetMapRectOnMap(mapID, space)
 end
 
+function SmoothZoom.IsPlainZone(mapID)
+	if mapID == nil or not SmoothZoom.IsSpace(mapID) then return false end
+	if MapUtils.GetZoneDetailCityZone ~= nil and MapUtils:GetZoneDetailCityZone(mapID) ~= nil then return false end
+	local info = C_Map.GetMapInfo(mapID)
+
+	return info ~= nil and Enum ~= nil and Enum.UIMapType ~= nil and info.mapType == Enum.UIMapType.Zone
+end
+
+function SmoothZoom.SampleZoneCoverage(host, space, continent, l, r, t, b, u, v, viewWidth, viewHeight, x, y, scale)
+	local cache = SmoothZoom.zoneCoverage
+	if cache ~= nil and cache.host == host and cache.x == x and cache.y == y and cache.scale == scale then return cache.shares end
+	local counts, total, grid = {}, 0, SmoothZoom.zoneSampleGrid
+	local step = 0.8 / math.max(1, grid - 1)
+	for row = 0, grid - 1 do
+		local sv = v + (-0.4 + row * step) * viewHeight
+		for col = 0, grid - 1 do
+			local su = u + (-0.4 + col * step) * viewWidth
+			local zone
+			if su >= l and su <= r and sv >= t and sv <= b then
+				zone = SmoothZoom.ZoneAt(continent, space, su, sv, l, r, t, b)
+			else
+				local _, other = SmoothZoom.ContinentAt(space, su, sv, continent)
+				zone = other
+			end
+
+			local id = zone and zone.mapID
+			if id ~= nil and not SmoothZoom.IsPlainZone(id) and MapUtils.GetZoneDetailCityZone ~= nil then id = MapUtils:GetZoneDetailCityZone(id) end
+			if id ~= nil and SmoothZoom.IsPlainZone(id) then
+				counts[id] = (counts[id] or 0) + 1
+				total = total + 1
+			end
+		end
+	end
+
+	local shares
+	if total > 0 then
+		shares = {}
+		for id, count in pairs(counts) do
+			shares[id] = count / total
+		end
+	end
+
+	SmoothZoom.zoneCoverage = {
+		["host"] = host,
+		["x"] = x,
+		["y"] = y,
+		["scale"] = scale,
+		["shares"] = shares,
+	}
+
+	return shares
+end
+
+function SmoothZoom.PickDominantZone(host, pick, space, continent, l, r, t, b, u, v, viewWidth, viewHeight, x, y, scale, fits)
+	if not SmoothZoom.IsPlainZone(pick) then return pick end
+	local shares = SmoothZoom.SampleZoneCoverage(host, space, continent, l, r, t, b, u, v, viewWidth, viewHeight, x, y, scale)
+	if shares == nil then return pick end
+	local best, bestShare = pick, shares[pick] or 0
+	for id, share in pairs(shares) do
+		if share > bestShare and fits(id, false) then best, bestShare = id, share end
+	end
+
+	if best ~= host and SmoothZoom.IsPlainZone(host) then
+		local hostShare = shares[host] or 0
+		if bestShare - hostShare < SmoothZoom.zoneSwitchLead then return host end
+	end
+
+	return best
+end
+
 function SmoothZoom.PickMap(container)
 	local host = container.mapID
 	local left, right, top, bottom = MapUtils:GetZoneDetailSpaceRect(host)
@@ -1996,11 +2068,18 @@ function SmoothZoom.PickMap(container)
 				local sampleY = v + math.sin(angle) * viewHeight * radius
 				if sampleX >= l and sampleX <= r and sampleY >= t and sampleY <= b then
 					local nearby = SmoothZoom.ZoneAt(continent, space, sampleX, sampleY, l, r, t, b)
-					if nearby ~= nil and nearby.mapType == Enum.UIMapType.Zone and SmoothZoom.IsSpace(nearby.mapID) and MapUtils:GetZoneDetailCityZone(nearby.mapID) == nil and Fits(nearby.mapID, false) then return nearby.mapID end
+					if nearby ~= nil and nearby.mapType == Enum.UIMapType.Zone and SmoothZoom.IsSpace(nearby.mapID) and MapUtils:GetZoneDetailCityZone(nearby.mapID) == nil and Fits(nearby.mapID, false) then
+						pick = nearby.mapID
+						break
+					end
 				end
 			end
+
+			if pick ~= continent then break end
 		end
 	end
+
+	if pick ~= space and pick ~= continent then return SmoothZoom.PickDominantZone(host, pick, space, continent, l, r, t, b, u, v, viewWidth, viewHeight, x, y, scale, Fits) end
 
 	return pick
 end
