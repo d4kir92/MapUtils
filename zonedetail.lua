@@ -1592,11 +1592,11 @@ local function Update(force)
 
 	base.ApplyLevels(child:GetFrameLevel() + FRAME_LEVEL_OFFSET, GetEmbeddedCityStyle(mapID) ~= nil)
 	container:Show()
-	base.fade.Update()
 	MinimapLayer.signature = nil
 	base.cull.dirty = true
 	base.cull.switchUntil = GetTime() + base.cull.switchWindow
 	if MapUtils.zoneSwitching then return end
+	base.fade.Update()
 	MinimapLayer.Update()
 	base.cull.Run()
 end
@@ -2264,6 +2264,16 @@ function MinimapLayer.UpdateCityDetail(force)
 	end
 end
 
+function MinimapLayer.PadRange(x0, x1, y0, y1, count, maxLimit)
+	if count > maxLimit then return x0, x1, y0, y1, count end
+	local px0, px1 = math.max(0, x0 - 1), math.min(63, x1 + 1)
+	local py0, py1 = math.max(0, y0 - 1), math.min(63, y1 + 1)
+	local padded = (px1 - px0 + 1) * (py1 - py0 + 1)
+	if padded <= maxLimit then return px0, px1, py0, py1, padded end
+
+	return x0, x1, y0, y1, count
+end
+
 function MinimapLayer.Update()
 	if container == nil or MinimapLayer.frame == nil then return end
 	local host = WorldMapFrame:GetMapID()
@@ -2350,12 +2360,14 @@ function MinimapLayer.Update()
 					local x0, x1 = math.max(0, math.floor(32 - maxY / MinimapLayer.tile)), math.min(63, math.floor(32 - minY / MinimapLayer.tile))
 					local y0, y1 = math.max(0, math.floor(32 - maxX / MinimapLayer.tile)), math.min(63, math.floor(32 - minX / MinimapLayer.tile))
 					local count = (x1 - x0 + 1) * (y1 - y0 + 1)
-					info.range = format("x %d-%d y %d-%d (%d)", x0, x1, y0, y1, count)
 					local useTerrain = terrain or embeddedStyle == "TERRAIN"
+					local maxLimit = useTerrain and MinimapLayer.terrainMaxTiles or MinimapLayer.maxTiles
+					if minX <= maxX and minY <= maxY and x1 >= x0 and y1 >= y0 then x0, x1, y0, y1, count = MinimapLayer.PadRange(x0, x1, y0, y1, count, maxLimit) end
+					info.range = format("x %d-%d y %d-%d (%d)", x0, x1, y0, y1, count)
 					local lod = useTerrain and count > MinimapLayer.terrainMaxTiles and MinimapLayer.GetLOD(source.instance)
 					local coarse = useTerrain and tilePixels <= MinimapLayer.coarseMaxPixels and MinimapLayer.coarse[source.instance]
 					if coarse then lod = nil end
-					if minX <= maxX and minY <= maxY and x1 >= x0 and y1 >= y0 and (count <= (useTerrain and MinimapLayer.terrainMaxTiles or MinimapLayer.maxTiles) or lod or coarse) then
+					if minX <= maxX and minY <= maxY and x1 >= x0 and y1 >= y0 and (count <= maxLimit or lod or coarse) then
 						if terrain or count <= MinimapLayer.maxTiles then alpha = math.max(alpha, MinimapLayer.maxAlpha * math.min(1, share)) end
 						if embeddedStyle == "TERRAIN" or count <= MinimapLayer.maxTiles then cityAlpha = math.max(cityAlpha, MinimapLayer.maxAlpha * math.min(1, cityShare)) end
 						info.drawn = coarse and "coarse" or lod and "lod" or "tiles"
@@ -2432,8 +2444,12 @@ function MinimapLayer.Update()
 	local now = GetTime()
 	if ready or MinimapLayer.waitSince and now - MinimapLayer.waitSince > MinimapLayer.swapTimeout then
 		MinimapLayer.waitSince = nil
-		for key in pairs(MinimapLayer.active) do
-			if not wanted[key] then MinimapLayer.Release(key) end
+		if now < (base.cull.switchUntil or 0) then
+			MinimapLayer.signature = nil
+		else
+			for key in pairs(MinimapLayer.active) do
+				if not wanted[key] then MinimapLayer.Release(key) end
+			end
 		end
 	else
 		MinimapLayer.waitSince = MinimapLayer.waitSince or now
