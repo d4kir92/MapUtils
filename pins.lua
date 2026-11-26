@@ -1871,17 +1871,47 @@ local function GetFlightIcon(node, faction)
 end
 
 function MapUtils:GetFlightKnowledge()
-	local guid = UnitGUID("player")
-	if guid == nil or MAUTTAB == nil then return {} end
-	if MAUTTAB.flightKnowledgeVersion ~= 4 then
-		MAUTTAB.flightKnowledge = {}
-		MAUTTAB.flightKnowledgeVersion = 4
+	if not PinCache.flightReady then return {} end
+	if type(MAUTTABPC) ~= "table" then MAUTTABPC = {} end
+	if MAUTTABPC.flightKnowledgeVersion ~= 4 or type(MAUTTABPC.flightKnowledge) ~= "table" then
+		MAUTTABPC.flightKnowledge = {}
+		MAUTTABPC.flightKnowledgeVersion = 4
+		local guid = UnitGUID("player")
+		if guid ~= nil and type(MAUTTAB) == "table" and MAUTTAB.flightKnowledgeVersion == 4 and type(MAUTTAB.flightKnowledge) == "table" and type(MAUTTAB.flightKnowledge[guid]) == "table" then
+			for nodeID, value in pairs(MAUTTAB.flightKnowledge[guid]) do
+				if value == true then MAUTTABPC.flightKnowledge[nodeID] = true end
+			end
+		end
 	end
 
-	MAUTTAB.flightKnowledge = MAUTTAB.flightKnowledge or {}
-	MAUTTAB.flightKnowledge[guid] = MAUTTAB.flightKnowledge[guid] or {}
+	return MAUTTABPC.flightKnowledge
+end
 
-	return MAUTTAB.flightKnowledge[guid]
+function MapUtils:CaptureNearbyFlightNode()
+	if not PinCache.flightReady or C_Map == nil or C_Map.GetBestMapForUnit == nil or C_TaxiMap == nil or C_TaxiMap.GetTaxiNodesForMap == nil then return end
+	local mapID = C_Map.GetBestMapForUnit("player")
+	local wx, wy = UnitPosition("player")
+	if mapID == nil or wx == nil or wy == nil then return end
+	if issecretvalue ~= nil and (issecretvalue(mapID) or issecretvalue(wx) or issecretvalue(wy)) then return end
+	local bestNodeID, bestDistSq = nil, 60 * 60
+	local ok, nodes = pcall(C_TaxiMap.GetTaxiNodesForMap, mapID)
+	if ok and type(nodes) == "table" then
+		for _, node in ipairs(nodes) do
+			if node.nodeID ~= nil and node.position ~= nil then
+				local nx, ny = node.position:GetXY()
+				local pos = GetEntryWorldPos(mapID, {x = nx, y = ny})
+				if pos ~= nil then
+					local dx, dy = pos.x - wx, pos.y - wy
+					local distSq = dx * dx + dy * dy
+					if distSq <= bestDistSq then
+						bestDistSq = distSq
+						bestNodeID = node.nodeID
+					end
+				end
+			end
+		end
+	end
+	if bestNodeID ~= nil then self:GetFlightKnowledge()[bestNodeID] = true end
 end
 
 function MapUtils:CaptureFlightKnowledge()
@@ -1969,10 +1999,16 @@ local function GetFlights(mapID)
 					entry.nodeID = node.nodeID
 					entry.name = MapUtils:TransName(node.name)
 					entry.faction = faction
-					entry.undiscovered = node.isUndiscovered == true
 					local known = MapUtils:GetFlightKnowledge()[node.nodeID]
-					entry.discoveryKnown = entry.undiscovered or known ~= nil or MapUtils:GetWoWBuild() == "RETAIL" and not MapUtils:IsForever() and type(node.isUndiscovered) == "boolean"
-					if not entry.undiscovered and known ~= nil then entry.undiscovered = not known end
+					if known == true then
+						entry.undiscovered = false
+						entry.discoveryKnown = true
+						entry.seen = true
+					else
+						entry.undiscovered = node.isUndiscovered == true
+						entry.discoveryKnown = entry.undiscovered or known ~= nil or MapUtils:GetWoWBuild() == "RETAIL" and not MapUtils:IsForever() and type(node.isUndiscovered) == "boolean"
+						if not entry.undiscovered and known ~= nil then entry.undiscovered = not known end
+					end
 					if druidFlight then
 						entry.undiscovered = false
 						entry.discoveryKnown = true
@@ -1987,7 +2023,7 @@ local function GetFlights(mapID)
 		end
 	end
 
-	flights[mapID] = list
+	if PinCache.flightReady then flights[mapID] = list end
 
 	return list
 end
@@ -3452,6 +3488,8 @@ end)
 
 if C_TaxiMap ~= nil and C_TaxiMap.GetTaxiNodesForMap ~= nil then
 	local taxiFrame = CreateFrame("FRAME")
+	MapUtils:RegisterEvent(taxiFrame, "PLAYER_LOGIN")
+	MapUtils:RegisterEvent(taxiFrame, "PLAYER_ENTERING_WORLD")
 	MapUtils:RegisterEvent(taxiFrame, "TAXI_NODE_STATUS_CHANGED")
 	MapUtils:RegisterEvent(taxiFrame, "TAXIMAP_OPENED")
 	MapUtils:RegisterEvent(taxiFrame, "UI_INFO_MESSAGE")
@@ -3471,13 +3509,21 @@ if C_TaxiMap ~= nil and C_TaxiMap.GetTaxiNodesForMap ~= nil then
 	taxiFrame:SetScript(
 		"OnEvent",
 		function(self, event, _, message)
+			if event == "PLAYER_LOGIN" or event == "PLAYER_ENTERING_WORLD" then
+				PinCache.flightReady = true
+				return self.Refresh()
+			end
 			if event == "TAXIMAP_OPENED" then MapUtils:CaptureFlightKnowledge() end
 			if event == "UI_INFO_MESSAGE" then
 				if ERR_NEWTAXIPATH == nil or message ~= ERR_NEWTAXIPATH then return end
+				MapUtils:CaptureNearbyFlightNode()
 				if C_Timer ~= nil then C_Timer.After(0.5, self.Refresh) end
 			end
 
-			if event == "TAXI_NODE_STATUS_CHANGED" then return self.QueueRefresh() end
+			if event == "TAXI_NODE_STATUS_CHANGED" then
+				if (TaxiFrame ~= nil and TaxiFrame:IsShown()) or (FlightMapFrame ~= nil and FlightMapFrame:IsShown()) then MapUtils:CaptureFlightKnowledge() end
+				return self.QueueRefresh()
+			end
 			self.Refresh()
 		end
 	)
@@ -3571,6 +3617,7 @@ local function RefreshIcons()
 end
 
 function MapUtils:RefreshPins()
+	wipe(flights)
 	worldMapID = nil
 	worldScale = nil
 	worldPiers = nil
