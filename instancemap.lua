@@ -106,10 +106,19 @@ local instanceMap = MapUtils:CreateInstanceMap(
 		["getLabel"] = GetLevelLabel,
 		["getLevelsTitle"] = function() return MapUtils:Trans("LID_MAPLEVELS") end,
 		["getLevelPanelPos"] = function() return MapUtils:GetConfig("INSTANCEMAPLEVELPOS", nil) end,
-		["setLevelPanelPos"] = function(pos) MapUtils:SetConfig("INSTANCEMAPLEVELPOS", pos) end,
+		["setLevelPanelPos"] = function(pos) MapUtils:SetMapOption("INSTANCEMAPLEVELPOS", pos) end,
 		["getLevelPanelCollapsed"] = function() return MapUtils:GetConfig("INSTANCEMAPLEVELCOLLAPSED", false) end,
-		["setLevelPanelCollapsed"] = function(collapsed) MapUtils:SetConfig("INSTANCEMAPLEVELCOLLAPSED", collapsed) end,
-		["getPins"] = function(info) return MapUtils:GetDebugInstancePins(info) end,
+		["setLevelPanelCollapsed"] = function(collapsed) MapUtils:SetMapOption("INSTANCEMAPLEVELCOLLAPSED", collapsed) end,
+		["getLevelUseNav"] = function() return MapUtils:GetConfig("INSTANCEMAPLEVELNAV", false) == true end,
+		["setLevelUseNav"] = function(useNav) MapUtils:SetMapOption("INSTANCEMAPLEVELNAV", useNav == true) end,
+		["getLevelToNavTooltip"] = function() return MapUtils:Trans("LID_MAPLEVELSTONAV") end,
+		["getLevelToWidgetLabel"] = function() return MapUtils:Trans("LID_MAPLEVELSTOWIDGET") end,
+		["getLevelToNavConfirm"] = function() return MapUtils:Trans("LID_MAPLEVELSTONAVCONFIRM") end,
+		["getLevelToWidgetConfirm"] = function() return MapUtils:Trans("LID_MAPLEVELSTOWIDGETCONFIRM") end,
+		["getPins"] = function(info)
+			MapUtils.activeInstanceArtKey = info ~= nil and info.key or nil
+			return MapUtils:GetDebugInstancePins(info)
+		end,
 		["getBossName"] = function(row) return MapUtils:TransName(row[5]) end,
 		["getLevelHint"] = function() return format("|cffffd100%s|r  %s", MapUtils:Trans("LID_LEFTCLICK"), MapUtils:Trans("LID_SHOWDESTMAP")) end,
 		["getCredit"] = function(level) return level.source and format(MapUtils:Trans("LID_MAPSOURCE"), level.source) or nil end,
