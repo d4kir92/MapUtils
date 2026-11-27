@@ -3989,6 +3989,7 @@ local function FixSuperTrackedFrame()
 	local frame = SuperTrackedFrame
 	if superTrackedFixed or frame == nil then return superTrackedFixed end
 	superTrackedFixed = true
+	if frame.UpdateAlpha == nil then return true end
 	local function ShouldForceAlpha()
 		if MapUtils.IsInstancePositionScanning ~= nil and MapUtils:IsInstancePositionScanning() then return false end
 		if not MapUtils:IsWaypointTracked() and not MapUtils:GetConfig("ALWAYSSHOWWAYPOINT", false) then return false end
@@ -3999,18 +4000,29 @@ local function FixSuperTrackedFrame()
 		return distance >= SUPERTRACKED_MIN_DISTANCE
 	end
 
-	for _, key in ipairs({"GetTargetAlphaBaseValue", "GetTargetAlpha"}) do
-		local original = frame[key]
-		if original ~= nil then
-			frame[key] = function(self, ...)
-				if MapUtils.IsInstancePositionScanning ~= nil and MapUtils:IsInstancePositionScanning() then return 0 end
-				local alpha = original(self, ...)
-				if alpha == 0 and ShouldForceAlpha() then return SUPERTRACKED_ALPHA end
+	local function IsBlizzardHidden(self)
+		if C_Navigation.HasValidScreenPosition ~= nil and not C_Navigation.HasValidScreenPosition() then return true end
+		if self.transparentUntil ~= nil and self.transparentUntil > GetTime() then return true end
+		if self.GetTargetAlphaBaseValue == nil then return false end
+		local base = self:GetTargetAlphaBaseValue()
 
-				return alpha
-			end
-		end
+		return base == nil or base == 0
 	end
+
+	hooksecurefunc(
+		frame,
+		"UpdateAlpha",
+		MapUtils.Profile(
+			"pins supertracked alpha",
+			function(self)
+				if MapUtils.IsInstancePositionScanning ~= nil and MapUtils:IsInstancePositionScanning() then
+					self:SetAlpha(0)
+				elseif ShouldForceAlpha() and IsBlizzardHidden(self) then
+					self:SetAlpha(SUPERTRACKED_ALPHA)
+				end
+			end
+		)
+	)
 
 	return true
 end
