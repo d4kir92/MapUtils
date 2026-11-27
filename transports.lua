@@ -578,21 +578,25 @@ end
 
 function Transport.UpdateWorld()
 	local shown = 0
-	local canvas = Transport.GetCanvas()
-	local projections = canvas ~= nil and Transport.Enabled(true) and MapUtils.GetMapRect ~= nil and Transport.GetProjections(WorldMapFrame:GetMapID()) or nil
-	if projections ~= nil and canvas:GetScale() > 0 then
+	local canvas = WorldMapFrame ~= nil and WorldMapFrame:IsShown() and Transport.GetCanvas() or nil
+	local scale = canvas ~= nil and canvas:GetScale() or nil
+	local projections = scale ~= nil and scale > 0 and Transport.Enabled(true) and MapUtils.GetMapRect ~= nil and Transport.GetProjections(WorldMapFrame:GetMapID()) or nil
+	if projections ~= nil then
 		local w, h = canvas:GetWidth(), canvas:GetHeight()
-		local size = Transport.iconSize / canvas:GetScale() * MapUtils:GetPinSizeFactor("VESSELWORLDMAPPINS")
-		for id, route in pairs(Transport.GetRoutes()) do
-			local instance, wx, wy, angle, zoning = Transport.GetWorldMapPosition(id)
-			local mx, my = nil, nil
-			if instance ~= nil then mx, my = Transport.Project(projections, instance, wx, wy) end
-			if mx ~= nil then
-				shown = shown + 1
-				local pin = Transport.AcquirePin(Transport.worldPins, shown, canvas)
-				Transport.ShowPin(pin, id, route, size, angle, zoning)
-				pin:SetFrameLevel(canvas:GetFrameLevel() + 2100)
-				pin:SetPoint("CENTER", canvas, "TOPLEFT", w * mx, -h * my)
+		if w ~= nil and h ~= nil and w > 0 and h > 0 then
+			local size = Transport.iconSize / scale * MapUtils:GetPinSizeFactor("VESSELWORLDMAPPINS")
+			for id, route in pairs(Transport.GetRoutes()) do
+				local instance, wx, wy, angle, zoning = Transport.GetWorldMapPosition(id)
+				local mx, my = nil, nil
+				if instance ~= nil then mx, my = Transport.Project(projections, instance, wx, wy) end
+				if mx ~= nil then
+					shown = shown + 1
+					local pin = Transport.AcquirePin(Transport.worldPins, shown, canvas)
+					if MapUtils.SetCanvasPinScale ~= nil then MapUtils:SetCanvasPinScale(pin, scale) end
+					Transport.ShowPin(pin, id, route, size, angle, zoning)
+					pin:SetFrameLevel(canvas:GetFrameLevel() + 2100)
+					pin:SetPoint("CENTER", canvas, "TOPLEFT", w * mx, -h * my)
+				end
 			end
 		end
 	end
@@ -656,11 +660,23 @@ end
 
 function Transport.CreateUpdaters()
 	if WorldMapFrame ~= nil then
+		MapUtils.CanvasPinLists = MapUtils.CanvasPinLists or {}
+		tinsert(MapUtils.CanvasPinLists, Transport.worldPins)
+		MapUtils.CanvasPinUpdaters = MapUtils.CanvasPinUpdaters or {}
+		tinsert(MapUtils.CanvasPinUpdaters, Transport.UpdateWorld)
+		MapUtils.UpdateWorldTransportsNow = Transport.UpdateWorld
 		Transport.CreateUpdater(WorldMapFrame, MapUtils.Profile("transports UpdateWorld", Transport.UpdateWorld))
 		WorldMapFrame:HookScript(
 			"OnShow",
 			function()
 				Transport.Query(false)
+				Transport.UpdateWorld()
+			end
+		)
+		WorldMapFrame:HookScript(
+			"OnHide",
+			function()
+				Transport.HideFrom(Transport.worldPins, 1)
 			end
 		)
 	end

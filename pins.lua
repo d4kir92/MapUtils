@@ -3023,6 +3023,7 @@ function PinCache.CullWorldPins(child, w, h, baseLevel, layoutChanged)
 	local view = PinCache.worldView
 	if not layoutChanged and view.left == left and view.right == right and view.top == top and view.bottom == bottom and view.level == baseLevel then return end
 	view.left, view.right, view.top, view.bottom, view.level = left, right, top, bottom, baseLevel
+	local showed = false
 	for _, pin in ipairs(worldPins) do
 		local x, y, radius = pin.worldX, pin.worldY, pin.worldRadius
 		local visible = left == nil or x + radius >= left and x - radius <= right and y + radius >= top and y - radius <= bottom
@@ -3036,6 +3037,7 @@ function PinCache.CullWorldPins(child, w, h, baseLevel, layoutChanged)
 				end
 				UpdatePinStyle(pin)
 				pin:Show()
+				showed = true
 			elseif levelChanged then
 				UpdatePinLevel(pin, IsEntryWaypoint(pin.mapID, pin.entry))
 			end
@@ -3044,6 +3046,7 @@ function PinCache.CullWorldPins(child, w, h, baseLevel, layoutChanged)
 			pin:Hide()
 		end
 	end
+	if showed and child:GetScale() ~= worldScale and MapUtils.RescaleCanvasPins ~= nil then MapUtils:RescaleCanvasPins() end
 end
 
 local function UpdateWorldPins()

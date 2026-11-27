@@ -1884,6 +1884,7 @@ function SmoothZoom.Switch(container, target, keepCurrentView)
 	SmoothZoom.SetView(container, scale * factor, mapX(x), mapY(y), targetScale * factor, mapX(targetX), mapY(targetY), city)
 	SmoothZoom.ShowLoadedArt()
 	if MapUtils.UpdateWorldPinsNow ~= nil then MapUtils.UpdateWorldPinsNow() end
+	if MapUtils.UpdateWorldTransportsNow ~= nil then MapUtils.UpdateWorldTransportsNow() end
 
 	return true
 end
@@ -2220,6 +2221,7 @@ function SmoothZoom.CenterOnMap(container)
 	SmoothZoom.SetView(container, scale, x, y, scale, x, y)
 	SmoothZoom.userMoved = false
 	if MapUtils.UpdateWorldPinsNow ~= nil then MapUtils.UpdateWorldPinsNow() end
+	if MapUtils.UpdateWorldTransportsNow ~= nil then MapUtils.UpdateWorldTransportsNow() end
 end
 
 function SmoothZoom.GlideInto(container, target)
@@ -3084,6 +3086,7 @@ function MapView.ApplyZoom(container, zoom)
 	SmoothZoom.SetView(container, scale, x, y, scale, x, y)
 	SmoothZoom.userMoved = false
 	if MapUtils.UpdateWorldPinsNow ~= nil then MapUtils.UpdateWorldPinsNow() end
+	if MapUtils.UpdateWorldTransportsNow ~= nil then MapUtils.UpdateWorldTransportsNow() end
 end
 
 function MapView.Apply()
@@ -3118,6 +3121,7 @@ function MapView.Apply()
 		SmoothZoom.SetView(container, saved.scale, saved.x, saved.y, saved.scale, saved.x, saved.y)
 		SmoothZoom.userMoved = false
 		if MapUtils.UpdateWorldPinsNow ~= nil then MapUtils.UpdateWorldPinsNow() end
+		if MapUtils.UpdateWorldTransportsNow ~= nil then MapUtils.UpdateWorldTransportsNow() end
 	else
 		MapView.pending = nil
 	end
