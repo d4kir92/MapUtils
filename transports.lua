@@ -19,12 +19,17 @@ local Transport = {
 		mists = "m"
 	},
 	decoded = {},
-	zoneIndex = {},
 	worldPins = {},
 	minimapPins = {},
 	pending = {},
 	announce = {},
 	lastAnnounce = {},
+	lastTriggers = {},
+	samples = {},
+	sampleCount = 0,
+	evalFore = {},
+	evalSide = {},
+	cands = {},
 	received = {},
 	queryGap = 600,
 	staleQueryGap = 1800,
@@ -40,12 +45,43 @@ local Transport = {
 	dockRadius = 150,
 	dockTolerance = 15,
 	interval = 0.1,
-	triggerInterval = 0.8,
-	triggerRadius = 20,
-	minMove = 6.16,
-	commitMove = 17,
-	maxMove = 80,
-	triggerCooldown = 30,
+	triggerInterval = 0.5,
+	triggerCooldown = 25,
+	windowMax = 7.0,
+	windowMin = 4.5,
+	minSamples = 10,
+	maxGap = 2.5,
+	maxStepSpeed = 80,
+	minNetDist = 45,
+	minShipArc = 95,
+	minShipSpeed = 17.5,
+	safePlayerSpeed = 19.5,
+	minExcessDist = 22,
+	ambiguityGap = 10,
+	ambiguityCap = 22,
+	hullLimits = {
+		ship = {
+			search = 42,
+			maxFore = 35,
+			maxSide = 28,
+			foreSpan = 54,
+			sideSpan = 28
+		},
+		zeppelin = {
+			search = 34,
+			maxFore = 28,
+			maxSide = 24,
+			foreSpan = 42,
+			sideSpan = 24
+		},
+		tram = {
+			search = 22,
+			maxFore = 22,
+			maxSide = 16,
+			foreSpan = 32,
+			sideSpan = 16
+		}
+	},
 	logLimit = 5000
 }
 
@@ -85,6 +121,7 @@ end
 
 function Transport.Decode(route)
 	local d = {
+		rtt = route.rtt,
 		x = {},
 		y = {},
 		dx = {},
@@ -95,6 +132,12 @@ function Transport.Decode(route)
 		offset = {
 			[0] = 0
 		},
+		inst = {},
+		wx = {},
+		wy = {},
+		segLen = {},
+		segSpd = {},
+		bounds = {},
 		plat = {},
 		trig = {},
 		zoning = {},
@@ -123,6 +166,28 @@ function Transport.Decode(route)
 				d.rawp[i] = true
 			end
 		end
+
+		local inst, wx, wy = Transport.ToWorld(route, d, i, x, y)
+		d.inst[i], d.wx[i], d.wy[i] = inst, wx, wy
+		if i > 1 and not d.jump[i] and not d.zoning[i] and inst == d.inst[i - 1] and dt > 0 then
+			local px, py = d.wx[i - 1], d.wy[i - 1]
+			local segLen = math.sqrt((wx - px) ^ 2 + (wy - py) ^ 2)
+			local segSpd = segLen / dt
+			d.segLen[i], d.segSpd[i] = segLen, segSpd
+			if segSpd >= 6 then
+				local b = d.bounds[inst]
+				if b == nil then
+					d.bounds[inst] = {math.min(wx, px), math.max(wx, px), math.min(wy, py), math.max(wy, py)}
+				else
+					b[1] = math.min(b[1], wx, px)
+					b[2] = math.max(b[2], wx, px)
+					b[3] = math.min(b[3], wy, py)
+					b[4] = math.max(b[4], wy, py)
+				end
+			end
+		else
+			d.segLen[i], d.segSpd[i] = 0, 0
+		end
 	end
 
 	d.count = #route.points
@@ -134,10 +199,6 @@ end
 function Transport.Init()
 	for id, route in pairs(Transport.GetRoutes()) do
 		Transport.decoded[id] = Transport.Decode(route)
-		for mapID, flag in pairs(route.zones or {}) do
-			Transport.zoneIndex[mapID] = Transport.zoneIndex[mapID] or {}
-			Transport.zoneIndex[mapID][id] = flag
-		end
 	end
 
 	if next(Transport.decoded) == nil then return end
@@ -698,13 +759,205 @@ function Transport.GetCurrentZone()
 	return mapID
 end
 
-function Transport.DirectionMatches(route, dx, dy, sx, sy)
-	local direction = route.direction
-	if direction == nil then return true end
-	if direction.x and dx * sx <= 0 then return false end
-	if direction.y and dy * sy <= 0 then return false end
+function Transport.ClearSamples()
+	Transport.sampleCount = 0
+end
 
-	return true
+function Transport.PushSample(now, wx, wy, instance, speed)
+	local samples, count = Transport.samples, Transport.sampleCount
+	local drop = 0
+	while drop < count and now - samples[drop + 1].t > Transport.windowMax do
+		drop = drop + 1
+	end
+
+	if drop > 0 then
+		for i = 1, count - drop do
+			local dst, src = samples[i], samples[i + drop]
+			dst.t, dst.x, dst.y, dst.inst, dst.spd = src.t, src.x, src.y, src.inst, src.spd
+		end
+
+		count = count - drop
+	end
+
+	count = count + 1
+	local slot = samples[count]
+	if slot == nil then
+		slot = {}
+		samples[count] = slot
+	end
+
+	slot.t, slot.x, slot.y, slot.inst, slot.spd = now, wx, wy, instance, speed
+	Transport.sampleCount = count
+end
+
+function Transport.SampleRoute(d, cycle)
+	local c = cycle % d.rtt
+	local lo, hi = 1, d.count
+	while lo < hi do
+		local mid = math.floor((lo + hi) * 0.5)
+		if d.offset[mid] > c then
+			hi = mid
+		else
+			lo = mid + 1
+		end
+	end
+
+	if lo <= 1 or d.jump[lo] or d.zoning[lo] or d.inst[lo] ~= d.inst[lo - 1] or d.dt[lo] <= 0 then return nil end
+	local dt = d.dt[lo]
+	local f = math.min(1, math.max(0, (c - d.offset[lo - 1]) / dt))
+	local ax, ay = d.wx[lo - 1], d.wy[lo - 1]
+	local dx, dy = d.wx[lo] - ax, d.wy[lo] - ay
+
+	return d.inst[lo], ax + dx * f, ay + dy * f, dx / dt, dy / dt, d.segSpd[lo], d.dir[lo - 1] + d.ddir[lo] * f
+end
+
+function Transport.EvaluateCandidate(route, d, phase0)
+	local lim = Transport.hullLimits[route.kind] or Transport.hullLimits.ship
+	local samples, n = Transport.samples, Transport.sampleCount
+	local inst = samples[n].inst
+	local phase = phase0
+	for _ = 1, 2 do
+		local num, den = 0, 0
+		for k = 1, n do
+			local s = samples[k]
+			local pInst, px, py, vx, vy = Transport.SampleRoute(d, s.t - phase)
+			if pInst ~= inst then return nil end
+			num = num + (s.x - px) * vx + (s.y - py) * vy
+			den = den + vx * vx + vy * vy
+		end
+
+		if den < 10 then return nil end
+		local dp = -num / den
+		if dp > 2.5 then
+			dp = 2.5
+		elseif dp < -2.5 then
+			dp = -2.5
+		end
+
+		phase = phase + dp
+	end
+
+	local fores, sides = Transport.evalFore, Transport.evalSide
+	local shipArc, playerAlong, excessDist, speedSamples = 0, 0, 0, 0
+	local minFore, maxFore = math.huge, -math.huge
+	local minSide, maxSide = math.huge, -math.huge
+	local sumFore, sumSide = 0, 0
+	local prevPx, prevPy, prevS = nil, nil, nil
+	for k = 1, n do
+		local s = samples[k]
+		local pInst, px, py, vx, vy, spd, dir = Transport.SampleRoute(d, s.t - phase)
+		if pInst ~= inst then return nil end
+		local rx, ry = s.x - px, s.y - py
+		local ux, uy
+		if spd >= 4 then
+			ux, uy = vx / spd, vy / spd
+		else
+			ux, uy = math.sin(dir), math.cos(dir)
+		end
+
+		local fore = rx * ux + ry * uy
+		local side = rx * uy - ry * ux
+		if math.abs(fore) > lim.maxFore or math.abs(side) > lim.maxSide then return nil end
+		if fore < minFore then minFore = fore end
+		if fore > maxFore then maxFore = fore end
+		if side < minSide then minSide = side end
+		if side > maxSide then maxSide = side end
+		sumFore = sumFore + fore
+		sumSide = sumSide + side
+		fores[k] = fore
+		sides[k] = side
+		if prevS ~= nil then
+			local dsx, dsy = px - prevPx, py - prevPy
+			local seg = math.sqrt(dsx * dsx + dsy * dsy)
+			shipArc = shipArc + seg
+			if seg > 0.1 then playerAlong = playerAlong + ((s.x - prevS.x) * dsx + (s.y - prevS.y) * dsy) / seg end
+			local dt = s.t - prevS.t
+			if s.spd ~= nil and prevS.spd ~= nil and dt > 0 then
+				local wStep = math.sqrt((s.x - prevS.x) ^ 2 + (s.y - prevS.y) ^ 2)
+				excessDist = excessDist + wStep - math.max(s.spd, prevS.spd) * dt
+				speedSamples = speedSamples + 1
+			end
+		end
+
+		prevPx, prevPy, prevS = px, py, s
+	end
+
+	local span = samples[n].t - samples[1].t
+	if span <= 0 then return nil end
+	local shipAvgSpd = shipArc / span
+	local playerAvgAlong = playerAlong / span
+	local foreSpan = maxFore - minFore
+	local sideSpan = maxSide - minSide
+	if shipArc < Transport.minShipArc or shipAvgSpd < Transport.minShipSpeed then return nil end
+	if foreSpan > lim.foreSpan or sideSpan > lim.sideSpan then return nil end
+	if playerAvgAlong < Transport.safePlayerSpeed and (speedSamples < n - 2 or excessDist < Transport.minExcessDist) then return nil end
+
+	local meanF, meanS = sumFore / n, sumSide / n
+	local sq = 0
+	for k = 1, n do
+		local df, ds = fores[k] - meanF, sides[k] - meanS
+		sq = sq + df * df + ds * ds
+	end
+
+	local score = math.sqrt(sq / n) + 0.35 * math.abs(meanS)
+
+	return score, (samples[n].t - phase) % d.rtt
+end
+
+function Transport.MatchRoute(route, d)
+	local last = Transport.samples[Transport.sampleCount]
+	local b = d.bounds[last.inst]
+	if b == nil then return nil end
+	local lim = Transport.hullLimits[route.kind] or Transport.hullLimits.ship
+	local lx, ly = last.x, last.y
+	if lx < b[1] - lim.search or lx > b[2] + lim.search or ly < b[3] - lim.search or ly > b[4] + lim.search then return nil end
+	local cands, candCount = Transport.cands, 0
+	local inRun, runBestDist, runBestCycle = false, math.huge, 0
+	for i = 2, d.count do
+		if d.segLen[i] <= 0 or d.segSpd[i] < 6 or d.inst[i] ~= last.inst then
+			if inRun then
+				candCount = candCount + 1
+				cands[candCount] = runBestCycle
+				inRun, runBestDist = false, math.huge
+			end
+		else
+			local ax, ay = d.wx[i - 1], d.wy[i - 1]
+			local vx, vy = d.wx[i] - ax, d.wy[i] - ay
+			local len2 = vx * vx + vy * vy
+			local u = ((lx - ax) * vx + (ly - ay) * vy) / len2
+			if u < 0 then
+				u = 0
+			elseif u > 1 then
+				u = 1
+			end
+
+			local dist = math.sqrt((lx - (ax + vx * u)) ^ 2 + (ly - (ay + vy * u)) ^ 2)
+			if dist <= lim.search then
+				if not inRun or dist < runBestDist then
+					inRun = true
+					runBestDist = dist
+					runBestCycle = d.offset[i - 1] + u * d.dt[i]
+				end
+			elseif inRun then
+				candCount = candCount + 1
+				cands[candCount] = runBestCycle
+				inRun, runBestDist = false, math.huge
+			end
+		end
+	end
+
+	if inRun then
+		candCount = candCount + 1
+		cands[candCount] = runBestCycle
+	end
+
+	local bestScore, bestCycle = nil, nil
+	for i = 1, candCount do
+		local score, cycle = Transport.EvaluateCandidate(route, d, last.t - cands[i])
+		if score ~= nil and (bestScore == nil or score < bestScore) then bestScore, bestCycle = score, cycle end
+	end
+
+	return bestScore, bestCycle
 end
 
 function Transport.GetLog()
@@ -753,47 +1006,72 @@ end
 function Transport.CheckTriggers()
 	Transport.Record()
 	local _, instanceType = GetInstanceInfo()
-	local zone = (instanceType ~= "party" and instanceType ~= "raid") and Transport.GetCurrentZone() or nil
-	local routes = zone ~= nil and Transport.zoneIndex[zone] or nil
-	if routes == nil and instanceType == "none" then routes = Transport.GetRoutes() end
-	if routes == nil then
-		Transport.lastPos = nil
+	if instanceType == "party" or instanceType == "raid" then
+		Transport.ClearSamples()
 
 		return
 	end
 
 	local u1, u2, _, instance = UnitPosition("player")
-	if u1 == nil or Transport.IsSecret(u1, u2, instance) then return end
-	local last = Transport.lastPos
-	Transport.lastPos = {u2, u1, instance}
-	if last == nil or last[3] ~= instance then return end
-	local wx, wy = u2, u1
-	local dx, dy = wx - last[1], wy - last[2]
-	local moved = math.sqrt(dx * dx + dy * dy)
-	if moved <= Transport.minMove or moved > Transport.maxMove then return end
-	if IsSwimming() or UnitOnTaxi("player") then return end
-	if Transport.lastTrigger ~= nil and GetTime() - Transport.lastTrigger < Transport.triggerCooldown then return end
-	for id, flag in pairs(routes) do
-		local route, d = Transport.GetRoutes()[id], Transport.decoded[id]
-		if flag ~= "virtual" and route ~= nil and d ~= nil then
-			for _, index in ipairs(d.trig) do
-				local ti, tx, ty = Transport.ToWorld(route, d, index, d.x[index], d.y[index])
-				local pi, px, py = Transport.ToWorld(route, d, index - 1, d.x[index - 1], d.y[index - 1])
-				if ti == instance and pi == instance and math.sqrt((wx - tx) ^ 2 + (wy - ty) ^ 2) < Transport.triggerRadius and Transport.DirectionMatches(route, dx, dy, tx - px, ty - py) then
-					if moved > Transport.commitMove then
-						local segment = math.sqrt((tx - px) ^ 2 + (ty - py) ^ 2)
-						if segment > 0 then
-							local extrapolate = -d.dt[index] + d.dt[index] * math.sqrt((wx - px) ^ 2 + (wy - py) ^ 2) / segment
-							Transport.Observe(id, d.offset[index] + extrapolate)
-							Transport.lastTrigger = GetTime()
-						end
-					end
+	if u1 == nil or Transport.IsSecret(u1, u2, instance) then
+		Transport.ClearSamples()
 
-					return
+		return
+	end
+
+	if IsSwimming() or UnitOnTaxi("player") or (IsFlying ~= nil and IsFlying()) then
+		Transport.ClearSamples()
+
+		return
+	end
+
+	local speed = GetUnitSpeed ~= nil and GetUnitSpeed("player") or nil
+	if speed ~= nil and (Transport.IsSecret(speed) or type(speed) ~= "number") then speed = nil end
+	local now, wx, wy = GetTime(), u2, u1
+	if Transport.sampleCount > 0 then
+		local prev = Transport.samples[Transport.sampleCount]
+		local dt = now - prev.t
+		if prev.inst ~= instance or dt <= 0 or dt > Transport.maxGap then
+			Transport.ClearSamples()
+		else
+			local step = math.sqrt((wx - prev.x) ^ 2 + (wy - prev.y) ^ 2)
+			if step > Transport.maxStepSpeed * dt + 10 then Transport.ClearSamples() end
+		end
+	end
+
+	Transport.PushSample(now, wx, wy, instance, speed)
+	local count = Transport.sampleCount
+	if count < Transport.minSamples then return end
+	local first, last = Transport.samples[1], Transport.samples[count]
+	if last.t - first.t < Transport.windowMin then return end
+	local netDist = math.sqrt((last.x - first.x) ^ 2 + (last.y - first.y) ^ 2)
+	if netDist < Transport.minNetDist then return end
+	local bestID, bestScore, bestCycle, secondScore = nil, nil, nil, nil
+	for id, route in pairs(Transport.GetRoutes()) do
+		local d = Transport.decoded[id]
+		if d ~= nil then
+			local score, cycle = Transport.MatchRoute(route, d)
+			if score ~= nil then
+				if bestScore == nil or score < bestScore then
+					secondScore = bestScore
+					bestID, bestScore, bestCycle = id, score, cycle
+				elseif secondScore == nil or score < secondScore then
+					secondScore = score
 				end
 			end
 		end
 	end
+
+	if bestID == nil then return end
+	if secondScore ~= nil and secondScore < bestScore + Transport.ambiguityGap and secondScore < Transport.ambiguityCap then return end
+	local prev = Transport.lastTriggers[bestID]
+	if prev ~= nil and now - prev.t < Transport.triggerCooldown and (now - prev.t < 3 or bestScore >= prev.score * 0.5 or prev.score - bestScore < 2) then return end
+
+	Transport.Observe(bestID, bestCycle)
+	Transport.lastTriggers[bestID] = {
+		t = now,
+		score = bestScore
+	}
 end
 
 function Transport.Observe(id, cycle)
