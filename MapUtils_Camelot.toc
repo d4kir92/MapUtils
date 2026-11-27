@@ -97,6 +97,7 @@ data\forever\revealdata.lua
 data\forever\zonemasks.lua
 zonedetail.lua
 data\forever\minimaptiles.lua
+data\forever\minimapcaves.lua
 data\forever\minimaplod.lua
 data\forever\minimapcoarse.lua
 data\forever\extraart.lua

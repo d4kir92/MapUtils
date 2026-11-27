@@ -11,6 +11,7 @@ ignore:
   - convergences_wowhead.lua
   - data/cata/instances.lua
   - data/cata/questgivers.lua
+  - data/era/minimapcaves.lua
   - data/era/minimapcoarse.lua
   - data/era/minimaplod.lua
   - data/era/minimaptiles.lua
@@ -20,6 +21,7 @@ ignore:
   - data/forever/extraart.lua
   - data/forever/instances.lua
   - data/forever/librarybooks.lua
+  - data/forever/minimapcaves.lua
   - data/forever/minimapcoarse.lua
   - data/forever/minimaplod.lua
   - data/forever/minimaptiles.lua
@@ -29,6 +31,7 @@ ignore:
   - data/forever/zonemasks.lua
   - data/mists/instances.lua
   - data/mists/questgivers.lua
+  - data/tbc/minimapcaves.lua
   - data/tbc/minimapcoarse.lua
   - data/tbc/minimaplod.lua
   - data/tbc/minimaptiles.lua

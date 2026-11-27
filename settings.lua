@@ -913,6 +913,9 @@ function MapUtils:InitSetting()
 	AddTooltip(cityStyle, "LID_CITYMAPSTYLE", "LID_MAPSTYLEDESC")
 	styleControls["CITYMAPSTYLE"] = {cityStyle, AddTerrainFadeSliders("CITYTERRAINFADE", true)}
 	styleControls["CITYMAPSTYLE"][2](MapUtils:GetMapStyleOption("CITYMAPSTYLE"))
+	if MapUtils.HasMinimapCaves and MapUtils:HasMinimapCaves() then
+		AddTooltip(AddCheckbox("WORLDMAPCAVES", true, function() MapUtils:RefreshZoneDetail() end, nil, "2026-11-27"), "LID_WORLDMAPCAVES", "LID_WORLDMAPCAVESDESC")
+	end
 	AddCategory("NAVIGATION", 2, nil, ADDED_0928)
 	AddTooltip(AddCheckbox("ALWAYSSHOWWAYPOINT", false, nil, nil, ADDED_0928), "LID_ALWAYSSHOWWAYPOINT", "LID_ALWAYSSHOWWAYPOINTDESC")
 	if (C_Navigation and C_Navigation.GetDistance) or WorldMapPin_GetDistance then
