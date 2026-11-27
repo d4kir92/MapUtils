@@ -15,18 +15,92 @@ local NAV_BUTTON_PLAIN = 30
 local NAV_BUTTON_MIN_TEXT = 60
 local MAP_DOCK_ICON = 134269
 local CONFIRM_POPUP_KEY = "D4_INSTANCE_LEVEL_MODE"
-local PIN_TOGGLE_OFFSET_X = 40
-local PIN_TOGGLE_OFFSET_Y = 10
+local PIN_TOGGLE_OFFSET_X = 38
+local PIN_TOGGLE_OFFSET_Y = 6
 local FRAME_STRATA = {"BACKGROUND", "LOW", "MEDIUM", "HIGH", "DIALOG", "FULLSCREEN", "FULLSCREEN_DIALOG", "TOOLTIP"}
+local HUD_CHROME = {
+    ["bg"] = {0.05, 0.05, 0.07, 0.86},
+    ["border"] = {0.48, 0.41, 0.27, 0.88},
+    ["shadow"] = {0, 0, 0, 0.62},
+    ["sheen"] = {1, 0.94, 0.78, 0.07},
+    ["divider"] = {0.48, 0.41, 0.27, 0.55},
+    ["label"] = {0.96, 0.86, 0.55},
+    ["credit"] = {0.78, 0.74, 0.64},
+}
+local TOOLBAR = {
+    ["height"] = 36,
+    ["padX"] = 11,
+    ["gap"] = 11,
+    ["gripW"] = 14,
+    ["margin"] = 6,
+    ["dividerH"] = 22,
+}
 local BOSS_SCALE = {
     ["min"] = 0.5,
     ["max"] = 1.5,
     ["step"] = 0.05,
-    ["width"] = 120,
-    ["gap"] = 16,
+    ["width"] = 112,
 }
 local VIEW_MAX_ZOOM = 4
 local VIEW_WHEEL_FACTOR = 1.25
+
+local function ApplyHudChrome(frame, bgAlpha, borderAlpha)
+    frame.acoKeepLight = true
+    frame.shadows = {}
+    for edge = 1, 4 do
+        local tex = frame:CreateTexture(nil, "BACKGROUND", nil, -2)
+        tex:SetColorTexture(HUD_CHROME.shadow[1], HUD_CHROME.shadow[2], HUD_CHROME.shadow[3], HUD_CHROME.shadow[4])
+        frame.shadows[edge] = tex
+    end
+
+    frame.shadows[1]:SetPoint("BOTTOMLEFT", frame, "TOPLEFT", -1, 0)
+    frame.shadows[1]:SetPoint("BOTTOMRIGHT", frame, "TOPRIGHT", 1, 0)
+    frame.shadows[1]:SetHeight(1)
+    frame.shadows[2]:SetPoint("TOPLEFT", frame, "BOTTOMLEFT", -1, 0)
+    frame.shadows[2]:SetPoint("TOPRIGHT", frame, "BOTTOMRIGHT", 1, 0)
+    frame.shadows[2]:SetHeight(1)
+    frame.shadows[3]:SetPoint("TOPRIGHT", frame, "TOPLEFT", 0, 0)
+    frame.shadows[3]:SetPoint("BOTTOMRIGHT", frame, "BOTTOMLEFT", 0, 0)
+    frame.shadows[3]:SetWidth(1)
+    frame.shadows[4]:SetPoint("TOPLEFT", frame, "TOPRIGHT", 0, 0)
+    frame.shadows[4]:SetPoint("BOTTOMLEFT", frame, "BOTTOMRIGHT", 0, 0)
+    frame.shadows[4]:SetWidth(1)
+    frame.bg = frame:CreateTexture(nil, "BACKGROUND", nil, -1)
+    frame.bg:SetAllPoints(frame)
+    frame.bg:SetColorTexture(HUD_CHROME.bg[1], HUD_CHROME.bg[2], HUD_CHROME.bg[3], bgAlpha or HUD_CHROME.bg[4])
+    frame.sheen = frame:CreateTexture(nil, "ARTWORK", nil, -1)
+    frame.sheen:SetPoint("TOPLEFT", frame, "TOPLEFT", 1, -1)
+    frame.sheen:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -1, -1)
+    frame.sheen:SetHeight(1)
+    frame.sheen:SetColorTexture(HUD_CHROME.sheen[1], HUD_CHROME.sheen[2], HUD_CHROME.sheen[3], HUD_CHROME.sheen[4])
+    frame.borders = {}
+    for edge = 1, 4 do
+        local tex = frame:CreateTexture(nil, "BORDER")
+        tex:SetColorTexture(HUD_CHROME.border[1], HUD_CHROME.border[2], HUD_CHROME.border[3], borderAlpha or HUD_CHROME.border[4])
+        frame.borders[edge] = tex
+    end
+
+    frame.borders[1]:SetPoint("TOPLEFT", frame, "TOPLEFT", 0, 0)
+    frame.borders[1]:SetPoint("TOPRIGHT", frame, "TOPRIGHT", 0, 0)
+    frame.borders[1]:SetHeight(1)
+    frame.borders[2]:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 0, 0)
+    frame.borders[2]:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", 0, 0)
+    frame.borders[2]:SetHeight(1)
+    frame.borders[3]:SetPoint("TOPLEFT", frame, "TOPLEFT", 0, 0)
+    frame.borders[3]:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 0, 0)
+    frame.borders[3]:SetWidth(1)
+    frame.borders[4]:SetPoint("TOPRIGHT", frame, "TOPRIGHT", 0, 0)
+    frame.borders[4]:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", 0, 0)
+    frame.borders[4]:SetWidth(1)
+end
+
+local function CreateToolbarDivider(parent)
+    local div = parent:CreateTexture(nil, "ARTWORK")
+    div:SetSize(1, TOOLBAR.dividerH)
+    div:SetColorTexture(HUD_CHROME.divider[1], HUD_CHROME.divider[2], HUD_CHROME.divider[3], HUD_CHROME.divider[4])
+
+    return div
+end
 local function GetChild()
     if WorldMapFrame == nil or WorldMapFrame.ScrollContainer == nil then return nil end
     return WorldMapFrame.ScrollContainer.Child
@@ -60,31 +134,9 @@ end
 function D4:CreateInstanceLevelPanel(parent, options)
     options = options or {}
     local panel = CreateFrame("Frame", nil, parent)
-    panel.acoKeepLight = true
     panel:EnableMouse(true)
     panel:EnableMouseWheel(true)
-    panel.bg = panel:CreateTexture(nil, "BACKGROUND")
-    panel.bg:SetAllPoints(panel)
-    panel.bg:SetColorTexture(0.05, 0.05, 0.07, 0.84)
-    panel.borders = {}
-    for edge = 1, 4 do
-        local tex = panel:CreateTexture(nil, "BORDER")
-        tex:SetColorTexture(0.45, 0.4, 0.28, 0.85)
-        panel.borders[edge] = tex
-    end
-
-    panel.borders[1]:SetPoint("TOPLEFT", panel, "TOPLEFT", 0, 0)
-    panel.borders[1]:SetPoint("TOPRIGHT", panel, "TOPRIGHT", 0, 0)
-    panel.borders[1]:SetHeight(1)
-    panel.borders[2]:SetPoint("BOTTOMLEFT", panel, "BOTTOMLEFT", 0, 0)
-    panel.borders[2]:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", 0, 0)
-    panel.borders[2]:SetHeight(1)
-    panel.borders[3]:SetPoint("TOPLEFT", panel, "TOPLEFT", 0, 0)
-    panel.borders[3]:SetPoint("BOTTOMLEFT", panel, "BOTTOMLEFT", 0, 0)
-    panel.borders[3]:SetWidth(1)
-    panel.borders[4]:SetPoint("TOPRIGHT", panel, "TOPRIGHT", 0, 0)
-    panel.borders[4]:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", 0, 0)
-    panel.borders[4]:SetWidth(1)
+    ApplyHudChrome(panel, 0.84, 0.85)
     panel.pad = 5
     panel.headerH = 20
     panel.btnH = 22
@@ -581,6 +633,11 @@ function D4:CreateInstanceMap(provider)
     end
 
     local function OnOverlayWheel(_, delta)
+        if overlay ~= nil and overlay._muPlanShown == true and overlay._muOnWheel ~= nil then
+            overlay._muOnWheel(delta)
+            return
+        end
+
         local zoom = min(VIEW_MAX_ZOOM, max(1, view.zoom * VIEW_WHEEL_FACTOR ^ delta))
         if zoom == view.zoom then return end
         local dx, dy = GetCursorOffset()
@@ -827,6 +884,7 @@ function D4:CreateInstanceMap(provider)
                 HideLevelControls()
                 mapPinKey = nil
                 if mapPinSet ~= nil then mapPinSet:Hide() end
+                if overlay.toolbar ~= nil then overlay.toolbar:Hide() end
                 if not (InCombatLockdown ~= nil and InCombatLockdown()) and (WorldMapFrame.GetMapID == nil or WorldMapFrame:GetMapID() ~= mapID) then
                     WorldMapFrame:SetMapID(mapID)
                 end
@@ -925,9 +983,371 @@ function D4:CreateInstanceMap(provider)
     end
 
     local function HideMapPins()
-        if mapPinKey == nil then return end
+        if mapPinKey == nil then
+            if overlay ~= nil and overlay.toolbar ~= nil then overlay.toolbar:Hide() end
+            return
+        end
         mapPinKey = nil
         if mapPinSet ~= nil then mapPinSet:Hide() end
+        if overlay ~= nil and overlay.toolbar ~= nil then overlay.toolbar:Hide() end
+    end
+
+    local function UpdateCreditPill(text)
+        if overlay == nil or overlay.creditPill == nil then return end
+        local hasText = text ~= nil and text ~= ""
+        overlay.creditText = hasText and text or nil
+        if hasText then
+            overlay.credit:SetText(text)
+            local textW = ceil(overlay.credit:GetStringWidth() or 0)
+            overlay.creditPill:SetSize(max(40, textW + 16), 20)
+        else
+            overlay.credit:SetText("")
+        end
+
+        overlay.creditPill:SetShown(hasText and overlay._muPlanShown ~= true)
+    end
+
+    local function CreateToolbar(container)
+        local toolbar = CreateFrame("Frame", nil, container)
+        toolbar:SetPoint("BOTTOMRIGHT", container, "BOTTOMRIGHT", -PIN_TOGGLE_OFFSET_X, PIN_TOGGLE_OFFSET_Y)
+        toolbar:SetHeight(TOOLBAR.height)
+        toolbar:EnableMouse(true)
+        toolbar:EnableMouseWheel(true)
+        ApplyHudChrome(toolbar)
+        local grip = CreateFrame("Frame", nil, toolbar)
+        grip:SetPoint("TOPLEFT", toolbar, "TOPLEFT", 1, -1)
+        grip:SetPoint("BOTTOMLEFT", toolbar, "BOTTOMLEFT", 1, 1)
+        grip:SetWidth(TOOLBAR.gripW)
+        grip:EnableMouse(true)
+        grip.bg = grip:CreateTexture(nil, "BACKGROUND")
+        grip.bg:SetAllPoints(grip)
+        grip.bg:SetColorTexture(0.1, 0.1, 0.13, 0.72)
+        grip.edge = grip:CreateTexture(nil, "BORDER")
+        grip.edge:SetPoint("TOPRIGHT", grip, "TOPRIGHT", 0, 0)
+        grip.edge:SetPoint("BOTTOMRIGHT", grip, "BOTTOMRIGHT", 0, 0)
+        grip.edge:SetWidth(1)
+        grip.edge:SetColorTexture(HUD_CHROME.divider[1], HUD_CHROME.divider[2], HUD_CHROME.divider[3], 0.45)
+        grip.dots = {}
+        for col = 0, 1 do
+            for row = -1, 1 do
+                local dot = grip:CreateTexture(nil, "ARTWORK")
+                dot:SetSize(2, 2)
+                dot:SetPoint("CENTER", grip, "CENTER", (col - 0.5) * 4, row * 4)
+                dot:SetColorTexture(0.72, 0.66, 0.52, 0.9)
+                tinsert(grip.dots, dot)
+            end
+        end
+
+        toolbar.grip = grip
+        local toggles = mapPinSet:CreateToggles(toolbar)
+        toolbar.toggles = toggles
+        toolbar.pinDivider = CreateToolbarDivider(toolbar)
+        toolbar.extraDivider = CreateToolbarDivider(toolbar)
+        toolbar.extraDivider:Hide()
+        if provider.getBossScale ~= nil and provider.setBossScale ~= nil then
+            local holder = CreateFrame("Frame", nil, toolbar)
+            holder:SetSize(BOSS_SCALE.width, TOOLBAR.height - 4)
+            holder:EnableMouse(true)
+            holder:EnableMouseWheel(true)
+            local template = DoesTemplateExist ~= nil and (DoesTemplateExist("MinimalSliderTemplate") and "MinimalSliderTemplate" or DoesTemplateExist("UISliderTemplate") and "UISliderTemplate") or "OptionsSliderTemplate"
+            local slider = CreateFrame("Slider", nil, holder, template)
+            slider:SetSize(BOSS_SCALE.width, 14)
+            slider:SetPoint("BOTTOM", holder, "BOTTOM", 0, 2)
+            slider:SetMinMaxValues(BOSS_SCALE.min, BOSS_SCALE.max)
+            slider:SetValueStep(BOSS_SCALE.step)
+            if slider.SetObeyStepOnDrag ~= nil then slider:SetObeyStepOnDrag(true) end
+            slider:EnableMouseWheel(true)
+            for _, region in ipairs({slider:GetRegions()}) do
+                if region.GetObjectType ~= nil and region:GetObjectType() == "FontString" then region:SetText("") end
+            end
+
+            slider.label = holder:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+            slider.label:SetPoint("TOP", holder, "TOP", 0, -2)
+            slider.label:SetTextColor(HUD_CHROME.label[1], HUD_CHROME.label[2], HUD_CHROME.label[3])
+            local function UpdateLabel(value)
+                local percent = floor(value * 100 + 0.5)
+                slider.label:SetText(provider.getBossScaleText ~= nil and provider.getBossScaleText(percent) or format("%d%%", percent))
+            end
+
+            local function StepSlider(_, delta)
+                local nextVal = min(BOSS_SCALE.max, max(BOSS_SCALE.min, (slider:GetValue() or 1) + delta * BOSS_SCALE.step))
+                slider:SetValue(nextVal)
+            end
+
+            local function ResetSlider(_, button)
+                if button == "RightButton" then slider:SetValue(1) end
+            end
+
+            slider:SetValue(provider.getBossScale() or 1)
+            UpdateLabel(slider:GetValue())
+            slider:SetScript("OnValueChanged", function(_, value)
+                value = floor(value / BOSS_SCALE.step + 0.5) * BOSS_SCALE.step
+                UpdateLabel(value)
+                if toolbar.Layout ~= nil then toolbar:Layout() end
+                if abs(value - (provider.getBossScale() or 1)) < 0.001 then return end
+                provider.setBossScale(value)
+                mapPinKey = nil
+                Refresh()
+            end)
+
+            slider:SetScript("OnMouseWheel", StepSlider)
+            holder:SetScript("OnMouseWheel", StepSlider)
+            slider:HookScript("OnMouseUp", ResetSlider)
+            holder:SetScript("OnMouseUp", ResetSlider)
+            toolbar.sliderHolder = holder
+            toolbar.bossScale = slider
+        else
+            toolbar.pinDivider:Hide()
+        end
+
+        function toolbar:GetBounds()
+            local viewW = container:GetWidth() or 0
+            local viewH = container:GetHeight() or 0
+            local boxW = self:GetWidth() or 0
+            local boxH = self:GetHeight() or 0
+            local m = TOOLBAR.margin
+            local maxX = max(m, viewW - boxW - m)
+            local maxY = max(m, viewH - boxH - m)
+
+            return m, maxX, m, maxY
+        end
+
+        function toolbar:LoadPosition()
+            if self.posLoaded then return end
+            self.posLoaded = true
+            local saved = provider.getToolbarPos and provider.getToolbarPos() or nil
+            if type(saved) == "table" and type(saved.rx) == "number" and type(saved.ry) == "number" then
+                self.posRX = max(0, min(1, saved.rx))
+                self.posRY = max(0, min(1, saved.ry))
+            else
+                self.posRX = nil
+                self.posRY = nil
+            end
+        end
+
+        function toolbar:SavePosition()
+            if provider.setToolbarPos == nil then return end
+            if self.posRX == nil or self.posRY == nil then
+                provider.setToolbarPos(false)
+                return
+            end
+
+            provider.setToolbarPos({
+                rx = self.posRX,
+                ry = self.posRY,
+            })
+        end
+
+        function toolbar:ApplyPixelPosition(x, y, updateRatios)
+            local minX, maxX, minY, maxY = self:GetBounds()
+            local cx = max(minX, min(maxX, x))
+            local cy = max(minY, min(maxY, y))
+            self.posX = cx
+            self.posY = cy
+            self:ClearAllPoints()
+            self:SetPoint("TOPLEFT", container, "TOPLEFT", cx, -cy)
+            if updateRatios then
+                self.posRX = maxX > minX and (cx - minX) / (maxX - minX) or 0
+                self.posRY = maxY > minY and (cy - minY) / (maxY - minY) or 0
+            end
+        end
+
+        function toolbar:ApplyPosition()
+            self:LoadPosition()
+            if self.posRX == nil or self.posRY == nil then
+                local minX, maxX, minY, maxY = self:GetBounds()
+                local viewW = container:GetWidth() or 0
+                local viewH = container:GetHeight() or 0
+                local boxW = self:GetWidth() or 0
+                local boxH = self:GetHeight() or 0
+                self.posX = max(minX, min(maxX, viewW - boxW - PIN_TOGGLE_OFFSET_X))
+                self.posY = max(minY, min(maxY, viewH - boxH - PIN_TOGGLE_OFFSET_Y))
+                self:ClearAllPoints()
+                self:SetPoint("BOTTOMRIGHT", container, "BOTTOMRIGHT", -PIN_TOGGLE_OFFSET_X, PIN_TOGGLE_OFFSET_Y)
+                return
+            end
+
+            local minX, maxX, minY, maxY = self:GetBounds()
+            local x = minX + self.posRX * (maxX - minX)
+            local y = minY + self.posRY * (maxY - minY)
+            self:ApplyPixelPosition(x, y, false)
+        end
+
+        function toolbar:ResetPosition()
+            self.posLoaded = true
+            self.posRX = nil
+            self.posRY = nil
+            self:SavePosition()
+            self:ApplyPosition()
+        end
+
+        function toolbar:OnDragUpdate()
+            if not self.dragging or not IsMouseButtonDown("LeftButton") then
+                self:StopDrag()
+                return
+            end
+
+            local cx, cy = GetCursorPosition()
+            local scale = container:GetEffectiveScale()
+            if scale == nil or scale <= 0 then scale = 1 end
+            local dx = (cx - self.dragStartX) / scale
+            local dy = (cy - self.dragStartY) / scale
+            if not self.dragMoved and abs(dx) < 4 and abs(dy) < 4 then return end
+            self.dragMoved = true
+            self:ApplyPixelPosition(self.dragOriginX + dx, self.dragOriginY - dy, true)
+        end
+
+        function toolbar:StartDrag(button)
+            if button ~= "LeftButton" then return end
+            self:LoadPosition()
+            if self.posX == nil or self.posY == nil then self:ApplyPosition() end
+            local originX = self.posX
+            local originY = self.posY
+            if container.GetLeft ~= nil and self.GetLeft ~= nil then
+                local cLeft, cTop = container:GetLeft(), container:GetTop()
+                local sLeft, sTop = self:GetLeft(), self:GetTop()
+                if cLeft ~= nil and cTop ~= nil and sLeft ~= nil and sTop ~= nil then
+                    originX = sLeft - cLeft
+                    originY = cTop - sTop
+                end
+            end
+
+            local cx, cy = GetCursorPosition()
+            self.dragging = true
+            self.dragMoved = false
+            self.dragStartX = cx
+            self.dragStartY = cy
+            self.dragOriginX = originX or TOOLBAR.margin
+            self.dragOriginY = originY or TOOLBAR.margin
+            self:SetScript("OnUpdate", self.OnDragUpdate)
+        end
+
+        function toolbar:StopDrag()
+            if not self.dragging then return end
+            self.dragging = false
+            self:SetScript("OnUpdate", nil)
+            if self.dragMoved then self:SavePosition() end
+            self.dragMoved = false
+        end
+
+        grip:SetScript("OnEnter", function(sel)
+            sel.bg:SetColorTexture(0.16, 0.15, 0.18, 0.9)
+            for _, dot in ipairs(sel.dots) do
+                dot:SetColorTexture(1, 0.88, 0.35, 1)
+            end
+        end)
+
+        grip:SetScript("OnLeave", function(sel)
+            sel.bg:SetColorTexture(0.1, 0.1, 0.13, 0.72)
+            for _, dot in ipairs(sel.dots) do
+                dot:SetColorTexture(0.72, 0.66, 0.52, 0.9)
+            end
+        end)
+
+        grip:SetScript("OnMouseDown", function(_, button) toolbar:StartDrag(button) end)
+        grip:SetScript("OnMouseUp", function(_, button)
+            local moved = toolbar.dragMoved
+            toolbar:StopDrag()
+            if button == "RightButton" and not moved then toolbar:ResetPosition() end
+        end)
+
+        toolbar:SetScript("OnMouseDown", function(sel, button) sel:StartDrag(button) end)
+        toolbar:SetScript("OnMouseUp", function(sel) sel:StopDrag() end)
+        toolbar:SetScript("OnHide", function(sel) sel:StopDrag() end)
+
+        function toolbar:Layout()
+            local compact = self.compact == true or (overlay._muPlanShown == true and overlay._muPinProject == nil)
+            local extra = self.extraButton
+            local hasExtra = extra ~= nil and extra:IsShown()
+            local padX = TOOLBAR.padX
+            local gap = TOOLBAR.gap
+            local gripW = TOOLBAR.gripW + 1
+            if overlay ~= nil then
+                self:SetFrameStrata(overlay:GetFrameStrata())
+                self:SetFrameLevel(overlay:GetFrameLevel() + OVERLAY_TOGGLES_OFFSET)
+            end
+            if extra ~= nil then extra:SetFrameLevel(self:GetFrameLevel() + 2) end
+            if compact then
+                self.toggles:Hide()
+                self.pinDivider:Hide()
+                self.extraDivider:Hide()
+                if self.sliderHolder ~= nil then self.sliderHolder:Hide() end
+                if hasExtra then
+                    extra:ClearAllPoints()
+                    extra:SetPoint("RIGHT", self, "RIGHT", -padX, 0)
+                    self:SetSize(gripW + padX + (extra:GetWidth() or 20) + padX, TOOLBAR.height)
+                    self:ApplyPosition()
+                    self:Show()
+                else
+                    self:Hide()
+                end
+
+                return
+            end
+
+            self.toggles:Show()
+            self.toggles:ClearAllPoints()
+            self.toggles:SetPoint("RIGHT", self, "RIGHT", -padX, 0)
+            local cursor = self.toggles
+            local totalW = padX + (self.toggles:GetWidth() or 0)
+            if self.sliderHolder ~= nil then
+                local labelW = self.bossScale ~= nil and self.bossScale.label ~= nil and (self.bossScale.label:GetStringWidth() or 0) or 0
+                local holderW = max(BOSS_SCALE.width, ceil(labelW) + 4)
+                self.sliderHolder:SetWidth(holderW)
+                self.pinDivider:Show()
+                self.pinDivider:ClearAllPoints()
+                self.pinDivider:SetPoint("RIGHT", cursor, "LEFT", -gap, 0)
+                self.sliderHolder:Show()
+                self.sliderHolder:ClearAllPoints()
+                self.sliderHolder:SetPoint("RIGHT", self.pinDivider, "LEFT", -gap, 0)
+                cursor = self.sliderHolder
+                totalW = totalW + gap + 1 + gap + holderW
+            else
+                self.pinDivider:Hide()
+            end
+
+            if hasExtra then
+                self.extraDivider:Show()
+                self.extraDivider:ClearAllPoints()
+                self.extraDivider:SetPoint("RIGHT", cursor, "LEFT", -gap, 0)
+                extra:ClearAllPoints()
+                extra:SetPoint("RIGHT", self.extraDivider, "LEFT", -gap, 0)
+                totalW = totalW + gap + 1 + gap + (extra:GetWidth() or 20)
+            else
+                self.extraDivider:Hide()
+            end
+
+            self:SetSize(gripW + padX + totalW, TOOLBAR.height)
+            self:ApplyPosition()
+        end
+
+        function toolbar:SetExtraButton(btn)
+            self.extraButton = btn
+            if btn ~= nil then
+                if btn:GetParent() ~= self then btn:SetParent(self) end
+                btn:SetFrameLevel(self:GetFrameLevel() + 2)
+            end
+
+            self:Layout()
+        end
+
+        function toolbar:SetCompactMode(compact)
+            local nextCompact = compact == true
+            if overlay ~= nil and overlay.creditPill ~= nil then
+                overlay.creditPill:SetShown(overlay.creditText ~= nil and overlay._muPlanShown ~= true)
+            end
+            if self.compact == nextCompact then
+                self:Layout()
+                return
+            end
+
+            self.compact = nextCompact
+            self:Layout()
+        end
+
+        toolbar:Layout()
+        overlay.toolbar = toolbar
+        return toolbar
     end
 
     local function UpdateMapPins(info)
@@ -938,6 +1358,10 @@ function D4:CreateInstanceMap(provider)
             return
         end
 
+        local useMinimap = overlay._muPlanShown == true
+        local project = useMinimap and overlay._muPinProject or nil
+        local pinArt = useMinimap and overlay._muPinCanvas or overlay.art
+        local hidePins = useMinimap and (project == nil or pinArt == nil)
         local questKey = {}
         local killedKey = {}
         for _, row in ipairs(rows) do
@@ -949,7 +1373,10 @@ function D4:CreateInstanceMap(provider)
             end
         end
 
-        local key = format("%s|%.4f|%.1f|%.1f|%d|%s|%s", info.key, scale, overlay.art:GetWidth(), overlay.art:GetHeight(), #rows, table.concat(questKey), table.concat(killedKey))
+        local artW = pinArt ~= nil and (pinArt:GetWidth() or 0) or 0
+        local artH = pinArt ~= nil and (pinArt:GetHeight() or 0) or 0
+        local modeKey = hidePins and "H" or (useMinimap and "M" or "A")
+        local key = format("%s|%s|%.4f|%.1f|%.1f|%d|%s|%s", info.key, modeKey, scale, artW, artH, #rows, table.concat(questKey), table.concat(killedKey))
         if key == mapPinKey then return end
         mapPinKey = key
         if mapPinSet == nil then
@@ -971,48 +1398,34 @@ function D4:CreateInstanceMap(provider)
                 ["getBossScale"] = provider.getBossScale,
             })
 
-            local container = WorldMapFrame.ScrollContainer
-            local toggles = mapPinSet:CreateToggles(container)
-            toggles:SetPoint("BOTTOMRIGHT", container, "BOTTOMRIGHT", -PIN_TOGGLE_OFFSET_X, PIN_TOGGLE_OFFSET_Y)
-            toggles:SetFrameStrata(overlay:GetFrameStrata())
-            toggles:SetFrameLevel(overlay:GetFrameLevel() + OVERLAY_TOGGLES_OFFSET)
-            if provider.getBossScale ~= nil and provider.setBossScale ~= nil then
-                local template = DoesTemplateExist ~= nil and (DoesTemplateExist("MinimalSliderTemplate") and "MinimalSliderTemplate" or DoesTemplateExist("UISliderTemplate") and "UISliderTemplate") or "OptionsSliderTemplate"
-                local slider = CreateFrame("Slider", nil, toggles, template)
-                slider:SetSize(BOSS_SCALE.width, 16)
-                slider:SetPoint("RIGHT", toggles, "LEFT", -BOSS_SCALE.gap, 0)
-                slider:SetMinMaxValues(BOSS_SCALE.min, BOSS_SCALE.max)
-                slider:SetValueStep(BOSS_SCALE.step)
-                if slider.SetObeyStepOnDrag ~= nil then slider:SetObeyStepOnDrag(true) end
-                for _, region in ipairs({slider:GetRegions()}) do
-                    if region.GetObjectType ~= nil and region:GetObjectType() == "FontString" then region:SetText("") end
-                end
-
-                slider.label = slider:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-                slider.label:SetPoint("BOTTOM", slider, "TOP", 0, 1)
-                local function UpdateLabel(value)
-                    local percent = floor(value * 100 + 0.5)
-                    slider.label:SetText(provider.getBossScaleText ~= nil and provider.getBossScaleText(percent) or format("%d%%", percent))
-                end
-
-                slider:SetValue(provider.getBossScale() or 1)
-                UpdateLabel(slider:GetValue())
-                slider:SetScript("OnValueChanged", function(_, value)
-                    value = floor(value / BOSS_SCALE.step + 0.5) * BOSS_SCALE.step
-                    UpdateLabel(value)
-                    if abs(value - (provider.getBossScale() or 1)) < 0.001 then return end
-                    provider.setBossScale(value)
-                    mapPinKey = nil
-                    Refresh()
-                end)
-
-                toggles.bossScale = slider
-            end
+            CreateToolbar(WorldMapFrame.ScrollContainer)
         end
 
-        mapPinSet:Update(rows, overlay.art, scale)
+        if hidePins then
+            for _, pin in ipairs(mapPinSet.pins) do
+                pin:Hide()
+            end
+        else
+            mapPinSet:Update(rows, pinArt, scale, project)
+        end
+
         mapPinSet:UpdateToggles()
-        mapPinSet.toggles:Show()
+        if overlay.toolbar ~= nil then
+            overlay.toolbar:Layout()
+            local isCompact = overlay.toolbar.compact == true or hidePins
+            if not isCompact or (overlay.toolbar.extraButton ~= nil and overlay.toolbar.extraButton:IsShown()) then
+                overlay.toolbar:Show()
+            end
+        end
+    end
+
+    local function SyncMinimapPins()
+        if overlay == nil or shownLevels == nil or shownIndex == nil then return end
+        mapPinKey = nil
+        if overlay.creditPill ~= nil then
+            overlay.creditPill:SetShown(overlay.creditText ~= nil and overlay._muPlanShown ~= true)
+        end
+        UpdateMapPins(shownLevels[shownIndex])
     end
 
     local function CreateOverlay()
@@ -1067,8 +1480,10 @@ function D4:CreateInstanceMap(provider)
 
             if containerIndex ~= nil and highIndex ~= nil and containerIndex < highIndex then targetStrata = "HIGH" end
             if targetStrata ~= nil and overlay:GetFrameStrata() ~= targetStrata then overlay:SetFrameStrata(targetStrata) end
-            if mapPinSet ~= nil and mapPinSet.toggles ~= nil and targetStrata ~= nil and mapPinSet.toggles:GetFrameStrata() ~= targetStrata then
-                mapPinSet.toggles:SetFrameStrata(targetStrata)
+            if overlay.toolbar ~= nil and targetStrata ~= nil then
+                if overlay.toolbar:GetFrameStrata() ~= targetStrata then overlay.toolbar:SetFrameStrata(targetStrata) end
+                overlay.toolbar:SetFrameLevel(overlay:GetFrameLevel() + OVERLAY_TOGGLES_OFFSET)
+                if overlay.toolbar.extraButton ~= nil then overlay.toolbar.extraButton:SetFrameLevel(overlay.toolbar:GetFrameLevel() + 2) end
             end
             if navBar == nil and navButton ~= nil and targetStrata ~= nil and navButton:GetFrameStrata() ~= targetStrata then
                 navButton:SetFrameStrata(targetStrata)
@@ -1077,7 +1492,11 @@ function D4:CreateInstanceMap(provider)
         end
 
         overlay.SyncOverlayStrata = SyncOverlayStrata
+        overlay.SyncMinimapPins = SyncMinimapPins
         overlay:HookScript("OnShow", SyncOverlayStrata)
+        overlay:HookScript("OnHide", function()
+            if overlay.toolbar ~= nil then overlay.toolbar:Hide() end
+        end)
         overlay:SetAllPoints(container)
         if overlay.SetClipsChildren ~= nil then overlay:SetClipsChildren(true) end
         overlay.bg = overlay:CreateTexture(nil, "BACKGROUND")
@@ -1085,9 +1504,14 @@ function D4:CreateInstanceMap(provider)
         overlay.bg:SetColorTexture(0, 0, 0, 1)
         overlay.art = overlay:CreateTexture(nil, "ARTWORK")
         overlay.art:SetPoint("CENTER", overlay, "CENTER", 0, 0)
-        overlay.credit = overlay:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-        overlay.credit:SetPoint("BOTTOM", overlay, "BOTTOM", 0, LEVEL_BUTTON_OFFSET)
-        overlay.credit:Hide()
+        overlay.creditPill = CreateFrame("Frame", nil, overlay)
+        overlay.creditPill:SetPoint("BOTTOMLEFT", overlay, "BOTTOMLEFT", 10, PIN_TOGGLE_OFFSET_Y)
+        overlay.creditPill:SetFrameLevel(overlay:GetFrameLevel() + OVERLAY_TOGGLES_OFFSET)
+        ApplyHudChrome(overlay.creditPill, 0.78, 0.72)
+        overlay.credit = overlay.creditPill:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+        overlay.credit:SetPoint("CENTER", overlay.creditPill, "CENTER", 0, 0)
+        overlay.credit:SetTextColor(HUD_CHROME.credit[1], HUD_CHROME.credit[2], HUD_CHROME.credit[3])
+        overlay.creditPill:Hide()
         overlay:Hide()
         levelButton = D4:CreateInstanceLevelPanel(overlay, {
             ["getTitle"] = provider.getLevelsTitle,
@@ -1122,6 +1546,7 @@ function D4:CreateInstanceMap(provider)
 
         overlay:HookScript("OnSizeChanged", function()
             if levelButton ~= nil and levelButton:IsShown() then levelButton:Layout() end
+            if overlay.toolbar ~= nil and overlay.toolbar:IsShown() then overlay.toolbar:ApplyPosition() end
         end)
 
         HideLevelControls()
@@ -1210,13 +1635,13 @@ function D4:CreateInstanceMap(provider)
             end
 
             overlay.art:SetTexture(info.file)
+            overlay.art._muTexPath = info.file
             local width = info.width or DEFAULT_ART_WIDTH
             local height = info.height or DEFAULT_ART_HEIGHT
             overlay.art:SetTexCoord(0, width / (info.fileWidth or width), 0, height / (info.fileHeight or height))
             Layout(info)
             local credit = provider.getCredit and provider.getCredit(info)
-            overlay.credit:SetText(credit or "")
-            overlay.credit:SetShown(credit ~= nil)
+            UpdateCreditPill(credit)
             if useNav then
                 navButton:SetLabel(GetLabel(levels, info))
             elseif #levels > 1 then

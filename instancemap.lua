@@ -109,6 +109,8 @@ local instanceMap = MapUtils:CreateInstanceMap(
 		["setLevelPanelPos"] = function(pos) MapUtils:SetMapOption("INSTANCEMAPLEVELPOS", pos) end,
 		["getLevelPanelCollapsed"] = function() return MapUtils:GetConfig("INSTANCEMAPLEVELCOLLAPSED", false) end,
 		["setLevelPanelCollapsed"] = function(collapsed) MapUtils:SetMapOption("INSTANCEMAPLEVELCOLLAPSED", collapsed) end,
+		["getToolbarPos"] = function() return MapUtils:GetConfig("INSTANCEMAPTOOLBARPOS", nil) end,
+		["setToolbarPos"] = function(pos) MapUtils:SetMapOption("INSTANCEMAPTOOLBARPOS", pos) end,
 		["getLevelUseNav"] = function() return MapUtils:GetConfig("INSTANCEMAPLEVELNAV", false) == true end,
 		["setLevelUseNav"] = function(useNav) MapUtils:SetMapOption("INSTANCEMAPLEVELNAV", useNav == true) end,
 		["getLevelToNavTooltip"] = function() return MapUtils:Trans("LID_MAPLEVELSTONAV") end,

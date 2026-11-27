@@ -105,6 +105,17 @@ local function MatchOverlayData(artKey)
 	return ref[1], ref[2] or 0
 end
 
+local function HookOverlay(child)
+	if child == nil then return end
+	HookArtTexture(child.art)
+	if not child._muShowHooked then
+		child._muShowHooked = true
+		child:HookScript("OnShow", function()
+			if Refresh ~= nil then Refresh() end
+		end)
+	end
+end
+
 local function FindRawOverlay()
 	if WorldMapFrame == nil or not WorldMapFrame:IsShown() then return nil, nil end
 	local cached = IM.cachedOverlay
@@ -118,7 +129,7 @@ local function FindRawOverlay()
 	for i = 1, #children do
 		local child = children[i]
 		if child ~= nil and child.art ~= nil and child.bg ~= nil and child.credit ~= nil then
-			HookArtTexture(child.art)
+			HookOverlay(child)
 			if child:IsShown() then
 				IM.cachedOverlay = child
 				local artKey = GetOverlayArtKey(child.art)
@@ -130,15 +141,16 @@ local function FindRawOverlay()
 end
 
 local function EnsurePlanArrow(plan)
+	local arrowLevel = IM.planOverlay ~= nil and (IM.planOverlay:GetFrameLevel() + 260) or (plan.canvas:GetFrameLevel() + 250)
 	local a = IM.arrow
 	if a == nil then
 		if MapUtils.CreateInstancePosArrow ~= nil then
-			a = MapUtils:CreateInstancePosArrow(plan, plan.canvas:GetFrameLevel() + 10, ARROW_SIZE)
+			a = MapUtils:CreateInstancePosArrow(plan, arrowLevel, ARROW_SIZE)
 		else
 			a = CreateFrame("Frame", nil, plan)
 			a:SetSize(ARROW_SIZE, ARROW_SIZE)
 			a:EnableMouse(false)
-			a:SetFrameLevel(plan.canvas:GetFrameLevel() + 10)
+			a:SetFrameLevel(arrowLevel)
 			local tex = a:CreateTexture(nil, "OVERLAY")
 			tex:SetAllPoints(a)
 			tex:SetTexture("Interface\\Minimap\\MinimapArrow")
@@ -147,9 +159,30 @@ local function EnsurePlanArrow(plan)
 		end
 		IM.arrow = a
 	else
-		a:SetFrameLevel(plan.canvas:GetFrameLevel() + 10)
+		a:SetFrameLevel(arrowLevel)
 	end
 	return a
+end
+
+local function BuildPinProjector(artKey, mapData)
+	if artKey == nil or mapData == nil or mapData.wx == nil or mapData.wy == nil or mapData.ps == nil or mapData.w == nil or mapData.h == nil or mapData.w <= 0 or mapData.h <= 0 then
+		return nil
+	end
+	local artTable = MapUtils.INSTANCEPOS ~= nil and MapUtils.INSTANCEPOS.art or nil
+	if artTable == nil then return nil end
+	local bounds = artTable[artKey] or artTable[strlower(artKey)]
+	if bounds == nil then return nil end
+	local dx = bounds[3] - bounds[2]
+	local dy = bounds[5] - bounds[4]
+	if dx <= 0 or dy <= 0 then return nil end
+	local ox = (mapData.wy - bounds[5]) * mapData.ps / mapData.w
+	local sx = dy * mapData.ps / mapData.w
+	local oy = (mapData.wx - bounds[3]) * mapData.ps / mapData.h
+	local sy = dx * mapData.ps / mapData.h
+	return function(u, v)
+		if u == nil or v == nil then return nil, nil end
+		return ox + u * sx, oy + v * sy
+	end
 end
 
 local function HidePlanArrow()
@@ -219,6 +252,8 @@ local function ApplyView(mapData)
 	local maxY = math.max(0, (ch - ph) * 0.5)
 	IM.panX = math.min(maxX, math.max(-maxX, IM.panX))
 	IM.panY = math.min(maxY, math.max(-maxY, IM.panY))
+	local prevW = plan.canvas:GetWidth() or 0
+	local prevH = plan.canvas:GetHeight() or 0
 	plan.canvas:SetSize(cw, ch)
 	plan.canvas:ClearAllPoints()
 	plan.canvas:SetPoint("CENTER", plan, "CENTER", IM.panX, IM.panY)
@@ -238,6 +273,9 @@ local function ApplyView(mapData)
 		end
 	end
 	PlacePlanArrow(mapData)
+	if IM.planOverlay ~= nil and IM.planOverlay._muPlanShown == true and IM.planOverlay.SyncMinimapPins ~= nil and (math.abs(cw - prevW) > 0.1 or math.abs(ch - prevH) > 0.1) then
+		IM.planOverlay.SyncMinimapPins()
+	end
 end
 
 local function FitFloorView(overlay, mapData, floorIdx)
@@ -345,7 +383,7 @@ local function EnsurePlan(overlay, instID, mapData)
 		p.canvas = CreateFrame("Frame", nil, p)
 		p.canvas:SetPoint("CENTER", p, "CENTER", 0, 0)
 		p.textures = {}
-		p:SetScript("OnMouseWheel", function(_, delta)
+		local function OnPlanWheel(_, delta)
 			local cur = GetMapData(IM.activeInst)
 			if cur == nil then return end
 			local z = math.min(MAX_ZOOM, math.max(1, IM.zoom * (1.25 ^ delta)))
@@ -358,7 +396,9 @@ local function EnsurePlan(overlay, instID, mapData)
 			end
 			IM.zoom = z
 			ApplyView(cur)
-		end)
+		end
+		p.onWheel = OnPlanWheel
+		p:SetScript("OnMouseWheel", OnPlanWheel)
 		p:SetScript("OnMouseDown", function(_, button)
 			if button ~= "LeftButton" or IM.zoom <= 1 then return end
 			local dx, dy = GetCursorOffset()
@@ -395,68 +435,119 @@ local function EnsurePlan(overlay, instID, mapData)
 		IM.lastW = 0
 		IM.lastH = 0
 	end
-	IM.plan:SetFrameLevel(overlay:GetFrameLevel() + 250)
-	IM.plan.canvas:SetFrameLevel(overlay:GetFrameLevel() + 255)
+	IM.plan:SetFrameLevel(overlay:GetFrameLevel() + 5)
+	IM.plan.canvas:SetFrameLevel(overlay:GetFrameLevel() + 10)
 	if IM.builtInst ~= instID then
 		BuildTiles(IM.plan, instID, mapData)
 	end
 	return IM.plan
 end
 
-local function FindBossSlider()
-	if WorldMapFrame == nil or WorldMapFrame.ScrollContainer == nil then return nil end
-	local children = {WorldMapFrame.ScrollContainer:GetChildren()}
-	for i = 1, #children do
-		local child = children[i]
-		if child ~= nil and child:IsShown() and child.bossScale ~= nil and child.bossScale:IsShown() then
-			return child.bossScale
-		end
+local TOGGLE_ICON = "Interface\\Icons\\INV_Misc_Spyglass_02"
+local TOGGLE_TEXCOORD = {0.08, 0.92, 0.08, 0.92}
+
+local function ShowToggleTooltip(btn)
+	if GameTooltip == nil then return end
+	local on = IsMinimapViewOn(IM.activeInst)
+	local title = MapUtils.Trans ~= nil and MapUtils:Trans("LID_MINIMAPVIEW") or "Minimap view"
+	local status = MapUtils.Trans ~= nil and MapUtils:Trans(on and "LID_STATUSON" or "LID_STATUSOFF") or (on and "On" or "Off")
+	local leftClick = MapUtils.Trans ~= nil and MapUtils:Trans("LID_LEFTCLICK") or "Left-click"
+	local action = MapUtils.Trans ~= nil and MapUtils:Trans(on and "LID_MAPVIEW" or "LID_MINIMAPVIEW") or (on and "Map view" or "Minimap view")
+	GameTooltip:SetOwner(btn, "ANCHOR_TOP", 0, 6)
+	GameTooltip:SetText(title, 1, 0.82, 0)
+	if on then
+		GameTooltip:AddLine(status, 0.3, 0.9, 0.4)
+	else
+		GameTooltip:AddLine(status, 0.65, 0.65, 0.65)
 	end
-	return nil
+	GameTooltip:AddLine(format("|cffffd100%s|r  %s", leftClick, action), 0.85, 0.85, 0.85)
+	GameTooltip:Show()
+end
+
+local function HideToggleTooltip(btn)
+	if GameTooltip ~= nil and GameTooltip:IsOwned(btn) then GameTooltip:Hide() end
 end
 
 local function CreateToggleButton(overlay)
-	local btn
-	if MapUtils.CreateButton ~= nil then
-		btn = MapUtils:CreateButton(nil, overlay)
-	elseif DoesTemplateExist ~= nil and DoesTemplateExist("GameMenuButtonTemplate") then
-		btn = CreateFrame("Button", nil, overlay, "GameMenuButtonTemplate")
-	else
-		btn = CreateFrame("Button", nil, overlay, "UIPanelButtonTemplate")
+	local parent = overlay.toolbar or overlay
+	if MapUtils.CreateInstanceRoundButton ~= nil then
+		return MapUtils:CreateInstanceRoundButton(parent, {
+			["icon"] = TOGGLE_ICON,
+			["texCoord"] = TOGGLE_TEXCOORD,
+			["onEnter"] = ShowToggleTooltip,
+			["onLeave"] = HideToggleTooltip,
+		})
 	end
-	btn:SetHeight(26)
+
+	local btn = CreateFrame("Button", nil, parent)
+	btn:SetSize(20, 20)
+	btn.icon = btn:CreateTexture(nil, "ARTWORK")
+	btn.icon:SetAllPoints(btn)
+	btn.icon:SetTexture(TOGGLE_ICON)
+	btn.icon:SetTexCoord(unpack(TOGGLE_TEXCOORD))
+	btn:SetScript("OnEnter", ShowToggleTooltip)
+	btn:SetScript("OnLeave", HideToggleTooltip)
 	return btn
 end
 
-local function UpdateButtonText(btn, instID)
+local function UpdateButtonVisual(btn, instID)
 	local on = IsMinimapViewOn(instID)
-	local key = on and "LID_MAPVIEW" or "LID_MINIMAPVIEW"
-	local fallback = on and "Map view" or "Minimap view"
-	local label = MapUtils.Trans ~= nil and MapUtils:Trans(key) or fallback
-	btn:SetText(label)
-	local fs = btn.GetFontString ~= nil and btn:GetFontString() or btn.Text
-	local tw = fs ~= nil and fs.GetStringWidth ~= nil and fs:GetStringWidth() or (btn.GetTextWidth ~= nil and btn:GetTextWidth() or 90)
-	btn:SetWidth(math.max(108, tw + 30))
-end
-
-local function AnchorToggleButton(btn, overlay)
-	local slider = FindBossSlider()
-	btn:ClearAllPoints()
-	if slider ~= nil then
-		btn:SetPoint("RIGHT", slider, "LEFT", -14, 0)
-	else
-		btn:SetPoint("BOTTOMLEFT", overlay, "BOTTOMLEFT", 14, 10)
+	if btn.SetRingState ~= nil then
+		btn:SetRingState(on and "on" or "neutral")
+	elseif btn.icon ~= nil then
+		btn.icon:SetAlpha(on and 1 or 0.7)
 	end
 end
 
+local function AttachToggleButton(btn, overlay, minimapOn)
+	btn:Show()
+	local toolbar = overlay.toolbar
+	if toolbar ~= nil and toolbar.SetExtraButton ~= nil then
+		toolbar:SetExtraButton(btn)
+		if toolbar.SetCompactMode ~= nil then toolbar:SetCompactMode(minimapOn) end
+	else
+		if btn:GetParent() ~= overlay then btn:SetParent(overlay) end
+		btn:ClearAllPoints()
+		btn:SetPoint("BOTTOMRIGHT", overlay, "BOTTOMRIGHT", -49, 14)
+		btn:SetFrameLevel(overlay:GetFrameLevel() + 305)
+	end
+end
+
+local function DetachToggleButton(overlay)
+	if IM.btn ~= nil then
+		HideToggleTooltip(IM.btn)
+		IM.btn:Hide()
+	end
+
+	local target = overlay or IM.btnOverlay
+	if target ~= nil and target.toolbar ~= nil then
+		if target.toolbar.SetCompactMode ~= nil then
+			target.toolbar:SetCompactMode(false)
+		elseif target.toolbar.Layout ~= nil then
+			target.toolbar:Layout()
+		end
+	end
+end
+
+local function ClearOverlayPlanState(overlay)
+	if overlay == nil then return end
+	local wasShown = overlay._muPlanShown == true
+	overlay._muPlanShown = false
+	overlay._muPinCanvas = nil
+	overlay._muPinProject = nil
+	overlay._muOnWheel = nil
+	if wasShown and overlay.SyncMinimapPins ~= nil then overlay.SyncMinimapPins() end
+end
+
 local function HideVisuals()
-	if IM.planOverlay ~= nil then IM.planOverlay._muPlanShown = false end
+	ClearOverlayPlanState(IM.planOverlay)
 	if IM.plan ~= nil then IM.plan:Hide() end
-	if IM.btn ~= nil then IM.btn:Hide() end
+	DetachToggleButton(IM.planOverlay)
 	HidePlanArrow()
 	IM.activeInst = nil
 	IM.activeFloor = nil
 	IM.activeKey = nil
+	IM.btnOn = nil
 	IM.drag = nil
 end
 
@@ -505,13 +596,14 @@ Refresh = function()
 	local instID, floorIdx = MatchOverlayData(artKey)
 	local mapData = GetMapData(instID)
 	if mapData == nil then
-		overlay._muPlanShown = false
+		ClearOverlayPlanState(overlay)
 		if IM.plan ~= nil then IM.plan:Hide() end
-		if IM.btn ~= nil then IM.btn:Hide() end
+		DetachToggleButton(overlay)
 		HidePlanArrow()
 		IM.activeInst = nil
 		IM.activeFloor = nil
 		IM.activeKey = artKey
+		IM.btnOn = nil
 		IM.drag = nil
 		return
 	end
@@ -522,45 +614,57 @@ Refresh = function()
 	IM.activeKey = artKey
 	if IM.btn == nil then
 		local btn = CreateToggleButton(overlay)
-		btn:SetScript("OnClick", function()
+		btn:SetScript("OnClick", function(sel)
 			local curInst = IM.activeInst
 			SetMinimapViewOn(curInst, not IsMinimapViewOn(curInst))
-			UpdateButtonText(btn, curInst)
+			UpdateButtonVisual(sel, curInst)
 			IM.activeFloor = nil
 			Refresh()
+			if GameTooltip ~= nil and GameTooltip:IsOwned(sel) then ShowToggleTooltip(sel) end
 		end)
 		IM.btn = btn
 		IM.btnOverlay = overlay
 	elseif IM.btnOverlay ~= overlay then
-		IM.btn:SetParent(overlay)
 		IM.btnOverlay = overlay
 	end
 	local minimapOn = IsMinimapViewOn(instID)
-	local btnNeedsLayout = floorChanged or not IM.btn:IsShown() or IM.btnOn ~= minimapOn
-	if btnNeedsLayout then
-		IM.btnOn = minimapOn
-		AnchorToggleButton(IM.btn, overlay)
-		IM.btn:SetFrameLevel(overlay:GetFrameLevel() + 305)
-		UpdateButtonText(IM.btn, instID)
-		IM.btn:Show()
-	end
+	local wasPlanShown = overlay._muPlanShown == true
+	local needsDock = overlay.toolbar ~= nil and (IM.btn:GetParent() ~= overlay.toolbar or overlay.toolbar.extraButton ~= IM.btn)
+	local btnNeedsLayout = floorChanged or needsDock or not IM.btn:IsShown() or IM.btnOn ~= minimapOn
+	local compactMode = false
 	if minimapOn then
 		local plan = EnsurePlan(overlay, instID, mapData)
 		local wasHidden = not plan:IsShown()
 		overlay._muPlanShown = true
+		overlay._muPinCanvas = plan.canvas
+		overlay._muOnWheel = function(delta)
+			if plan.onWheel ~= nil then plan.onWheel(plan, delta) end
+		end
+		if floorChanged or wasHidden or overlay._muPinProject == nil then
+			overlay._muPinProject = BuildPinProjector(artKey, mapData)
+		end
+		compactMode = overlay._muPinProject == nil
 		plan:Show()
 		if floorChanged or wasHidden then
 			ApplyFloorStyling(floorIdx)
 		end
 		LayoutPlan(overlay, mapData, floorIdx, floorChanged or wasHidden)
 		UpdatePlanArrow(mapData, instID)
+		if (floorChanged or wasHidden or not wasPlanShown) and overlay.SyncMinimapPins ~= nil then
+			overlay.SyncMinimapPins()
+		end
 	else
-		overlay._muPlanShown = false
+		ClearOverlayPlanState(overlay)
 		if IM.plan ~= nil then
 			IM.plan:Hide()
 			IM.drag = nil
 		end
 		HidePlanArrow()
+	end
+	if btnNeedsLayout then
+		IM.btnOn = minimapOn
+		UpdateButtonVisual(IM.btn, instID)
+		AttachToggleButton(IM.btn, overlay, compactMode)
 	end
 end
 

@@ -199,7 +199,103 @@ local function StylePin(pin, row, media, killed)
     end
 end
 
-local TOGGLES = {{"boss", {{}, "Interface\\TargetingFrame\\UI-RaidTargetingIcons"}, {0.75, 1, 0.25, 0.5}}, {"item", {{}, "Interface\\Icons\\INV_Misc_Bag_10"}}, {"quest", {{}, "Interface\\GossipFrame\\AvailableQuestIcon"}},{"entrance", PIN_ICONS["entrance"]}, {"level", PIN_ICONS["up"]}}
+local TOGGLE_STYLE = {
+    ["size"] = 20,
+    ["step"] = 28,
+    ["ringScale"] = 1.55,
+    ["bg"] = {0.07, 0.07, 0.09, 0.92},
+    ["on"] = {0.26, 0.86, 0.36},
+    ["off"] = {0.78, 0.26, 0.26},
+    ["neutral"] = {0.72, 0.62, 0.4},
+    ["onHover"] = {0.42, 0.98, 0.5},
+    ["offHover"] = {0.95, 0.38, 0.38},
+    ["neutralHover"] = {0.95, 0.84, 0.54},
+}
+
+local TOGGLES = {
+    {"boss", {{}, "Interface\\TargetingFrame\\UI-RaidTargetingIcons"}, {0.75, 1, 0.25, 0.5}},
+    {"item", {{}, "Interface\\Icons\\INV_Misc_Bag_10"}, {0.08, 0.92, 0.08, 0.92}},
+    {"quest", {{}, "Interface\\GossipFrame\\AvailableQuestIcon"}},
+    {"entrance", PIN_ICONS["entrance"]},
+    {"level", PIN_ICONS["up"]},
+}
+
+function D4:CreateInstanceRoundButton(parent, options)
+    options = options or {}
+    local size = options.size or TOGGLE_STYLE.size
+    local button = CreateFrame("Button", nil, parent)
+    button:SetSize(size, size)
+    button:SetHitRectInsets(-3, -3, -3, -3)
+    button.bg = button:CreateTexture(nil, "BACKGROUND")
+    button.bg:SetAllPoints(button)
+    button.bg:SetColorTexture(TOGGLE_STYLE.bg[1], TOGGLE_STYLE.bg[2], TOGGLE_STYLE.bg[3], TOGGLE_STYLE.bg[4])
+    button.icon = button:CreateTexture(nil, "ARTWORK")
+    button.icon:SetPoint("TOPLEFT", button, "TOPLEFT", 1, -1)
+    button.icon:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -1, 1)
+    button.highlight = button:CreateTexture(nil, "HIGHLIGHT")
+    button.highlight:SetAllPoints(button.icon)
+    if type(options.icon) == "table" then
+        ApplyIcon(button.icon, options.icon)
+        ApplyIcon(button.highlight, options.icon)
+    elseif options.icon ~= nil then
+        D4:SetIconTexture(button.icon, options.icon)
+        D4:SetIconTexture(button.highlight, options.icon)
+    end
+    if options.texCoord ~= nil then
+        button.icon:SetTexCoord(unpack(options.texCoord))
+        button.highlight:SetTexCoord(unpack(options.texCoord))
+    end
+
+    button.highlight:SetBlendMode("ADD")
+    button.highlight:SetAlpha(0.35)
+    button.ring = button:CreateTexture(nil, "OVERLAY", nil, 1)
+    button.ring:SetTexture(PIN_RING_TEXTURE)
+    button.ring:SetTexCoord(0, 0.6, 0, 0.6)
+    button.ring:SetSize(size * TOGGLE_STYLE.ringScale, size * TOGGLE_STYLE.ringScale)
+    button.ring:SetPoint("CENTER", button, "CENTER", 0, 0)
+    button.ring:SetDesaturated(true)
+    if button.CreateMaskTexture ~= nil and button.icon.AddMaskTexture ~= nil then
+        local mask = button:CreateMaskTexture()
+        mask:SetAllPoints(button)
+        mask:SetTexture(PIN_MASK, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+        button.bg:AddMaskTexture(mask)
+        button.icon:AddMaskTexture(mask)
+        button.highlight:AddMaskTexture(mask)
+    end
+
+    button._ringState = "neutral"
+    button._hovered = false
+    function button:ApplyRingVisual()
+        local state = self._ringState or "neutral"
+        local color = self._hovered and TOGGLE_STYLE[state .. "Hover"] or TOGGLE_STYLE[state] or TOGGLE_STYLE.neutral
+        self.ring:SetVertexColor(color[1], color[2], color[3])
+        self.icon:SetDesaturated(state == "off")
+        self.icon:SetAlpha(state == "on" and 1 or (state == "neutral" and 0.78 or 0.45))
+    end
+
+    function button:SetRingState(state)
+        self._ringState = state or "neutral"
+        self:ApplyRingVisual()
+    end
+
+    button:SetScript("OnEnter", function(sel)
+        sel._hovered = true
+        sel:ApplyRingVisual()
+        if options.onEnter ~= nil then options.onEnter(sel) end
+    end)
+
+    button:SetScript("OnLeave", function(sel)
+        sel._hovered = false
+        sel:ApplyRingVisual()
+        if options.onLeave ~= nil then options.onLeave(sel) end
+    end)
+
+    if options.onClick ~= nil then button:SetScript("OnClick", options.onClick) end
+    button:ApplyRingVisual()
+
+    return button
+end
+
 local InstancePins = {}
 InstancePins.__index = InstancePins
 function InstancePins:IsKindEnabled(kind)
@@ -211,14 +307,7 @@ function InstancePins:UpdateToggles()
     if self.toggles == nil then return end
     for _, button in ipairs(self.toggles.buttons) do
         local enabled = self:IsKindEnabled(button.kind)
-        if enabled then
-            button.ring:SetVertexColor(0.2, 1, 0.2)
-        else
-            button.ring:SetVertexColor(1, 0.2, 0.2)
-        end
-
-        button.icon:SetDesaturated(not enabled)
-        button.icon:SetAlpha(enabled and 1 or 0.5)
+        button:SetRingState(enabled and "on" or "off")
     end
 end
 
@@ -227,56 +316,31 @@ function InstancePins:CreateToggles(parent)
     local set = self
     local options = self.options
     local bar = CreateFrame("Frame", nil, parent)
-    bar:SetSize(#TOGGLES * 30 - 10, 20)
+    bar:SetSize((#TOGGLES - 1) * TOGGLE_STYLE.step + TOGGLE_STYLE.size, TOGGLE_STYLE.size)
     bar.buttons = {}
+    local function ShowTooltip(sel)
+        if options.getToggleText == nil then return end
+        GameTooltip:SetOwner(sel, "ANCHOR_TOP", 0, 6)
+        GameTooltip:SetText(options.getToggleText(sel.kind, set:IsKindEnabled(sel.kind)))
+        GameTooltip:Show()
+    end
+
     for index, def in ipairs(TOGGLES) do
-        local button = CreateFrame("Button", nil, bar)
+        local button = D4:CreateInstanceRoundButton(bar, {
+            ["icon"] = def[2],
+            ["texCoord"] = def[3],
+            ["onEnter"] = ShowTooltip,
+            ["onLeave"] = function(sel) if GameTooltip:IsOwned(sel) then GameTooltip:Hide() end end,
+            ["onClick"] = function(sel)
+                if options.setEnabled == nil then return end
+                options.setEnabled(sel.kind, not set:IsKindEnabled(sel.kind))
+                set:UpdateToggles()
+                if GameTooltip:IsOwned(sel) then ShowTooltip(sel) end
+            end,
+        })
+
         button.kind = def[1]
-        button:SetSize(20, 20)
-        button:SetPoint("RIGHT", bar, "RIGHT", -(index - 1) * 30, 0)
-        button.icon = button:CreateTexture(nil, "ARTWORK")
-        button.icon:SetAllPoints(button)
-        button.highlight = button:CreateTexture(nil, "HIGHLIGHT")
-        button.highlight:SetAllPoints(button)
-        ApplyIcon(button.icon, def[2])
-        ApplyIcon(button.highlight, def[2])
-        if def[3] then
-            button.icon:SetTexCoord(unpack(def[3]))
-            button.highlight:SetTexCoord(unpack(def[3]))
-        end
-
-        button.highlight:SetBlendMode("ADD")
-        button.highlight:SetAlpha(0.4)
-        button.ring = button:CreateTexture(nil, "OVERLAY", nil, 1)
-        button.ring:SetTexture(PIN_RING_TEXTURE)
-        button.ring:SetTexCoord(0, 0.6, 0, 0.6)
-        button.ring:SetSize(20 * PIN_RING_SCALE, 20 * PIN_RING_SCALE)
-        button.ring:SetPoint("CENTER", button, "CENTER", 0, 0)
-        button.ring:SetDesaturated(true)
-        if button.CreateMaskTexture ~= nil and button.icon.AddMaskTexture ~= nil then
-            local mask = button:CreateMaskTexture()
-            mask:SetAllPoints(button)
-            mask:SetTexture(PIN_MASK, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
-            button.icon:AddMaskTexture(mask)
-            button.highlight:AddMaskTexture(mask)
-        end
-
-        local function ShowTooltip(sel)
-            if options.getToggleText == nil then return end
-            GameTooltip:SetOwner(sel, "ANCHOR_RIGHT")
-            GameTooltip:SetText(options.getToggleText(sel.kind, set:IsKindEnabled(sel.kind)))
-            GameTooltip:Show()
-        end
-
-        button:SetScript("OnClick", function(sel)
-            if options.setEnabled == nil then return end
-            options.setEnabled(sel.kind, not set:IsKindEnabled(sel.kind))
-            set:UpdateToggles()
-            if GameTooltip:IsOwned(sel) then ShowTooltip(sel) end
-        end)
-
-        button:SetScript("OnEnter", ShowTooltip)
-        button:SetScript("OnLeave", function(sel) if GameTooltip:IsOwned(sel) then GameTooltip:Hide() end end)
+        button:SetPoint("RIGHT", bar, "RIGHT", -(index - 1) * TOGGLE_STYLE.step, 0)
         bar.buttons[index] = button
     end
 
@@ -286,7 +350,7 @@ function InstancePins:CreateToggles(parent)
     return bar
 end
 
-function InstancePins:Update(rows, art, scale)
+function InstancePins:Update(rows, art, scale, project)
     scale = scale or 1
     local options = self.options
     local w = art:GetWidth()
@@ -298,31 +362,35 @@ function InstancePins:Update(rows, art, scale)
         local level = nil
         if row[1] == "level" and options.getLevel then level = options.getLevel(row) end
         if self:IsKindEnabled(row[1]) and (row[1] ~= "level" or level ~= nil) and self:IsQuestRowVisible(row) then
-            count = count + 1
-            local pin = self.pins[count]
-            if pin == nil then
-                pin = CreatePin(self.parent, options)
-                self.pins[count] = pin
-            end
+            local px, py = row[2], row[3]
+            if project ~= nil then px, py = project(px, py) end
+            if px ~= nil and py ~= nil and px >= -0.15 and px <= 1.15 and py >= -0.15 and py <= 1.15 then
+                count = count + 1
+                local pin = self.pins[count]
+                if pin == nil then
+                    pin = CreatePin(self.parent, options)
+                    self.pins[count] = pin
+                end
 
-            local frameLevel = baseLevel + 2 + count * 3
-            if row[1] == "boss" then
-                frameLevel = frameLevel + #rows * 3
-            elseif QUEST_KINDS[row[1]] then
-                frameLevel = frameLevel + #rows * 6
+                local frameLevel = baseLevel + 20 + count * 3
+                if row[1] == "boss" then
+                    frameLevel = frameLevel + #rows * 3
+                elseif QUEST_KINDS[row[1]] then
+                    frameLevel = frameLevel + #rows * 6
+                end
+                if frameLevel > baseLevel + 240 then frameLevel = baseLevel + 240 end
+                pin:SetFrameLevel(frameLevel)
+                pin.badge:SetFrameLevel(frameLevel + 2)
+                pin.row = row
+                pin.level = level
+                local pinScale = (row[1] == "boss" and bossScale or 1) / scale
+                pin:SetScale(pinScale)
+                local killed = row[1] == "boss" and options.isBossKilled ~= nil and options.isBossKilled(row) == true
+                StylePin(pin, row, options.media, killed)
+                pin:ClearAllPoints()
+                pin:SetPoint("CENTER", art, "TOPLEFT", w * px / pinScale, -h * py / pinScale)
+                pin:Show()
             end
-            if frameLevel > baseLevel + 230 then frameLevel = baseLevel + 230 end
-            pin:SetFrameLevel(frameLevel)
-            pin.badge:SetFrameLevel(frameLevel + 2)
-            pin.row = row
-            pin.level = level
-            local pinScale = (row[1] == "boss" and bossScale or 1) / scale
-            pin:SetScale(pinScale)
-            local killed = row[1] == "boss" and options.isBossKilled ~= nil and options.isBossKilled(row) == true
-            StylePin(pin, row, options.media, killed)
-            pin:ClearAllPoints()
-            pin:SetPoint("CENTER", art, "TOPLEFT", w * row[2] / pinScale, -h * row[3] / pinScale)
-            pin:Show()
         end
     end
 
