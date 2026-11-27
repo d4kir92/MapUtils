@@ -311,6 +311,7 @@ function InstancePins:Update(rows, art, scale)
             elseif QUEST_KINDS[row[1]] then
                 frameLevel = frameLevel + #rows * 6
             end
+            if frameLevel > baseLevel + 230 then frameLevel = baseLevel + 230 end
             pin:SetFrameLevel(frameLevel)
             pin.badge:SetFrameLevel(frameLevel + 2)
             pin.row = row

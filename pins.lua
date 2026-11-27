@@ -1762,11 +1762,16 @@ function PinCache.WatchOutline(pin)
 end
 
 PinCache.bookMaskPath = "Interface\\CharacterFrame\\TempPortraitAlphaMask"
+PinCache.bookRingPath = "Interface\\AddOns\\MapUtils\\media\\book_ring.blp"
 PinCache.bookBorderColors = {
 	bag = {0.2, 1, 0.2},
 	bank = {0.2, 1, 0.2},
 	missing = {1, 0.15, 0.15}
 }
+
+function PinCache.IsOwnedLibraryBook(entry)
+	return entry ~= nil and entry.kind == "librarybook" and (entry.state == "bag" or entry.state == "bank")
+end
 
 function PinCache.ApplyBookBorder(pin, entry)
 	local isBook = entry.kind == "librarybook"
@@ -1791,7 +1796,6 @@ function PinCache.ApplyBookBorder(pin, entry)
 		end
 
 		if pin.bookBorder ~= nil then pin.bookBorder:Hide() end
-		if pin.bookBg ~= nil then pin.bookBg:Hide() end
 
 		return
 	end
@@ -1799,15 +1803,14 @@ function PinCache.ApplyBookBorder(pin, entry)
 	local color = PinCache.bookBorderColors[entry.state]
 	if color == nil then
 		if pin.bookBorder ~= nil then pin.bookBorder:Hide() end
-		if pin.bookBg ~= nil then pin.bookBg:Hide() end
 
 		return
 	end
 
 	local t = (pin.pixel or 1) * 1.5
 	if pin.bookBorder == nil then
-		pin.bookBorder = pin:CreateTexture(nil, "OVERLAY", nil, -2)
-		pin.bookBorder:SetTexture(PinCache.bookMaskPath)
+		pin.bookBorder = pin:CreateTexture(nil, "OVERLAY", nil, 1)
+		pin.bookBorder:SetTexture(PinCache.bookRingPath)
 	end
 
 	pin.bookBorder:ClearAllPoints()
@@ -1815,25 +1818,10 @@ function PinCache.ApplyBookBorder(pin, entry)
 	pin.bookBorder:SetPoint("BOTTOMRIGHT", icon, "BOTTOMRIGHT", t, -t)
 	pin.bookBorder:SetVertexColor(color[1], color[2], color[3], 1)
 	pin.bookBorder:Show()
-
-	local owned = entry.state == "bag" or entry.state == "bank"
-	if owned then
-		if pin.bookBg == nil then
-			pin.bookBg = pin:CreateTexture(nil, "OVERLAY", nil, -1)
-			pin.bookBg:SetTexture(PinCache.bookMaskPath)
-			pin.bookBg:SetVertexColor(0, 0, 0, 0.75)
-		end
-
-		pin.bookBg:ClearAllPoints()
-		pin.bookBg:SetAllPoints(icon)
-		pin.bookBg:Show()
-	elseif pin.bookBg ~= nil then
-		pin.bookBg:Hide()
-	end
 end
 
 local function ApplyEntryTint(pin, entry)
-	pin.texture:SetAlpha(entry.kind == "librarybook" and (entry.state == "bag" or entry.state == "bank") and 0.5 or 1)
+	pin.texture:SetAlpha(1)
 	PinCache.ApplyBookBorder(pin, entry)
 	pin.texture:SetDesaturated(IsDesaturatedEntry(entry))
 	if entry.kind == "flight" and entry.undiscovered then
@@ -2072,7 +2060,7 @@ local function GetFlightDescription()
 end
 
 local function GetFlightStatus(entry)
-	if not entry.discoveryKnown then return UNKNOWN or "Unknown", 1, 0.82, 0 end
+	if not entry.discoveryKnown then return MapUtils:Trans("LID_FLIGHTUNKNOWN"), 1, 0.82, 0 end
 	if entry.undiscovered then return MapUtils:Trans("LID_FLIGHTUNDISCOVERED"), 1, 0.25, 0.25 end
 
 	return MapUtils:Trans("LID_FLIGHTDISCOVERED"), 0.25, 1, 0.25
@@ -2431,6 +2419,7 @@ function PinCache.AddTooltipLines(entry, mapID)
 		GameTooltip:AddLine(entry.name, 1, 1, 1)
 		GameTooltip:AddLine(GetFlightDescription(), 0.6, 0.6, 0.6)
 		GameTooltip:AddLine(GetFlightStatus(entry))
+		if not entry.discoveryKnown then GameTooltip:AddLine(MapUtils:Trans("LID_FLIGHTUNKNOWNHINT"), 0.7, 0.7, 0.7, true) end
 	else
 		local name, description = GetPierLabel(entry, mapID or C_Map.GetBestMapForUnit("player"))
 		GameTooltip:AddLine(name, 1, 1, 1)
@@ -3183,9 +3172,10 @@ local function UpdateWorldPins()
 		if acquired then
 			ApplyIcon(pin, GetEntryIcon(entry))
 			ApplyEntryTint(pin, entry)
-			pin:SetAlpha(MapUtils:GetDebugPinAlpha(entry))
+			pin:SetAlpha(MapUtils:GetDebugPinAlpha(entry) * (PinCache.IsOwnedLibraryBook(entry) and 0.5 or 1))
 		elseif entry.kind == "librarybook" then
 			PinCache.ApplyBookBorder(pin, entry)
+			pin:SetAlpha(MapUtils:GetDebugPinAlpha(entry) * (PinCache.IsOwnedLibraryBook(entry) and 0.5 or 1))
 		end
 		local factor = sizeFactors[entry.kind or ""] or MapUtils:GetPinKindSizeFactor(entry.kind)
 		if entry.kind == "crossing" or entry.kind == "dungeon" and entry.entrance == "path" then
@@ -3380,6 +3370,7 @@ local function UpdateMinimapPins()
 		pin.entry = entry
 		ApplyIcon(pin, GetEntryIcon(entry))
 		ApplyEntryTint(pin, entry)
+		pin:SetAlpha(PinCache.IsOwnedLibraryBook(entry) and 0.5 or 1)
 		local minimapSize = ICON_SIZE * (pin.icon == TRANSPORT_ICONS["ship"] and SHIP_ICON_SCALE or 1)
 		pin:SetSize(minimapSize, minimapSize)
 		LayoutPinIcon(pin, minimapSize * GetEntryIconScale(entry), 0, 0)

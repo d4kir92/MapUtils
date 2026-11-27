@@ -1,5 +1,5 @@
-local _, D4 = ...
-local VERSION = 1
+local addonName, D4 = ...
+local VERSION = 2
 local TAXI_PIN = Enum and Enum.SuperTrackingMapPinType and Enum.SuperTrackingMapPinType.TaxiNode or 2
 local TRACK = Enum and Enum.SuperTrackingType or {}
 local TRACK_QUEST = TRACK.Quest or 0
@@ -9,6 +9,8 @@ local TRACK_PIN = TRACK.MapPin or 6
 local TRACK_VIGNETTE = TRACK.Vignette or 7
 local ARROW_SIZE = 24
 local POS_MAX_AGE = 3.0
+local TEX_CIRCLE = "Interface\\AddOns\\" .. addonName .. "\\shared\\InstanceMap\\player_circle.blp"
+local TEX_POINTER = "Interface\\AddOns\\" .. addonName .. "\\shared\\InstanceMap\\player_pointer.blp"
 local CFG = {
 	["activeCount"] = 5,
 	["minFix"] = 4,
@@ -41,6 +43,8 @@ local CFG = {
 	["maxSpeed"] = 45,
 	["minSpeed"] = 0.4,
 	["headingSpeed"] = 1.2,
+	["arrowDelay"] = 0.5,
+	["headingMaxAge"] = 2.5,
 	["extrapolate"] = 0.25,
 	["ageWeight"] = 3,
 	["zBufSize"] = 5,
@@ -90,6 +94,7 @@ if reg == nil then
 			["rejects"] = 0,
 			["lastOk"] = 0,
 			["moving"] = false,
+			["moveStart"] = 0,
 			["motionSince"] = 0,
 			["settleLeft"] = 0,
 			["nextSleepPing"] = 0,
@@ -106,6 +111,7 @@ if reg == nil then
 				["vx"] = 0,
 				["vy"] = 0,
 				["heading"] = nil,
+				["headingTime"] = 0,
 				["time"] = 0,
 				["residual"] = 999,
 				["count"] = 0,
@@ -132,10 +138,11 @@ local function IsSecret(v)
 	return issecretvalue ~= nil and issecretvalue(v) == true
 end
 
-local function IsPlayerMoving()
-	if GetUnitSpeed == nil then return false end
+local function GetPlayerMovingKnown()
+	if GetUnitSpeed == nil then return nil end
 	local s = GetUnitSpeed("player")
-	return not IsSecret(s) and type(s) == "number" and s > 0
+	if IsSecret(s) or type(s) ~= "number" then return nil end
+	return s > 0
 end
 
 local function GetCurrentInstanceID()
@@ -195,6 +202,7 @@ end
 local function ResetMotion(now)
 	POS.fix.vx = 0
 	POS.fix.vy = 0
+	POS.fix.headingTime = 0
 	POS.motionSince = now
 end
 
@@ -370,7 +378,10 @@ local function UpdateVelocity(now)
 	end
 	f.vx = vx
 	f.vy = vy
-	if speed >= CFG.headingSpeed then f.heading = math.atan2(vy, vx) end
+	if speed >= CFG.headingSpeed then
+		f.heading = math.atan2(vy, vx)
+		f.headingTime = now
+	end
 end
 
 local function AcceptFix(x, y, z, residual, count, now)
@@ -856,6 +867,62 @@ local function BuildAnchorOrder(instID)
 end
 
 local impl = {}
+
+local function OnStartMoving(now)
+	if POS.moving then return end
+	POS.moving = true
+	POS.moveStart = now
+	ResetMotion(now)
+	if POS.active and POS.phase == 3 then
+		POS.phase = 2
+		POS.settleLeft = 0
+		POS.elapsed = CFG.stepActive
+		SwitchSlot(NextSlotIndex(), now)
+	end
+end
+
+local function OnStopMoving(now)
+	if not POS.moving then return end
+	POS.moving = false
+	POS.moveStart = 0
+	ResetMotion(now)
+	if POS.active and POS.phase == 2 then POS.settleLeft = POS.activeCount end
+end
+
+local function BindMotionScript(mf)
+	mf:SetScript("OnEvent", function(_, event)
+		local now = GetTime()
+		if event == "PLAYER_STARTED_MOVING" then
+			OnStartMoving(now)
+		elseif event == "PLAYER_STOPPED_MOVING" then
+			OnStopMoving(now)
+		elseif event == "PLAYER_ENTERING_WORLD" then
+			if GetCurrentInstanceID() == nil then
+				wipe(reg.leases)
+				impl.Stop()
+			elseif POS.active and POS.phase == 3 then
+				POS.nextSleepPing = now
+			end
+		elseif POS.active and POS.phase == 3 then
+			POS.nextSleepPing = now
+		end
+	end)
+end
+
+local function EnsureMotionFrame()
+	if reg.motionFrame == nil then
+		if CreateFrame == nil then return end
+		local mf = CreateFrame("Frame")
+		mf:RegisterEvent("PLAYER_STARTED_MOVING")
+		mf:RegisterEvent("PLAYER_STOPPED_MOVING")
+		mf:RegisterEvent("PLAYER_ENTERING_WORLD")
+		mf:RegisterEvent("ZONE_CHANGED_INDOORS")
+		mf:RegisterEvent("ZONE_CHANGED")
+		BindMotionScript(mf)
+		reg.motionFrame = mf
+	end
+end
+
 local function EnsureFrames()
 	if reg.driver == nil then
 		local drv = CreateFrame("Frame")
@@ -876,41 +943,7 @@ local function EnsureFrames()
 		end)
 		reg.driver = drv
 	end
-	if reg.motionFrame == nil then
-		local mf = CreateFrame("Frame")
-		mf:RegisterEvent("PLAYER_STARTED_MOVING")
-		mf:RegisterEvent("PLAYER_STOPPED_MOVING")
-		mf:RegisterEvent("PLAYER_ENTERING_WORLD")
-		mf:RegisterEvent("ZONE_CHANGED_INDOORS")
-		mf:RegisterEvent("ZONE_CHANGED")
-		mf:SetScript("OnEvent", function(_, event)
-			local now = GetTime()
-			if event == "PLAYER_STARTED_MOVING" then
-				POS.moving = true
-				ResetMotion(now)
-				if POS.active and POS.phase == 3 then
-					POS.phase = 2
-					POS.settleLeft = 0
-					POS.elapsed = CFG.stepActive
-					SwitchSlot(NextSlotIndex(), now)
-				end
-			elseif event == "PLAYER_STOPPED_MOVING" then
-				POS.moving = false
-				ResetMotion(now)
-				if POS.active and POS.phase == 2 then POS.settleLeft = POS.activeCount end
-			elseif event == "PLAYER_ENTERING_WORLD" then
-				if GetCurrentInstanceID() == nil then
-					wipe(reg.leases)
-					impl.Stop()
-				elseif POS.active and POS.phase == 3 then
-					POS.nextSleepPing = now
-				end
-			elseif POS.active and POS.phase == 3 then
-				POS.nextSleepPing = now
-			end
-		end)
-		reg.motionFrame = mf
-	end
+	EnsureMotionFrame()
 end
 
 function impl.IsAvailable()
@@ -942,7 +975,15 @@ function impl.Start(instID)
 	POS.misses = 0
 	POS.rejects = 0
 	POS.lastOk = 0
-	POS.moving = IsPlayerMoving()
+	local knownMoving = GetPlayerMovingKnown()
+	if knownMoving ~= nil then
+		POS.moving = knownMoving
+		if knownMoving then
+			if (POS.moveStart or 0) == 0 then POS.moveStart = now end
+		else
+			POS.moveStart = 0
+		end
+	end
 	POS.blockedUntil = 0
 	POS.stopAt = 0
 	POS.elapsed = 0
@@ -953,6 +994,7 @@ function impl.Start(instID)
 	f.valid = false
 	f.confirmed = false
 	f.heading = nil
+	f.headingTime = 0
 	f.residual = 999
 	f.count = 0
 	ResetMotion(now)
@@ -972,6 +1014,7 @@ function impl.Stop()
 	if reg.driver ~= nil then reg.driver:Hide() end
 	POS.fix.valid = false
 	POS.fix.confirmed = false
+	POS.fix.headingTime = 0
 	RestoreSuperTrack()
 	SetMarkerAlpha(true)
 end
@@ -1026,7 +1069,16 @@ function impl.GetLive(ownerKey, instID, enabled)
 		impl.Release(ownerKey)
 		return nil
 	end
+	EnsureMotionFrame()
+	local now = GetTime()
+	local knownMoving = GetPlayerMovingKnown()
+	if knownMoving == true then
+		OnStartMoving(now)
+	elseif knownMoving == false and POS.moving and (now - (POS.moveStart or 0)) > 0.2 then
+		OnStopMoving(now)
+	end
 	local wx, wy, wz, heading, age
+	local usedTrilateration = false
 	if UnitPosition ~= nil then
 		local nx, ny = UnitPosition("player")
 		if not IsSecret(nx) and not IsSecret(ny) and type(nx) == "number" and type(ny) == "number" then
@@ -1035,6 +1087,7 @@ function impl.GetLive(ownerKey, instID, enabled)
 		end
 	end
 	if wx == nil then
+		usedTrilateration = true
 		impl.Request(ownerKey, curInst)
 		local fx, fy, fz, fhead, fage = impl.Get()
 		if fx ~= nil and fage ~= nil and fage <= POS_MAX_AGE then
@@ -1042,18 +1095,38 @@ function impl.GetLive(ownerKey, instID, enabled)
 		end
 	end
 	if wx == nil then return nil end
-	local facing = nil
+	local liveFacing = nil
 	if GetPlayerFacing ~= nil then
 		local f = GetPlayerFacing()
-		if not IsSecret(f) and type(f) == "number" then facing = f end
+		if not IsSecret(f) and type(f) == "number" then liveFacing = f end
 	end
+	local facing = liveFacing
 	if facing == nil then facing = heading end
-	return wx, wy, wz, facing, age
+	local movedLongEnough = POS.moving == true and (POS.moveStart or 0) > 0 and (now - POS.moveStart) >= CFG.arrowDelay
+	local showArrow = false
+	if movedLongEnough and facing ~= nil then
+		if liveFacing ~= nil then
+			showArrow = true
+		elseif usedTrilateration then
+			local ht = POS.fix.headingTime or 0
+			if ht > 0 and ht >= POS.motionSince and (now - ht) <= CFG.headingMaxAge then
+				showArrow = true
+			end
+		end
+	end
+	return wx, wy, wz, facing, age, showArrow
 end
 
 if reg.version < VERSION then
 	reg.version = VERSION
 	reg.impl = impl
+	if POS.moveStart == nil then POS.moveStart = 0 end
+	if POS.fix.headingTime == nil then POS.fix.headingTime = 0 end
+	if reg.motionFrame ~= nil then
+		BindMotionScript(reg.motionFrame)
+	else
+		EnsureMotionFrame()
+	end
 end
 
 function D4:RegisterInstancePosData(data)
@@ -1088,23 +1161,74 @@ function D4:GetLiveInstancePosition(ownerKey, instID, enabled)
 	return reg.impl.GetLive(ownerKey, instID, enabled)
 end
 
+local function GetPlayerClassRGB()
+	if UnitClass == nil then return 1, 1, 1 end
+	local _, class = UnitClass("player")
+	if class == nil then return 1, 1, 1 end
+	if D4.GetClassColor ~= nil then
+		local r, g, b = D4:GetClassColor(class)
+		if r ~= nil and g ~= nil and b ~= nil then return r, g, b end
+	end
+	local tab = CUSTOM_CLASS_COLORS or RAID_CLASS_COLORS
+	local c = tab ~= nil and tab[class] or nil
+	if c ~= nil then return c.r or 1, c.g or 1, c.b or 1 end
+	return 1, 1, 1
+end
+
+local function ApplyMarkerColor(arrow)
+	if arrow == nil then return end
+	local r, g, b = GetPlayerClassRGB()
+	if arrow._d4R == r and arrow._d4G == g and arrow._d4B == b then return end
+	arrow._d4R = r
+	arrow._d4G = g
+	arrow._d4B = b
+	if arrow.circle ~= nil then arrow.circle:SetVertexColor(r, g, b, 1) end
+	if arrow.pointer ~= nil then arrow.pointer:SetVertexColor(r, g, b, 1) end
+end
+
 function D4:CreateInstancePosArrow(parent, level, size)
 	local a = CreateFrame("Frame", nil, parent)
 	local sz = size or ARROW_SIZE
 	a:SetSize(sz, sz)
 	a:EnableMouse(false)
 	if level ~= nil then a:SetFrameLevel(level) end
-	local tex = a:CreateTexture(nil, "OVERLAY")
-	tex:SetAllPoints(a)
-	tex:SetTexture("Interface\\Minimap\\MinimapArrow")
-	a.tex = tex
+	local pointer = a:CreateTexture(nil, "OVERLAY", nil, 1)
+	pointer:SetAllPoints(a)
+	pointer:SetTexture(TEX_POINTER)
+	pointer:Hide()
+	local circle = a:CreateTexture(nil, "OVERLAY", nil, 2)
+	circle:SetAllPoints(a)
+	circle:SetTexture(TEX_CIRCLE)
+	a.pointer = pointer
+	a.circle = circle
+	a.tex = pointer
+	ApplyMarkerColor(a)
 	a:Hide()
 	return a
+end
+
+function D4:SetInstancePosArrowState(arrow, facing, showArrow)
+	if arrow == nil then return end
+	ApplyMarkerColor(arrow)
+	local wantPointer = showArrow == true and facing ~= nil
+	if arrow.pointer ~= nil then
+		if wantPointer then
+			if arrow._d4Rot == nil or math.abs(facing - arrow._d4Rot) > 0.005 then
+				arrow._d4Rot = facing
+				arrow.pointer:SetRotation(facing)
+			end
+			if not arrow.pointer:IsShown() then arrow.pointer:Show() end
+		else
+			if arrow.pointer:IsShown() then arrow.pointer:Hide() end
+			arrow._d4Rot = nil
+		end
+	end
 end
 
 function D4:HideInstancePosArrow(arrow, ownerKey)
 	if arrow ~= nil then
 		if arrow:IsShown() then arrow:Hide() end
+		if arrow.pointer ~= nil and arrow.pointer:IsShown() then arrow.pointer:Hide() end
 		arrow._d4X = nil
 		arrow._d4Y = nil
 		arrow._d4Rot = nil
@@ -1122,11 +1246,12 @@ function D4:UpdateInstancePosArrow(arrow, artTex, artKey, ownerKey, enabled)
 		D4:HideInstancePosArrow(arrow, ownerKey)
 		return false
 	end
-	local wx, wy, _, facing = reg.impl.GetLive(ownerKey, bounds[1], enabled)
+	local wx, wy, _, facing, _, showArrow = reg.impl.GetLive(ownerKey, bounds[1], enabled)
 	if wx == nil then
 		if arrow:IsShown() then arrow:Hide() end
 		arrow._d4X = nil
 		arrow._d4Y = nil
+		arrow._d4Rot = nil
 		return false
 	end
 	local dx = bounds[3] - bounds[2]
@@ -1143,6 +1268,7 @@ function D4:UpdateInstancePosArrow(arrow, artTex, artKey, ownerKey, enabled)
 		if arrow:IsShown() then arrow:Hide() end
 		arrow._d4X = nil
 		arrow._d4Y = nil
+		arrow._d4Rot = nil
 		return false
 	end
 	local ax = u * aw
@@ -1153,10 +1279,7 @@ function D4:UpdateInstancePosArrow(arrow, artTex, artKey, ownerKey, enabled)
 		arrow:ClearAllPoints()
 		arrow:SetPoint("CENTER", artTex, "TOPLEFT", ax, ay)
 	end
-	if facing ~= nil and (arrow._d4Rot == nil or math.abs(facing - arrow._d4Rot) > 0.005) then
-		arrow._d4Rot = facing
-		arrow.tex:SetRotation(facing)
-	end
+	D4:SetInstancePosArrowState(arrow, facing, showArrow)
 	if not arrow:IsShown() then arrow:Show() end
 	return true
 end

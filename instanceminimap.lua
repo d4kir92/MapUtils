@@ -33,15 +33,24 @@ local function IsSecret(v)
 	return issecretvalue ~= nil and issecretvalue(v) == true
 end
 
-local function IsMinimapViewOn()
-	return MapUtils:GetConfig("INSTANCEPLANMINIMAP", true) ~= false
+local function IsMinimapViewOn(instID)
+	if instID == nil or MAUTTAB == nil then return false end
+	local views = MAUTTAB["INSTANCEMINIMAPVIEWS"]
+	return type(views) == "table" and views[instID] == true
 end
 
-local function SetMinimapViewOn(enabled)
-	if MapUtils.SetMapOption ~= nil then
-		MapUtils:SetMapOption("INSTANCEPLANMINIMAP", enabled == true)
-	elseif MAUTTAB ~= nil and MapUtils.SV ~= nil then
-		MapUtils:SV(MAUTTAB, "INSTANCEPLANMINIMAP", enabled == true)
+local function SetMinimapViewOn(instID, enabled)
+	if instID == nil then return end
+	MAUTTAB = MAUTTAB or {}
+	local views = MAUTTAB["INSTANCEMINIMAPVIEWS"]
+	if type(views) ~= "table" then
+		views = {}
+		MAUTTAB["INSTANCEMINIMAPVIEWS"] = views
+	end
+	if enabled == true then
+		views[instID] = true
+	else
+		views[instID] = nil
 	end
 end
 
@@ -124,12 +133,12 @@ local function EnsurePlanArrow(plan)
 	local a = IM.arrow
 	if a == nil then
 		if MapUtils.CreateInstancePosArrow ~= nil then
-			a = MapUtils:CreateInstancePosArrow(plan, plan.canvas:GetFrameLevel() + 20, ARROW_SIZE)
+			a = MapUtils:CreateInstancePosArrow(plan, plan.canvas:GetFrameLevel() + 10, ARROW_SIZE)
 		else
 			a = CreateFrame("Frame", nil, plan)
 			a:SetSize(ARROW_SIZE, ARROW_SIZE)
 			a:EnableMouse(false)
-			a:SetFrameLevel(plan.canvas:GetFrameLevel() + 20)
+			a:SetFrameLevel(plan.canvas:GetFrameLevel() + 10)
 			local tex = a:CreateTexture(nil, "OVERLAY")
 			tex:SetAllPoints(a)
 			tex:SetTexture("Interface\\Minimap\\MinimapArrow")
@@ -138,7 +147,7 @@ local function EnsurePlanArrow(plan)
 		end
 		IM.arrow = a
 	else
-		a:SetFrameLevel(plan.canvas:GetFrameLevel() + 20)
+		a:SetFrameLevel(plan.canvas:GetFrameLevel() + 10)
 	end
 	return a
 end
@@ -386,8 +395,8 @@ local function EnsurePlan(overlay, instID, mapData)
 		IM.lastW = 0
 		IM.lastH = 0
 	end
-	IM.plan:SetFrameLevel(overlay:GetFrameLevel() + 400)
-	IM.plan.canvas:SetFrameLevel(overlay:GetFrameLevel() + 410)
+	IM.plan:SetFrameLevel(overlay:GetFrameLevel() + 250)
+	IM.plan.canvas:SetFrameLevel(overlay:GetFrameLevel() + 255)
 	if IM.builtInst ~= instID then
 		BuildTiles(IM.plan, instID, mapData)
 	end
@@ -419,8 +428,8 @@ local function CreateToggleButton(overlay)
 	return btn
 end
 
-local function UpdateButtonText(btn)
-	local on = IsMinimapViewOn()
+local function UpdateButtonText(btn, instID)
+	local on = IsMinimapViewOn(instID)
 	local key = on and "LID_MAPVIEW" or "LID_MINIMAPVIEW"
 	local fallback = on and "Map view" or "Minimap view"
 	local label = MapUtils.Trans ~= nil and MapUtils:Trans(key) or fallback
@@ -458,7 +467,7 @@ local function UpdatePlanArrow(mapData, instID)
 		HidePlanArrow()
 		return
 	end
-	local wx, wy, _, facing = MapUtils:GetLiveInstancePosition("MapUtils_Minimap", instID, true)
+	local wx, wy, _, facing, _, showArrow = MapUtils:GetLiveInstancePosition("MapUtils_Minimap", instID, true)
 	if wx == nil then
 		if IM.arrow ~= nil and IM.arrow:IsShown() then IM.arrow:Hide() end
 		IM.arrowPx = nil
@@ -477,7 +486,9 @@ local function UpdatePlanArrow(mapData, instID)
 	local moved = IM.arrowPx == nil or math.abs(px - IM.arrowPx) > 0.05 or math.abs(py - IM.arrowPy) > 0.05
 	IM.arrowPx = px
 	IM.arrowPy = py
-	if facing ~= nil and (IM.arrowRot == nil or math.abs(facing - IM.arrowRot) > 0.005) then
+	if MapUtils.SetInstancePosArrowState ~= nil then
+		MapUtils:SetInstancePosArrowState(a, facing, showArrow)
+	elseif facing ~= nil and (IM.arrowRot == nil or math.abs(facing - IM.arrowRot) > 0.005) then
 		IM.arrowRot = facing
 		a.tex:SetRotation(facing)
 	end
@@ -512,8 +523,9 @@ Refresh = function()
 	if IM.btn == nil then
 		local btn = CreateToggleButton(overlay)
 		btn:SetScript("OnClick", function()
-			SetMinimapViewOn(not IsMinimapViewOn())
-			UpdateButtonText(btn)
+			local curInst = IM.activeInst
+			SetMinimapViewOn(curInst, not IsMinimapViewOn(curInst))
+			UpdateButtonText(btn, curInst)
 			IM.activeFloor = nil
 			Refresh()
 		end)
@@ -523,15 +535,16 @@ Refresh = function()
 		IM.btn:SetParent(overlay)
 		IM.btnOverlay = overlay
 	end
-	local btnNeedsLayout = floorChanged or not IM.btn:IsShown() or IM.btnOn ~= IsMinimapViewOn()
+	local minimapOn = IsMinimapViewOn(instID)
+	local btnNeedsLayout = floorChanged or not IM.btn:IsShown() or IM.btnOn ~= minimapOn
 	if btnNeedsLayout then
-		IM.btnOn = IsMinimapViewOn()
+		IM.btnOn = minimapOn
 		AnchorToggleButton(IM.btn, overlay)
-		IM.btn:SetFrameLevel(overlay:GetFrameLevel() + 1100)
-		UpdateButtonText(IM.btn)
+		IM.btn:SetFrameLevel(overlay:GetFrameLevel() + 305)
+		UpdateButtonText(IM.btn, instID)
 		IM.btn:Show()
 	end
-	if IsMinimapViewOn() then
+	if minimapOn then
 		local plan = EnsurePlan(overlay, instID, mapData)
 		local wasHidden = not plan:IsShown()
 		overlay._muPlanShown = true

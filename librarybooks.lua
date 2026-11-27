@@ -57,15 +57,27 @@ function LibraryBooks.GetCachedState(book)
 	return entry[1], entry[2]
 end
 
+function LibraryBooks.IsQuestCompleted(questId)
+	if questId == nil then return false end
+	if C_QuestLog ~= nil and C_QuestLog.IsQuestFlaggedCompleted ~= nil then
+		return C_QuestLog.IsQuestFlaggedCompleted(questId) == true
+	end
+	if IsQuestFlaggedCompleted ~= nil then
+		return IsQuestFlaggedCompleted(questId) == true
+	end
+
+	return false
+end
+
 function LibraryBooks.GetState(book)
+	if LibraryBooks.IsQuestCompleted(book.questId) then return "done", false end
 	local api = _G["AzerothCompendiumAPI"]
 	if type(api) == "table" and api.GetLibraryBookState ~= nil then
 		local state, seen = api.GetLibraryBookState(book.itemId)
+		if state == "questflag" then return "done", false end
 		if state ~= nil then return state, seen == true end
 	end
 
-	local done = C_QuestLog ~= nil and C_QuestLog.IsQuestFlaggedCompleted ~= nil and C_QuestLog.IsQuestFlaggedCompleted(book.questId)
-	if done then return "done", false end
 	local bags = LibraryBooks.GetCount(book.itemId, false)
 	if bags > 0 then return "bag", true end
 	if LibraryBooks.GetCount(book.itemId, true) > bags then return "bank", true end
@@ -193,9 +205,10 @@ function LibraryBooks.CheckChanged()
 	local signature, states = LibraryBooks.GetSignature()
 	if LibraryBooks.signature == signature then return end
 	local first = LibraryBooks.signature == nil
+	local hadCache = next(LibraryBooks.cache) ~= nil
 	LibraryBooks.signature = signature
 	LibraryBooks.states = states
-	if first then return end
+	if first and not hadCache then return end
 	wipe(LibraryBooks.cache)
 	MapUtils:RefreshExploredPins()
 end
@@ -224,8 +237,12 @@ MapUtils:RegisterSharedSettings({
 })
 
 LibraryBooks.frame = CreateFrame("Frame")
+LibraryBooks.frame:RegisterEvent("PLAYER_ENTERING_WORLD")
 LibraryBooks.frame:RegisterEvent("QUEST_TURNED_IN")
+LibraryBooks.frame:RegisterEvent("QUEST_LOG_UPDATE")
 LibraryBooks.frame:RegisterEvent("BAG_UPDATE_DELAYED")
+LibraryBooks.frame:RegisterEvent("BANKFRAME_OPENED")
+LibraryBooks.frame:RegisterEvent("PLAYERBANKSLOTS_CHANGED")
 LibraryBooks.frame:SetScript("OnEvent", function() LibraryBooks.CheckChanged() end)
 if WorldMapFrame ~= nil then WorldMapFrame:HookScript("OnShow", function() LibraryBooks.OnMapShow() end) end
 MapUtils.ProfileTable("LibraryBooks", LibraryBooks)

@@ -2,7 +2,10 @@ local _, D4 = ...
 local DEFAULT_ART_WIDTH = 1024
 local DEFAULT_ART_HEIGHT = 1024
 local UPDATE_INTERVAL = 0.05
-local OVERLAY_LEVEL = 3000
+local OVERLAY_LEVEL = 9660
+local OVERLAY_ARROW_OFFSET = 260
+local OVERLAY_TOGGLES_OFFSET = 290
+local OVERLAY_CONTROL_OFFSET = 295
 local LEVEL_BUTTON_WIDTH = 260
 local LEVEL_BUTTON_HEIGHT = 22
 local LEVEL_BUTTON_OFFSET = 8
@@ -544,7 +547,7 @@ function D4:CreateInstanceMap(provider)
             return
         end
 
-        if posArrow == nil then posArrow = D4:CreateInstancePosArrow(overlay, overlay:GetFrameLevel() + 700) end
+        if posArrow == nil then posArrow = D4:CreateInstancePosArrow(overlay, overlay:GetFrameLevel() + OVERLAY_ARROW_OFFSET) end
         D4:UpdateInstancePosArrow(posArrow, overlay.art, info.file, "D4InstanceMap", true)
     end
 
@@ -971,7 +974,7 @@ function D4:CreateInstanceMap(provider)
             local container = WorldMapFrame.ScrollContainer
             local toggles = mapPinSet:CreateToggles(container)
             toggles:SetPoint("BOTTOMRIGHT", container, "BOTTOMRIGHT", -PIN_TOGGLE_OFFSET_X, PIN_TOGGLE_OFFSET_Y)
-            toggles:SetFrameLevel(overlay:GetFrameLevel() + 1000)
+            toggles:SetFrameLevel(overlay:GetFrameLevel() + OVERLAY_TOGGLES_OFFSET)
             if provider.getBossScale ~= nil and provider.setBossScale ~= nil then
                 local template = DoesTemplateExist ~= nil and (DoesTemplateExist("MinimalSliderTemplate") and "MinimalSliderTemplate" or DoesTemplateExist("UISliderTemplate") and "UISliderTemplate") or "OptionsSliderTemplate"
                 local slider = CreateFrame("Slider", nil, toggles, template)
@@ -1017,7 +1020,7 @@ function D4:CreateInstanceMap(provider)
         local container = GetContainer()
         if child == nil or container == nil then return nil end
         overlay = CreateFrame("FRAME", nil, container)
-        overlay:SetFrameLevel(child:GetFrameLevel() + OVERLAY_LEVEL)
+        overlay:SetFrameLevel(max(OVERLAY_LEVEL, child:GetFrameLevel() + 3000))
         overlay:EnableMouse(true)
         overlay:EnableMouseWheel(true)
         overlay:SetScript("OnMouseUp", OnCanvasMouseUp)
@@ -1027,7 +1030,7 @@ function D4:CreateInstanceMap(provider)
         local toggle = WorldMapFrame.SidePanelToggle
         if toggle ~= nil then
             local originalStrata, raisedStrata
-            overlay:HookScript("OnShow", function()
+            local function SyncSidePanelToggle()
                 local overlayStrata = overlay:GetFrameStrata()
                 local toggleStrata = toggle:GetFrameStrata()
                 local overlayIndex, toggleIndex
@@ -1036,14 +1039,16 @@ function D4:CreateInstanceMap(provider)
                     if strata == toggleStrata then toggleIndex = index end
                 end
 
-                if overlayIndex ~= nil and toggleIndex ~= nil and toggleIndex <= overlayIndex then
-                    raisedStrata = FRAME_STRATA[overlayIndex + 1]
-                    if raisedStrata ~= nil then
-                        originalStrata = toggleStrata
-                        toggle:SetFrameStrata(raisedStrata)
-                    end
-                end
-            end)
+                if overlayIndex == nil or toggleIndex == nil or toggleIndex > overlayIndex then return end
+                local nextStrata = FRAME_STRATA[overlayIndex + 1]
+                if nextStrata == nil then return end
+                if originalStrata == nil then originalStrata = toggleStrata end
+                raisedStrata = nextStrata
+                toggle:SetFrameStrata(raisedStrata)
+            end
+
+            overlay.SyncSidePanelToggle = SyncSidePanelToggle
+            overlay:HookScript("OnShow", SyncSidePanelToggle)
             overlay:HookScript("OnHide", function()
                 if originalStrata ~= nil and toggle:GetFrameStrata() == raisedStrata then toggle:SetFrameStrata(originalStrata) end
                 originalStrata, raisedStrata = nil, nil
@@ -1070,7 +1075,7 @@ function D4:CreateInstanceMap(provider)
             ["setCollapsed"] = provider.setLevelPanelCollapsed,
             ["onSwitchToNav"] = function() RequestSwitchMode(true) end,
             ["getSwitchToNavTooltip"] = provider.getLevelToNavTooltip,
-            ["getFrameLevel"] = function() return overlay:GetFrameLevel() + 1000 end,
+            ["getFrameLevel"] = function() return overlay:GetFrameLevel() + OVERLAY_CONTROL_OFFSET end,
         })
 
         local navBar = GetNavBar()
@@ -1087,7 +1092,7 @@ function D4:CreateInstanceMap(provider)
 
         if navBar == nil then
             navButton:SetPoint("BOTTOMLEFT", container, "BOTTOMLEFT", LEVEL_BUTTON_OFFSET, LEVEL_BUTTON_OFFSET)
-            navButton:SetFrameLevel(overlay:GetFrameLevel() + 1000)
+            navButton:SetFrameLevel(overlay:GetFrameLevel() + OVERLAY_CONTROL_OFFSET)
         end
 
         overlay:HookScript("OnSizeChanged", function()
@@ -1217,7 +1222,11 @@ function D4:CreateInstanceMap(provider)
             end
         end
 
-        if not overlay:IsShown() then overlay:Show() end
+        if not overlay:IsShown() then
+            overlay:Show()
+        elseif overlay.SyncSidePanelToggle ~= nil then
+            overlay.SyncSidePanelToggle()
+        end
         UpdatePosArrow(info)
     end
 
