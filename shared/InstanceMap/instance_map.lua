@@ -974,6 +974,7 @@ function D4:CreateInstanceMap(provider)
             local container = WorldMapFrame.ScrollContainer
             local toggles = mapPinSet:CreateToggles(container)
             toggles:SetPoint("BOTTOMRIGHT", container, "BOTTOMRIGHT", -PIN_TOGGLE_OFFSET_X, PIN_TOGGLE_OFFSET_Y)
+            toggles:SetFrameStrata(overlay:GetFrameStrata())
             toggles:SetFrameLevel(overlay:GetFrameLevel() + OVERLAY_TOGGLES_OFFSET)
             if provider.getBossScale ~= nil and provider.setBossScale ~= nil then
                 local template = DoesTemplateExist ~= nil and (DoesTemplateExist("MinimalSliderTemplate") and "MinimalSliderTemplate" or DoesTemplateExist("UISliderTemplate") and "UISliderTemplate") or "OptionsSliderTemplate"
@@ -1048,12 +1049,35 @@ function D4:CreateInstanceMap(provider)
             end
 
             overlay.SyncSidePanelToggle = SyncSidePanelToggle
-            overlay:HookScript("OnShow", SyncSidePanelToggle)
             overlay:HookScript("OnHide", function()
                 if originalStrata ~= nil and toggle:GetFrameStrata() == raisedStrata then toggle:SetFrameStrata(originalStrata) end
                 originalStrata, raisedStrata = nil, nil
             end)
         end
+
+        local navBar = GetNavBar()
+        local function SyncOverlayStrata()
+            local containerStrata = container:GetFrameStrata()
+            local targetStrata = containerStrata
+            local containerIndex, highIndex
+            for index, strata in ipairs(FRAME_STRATA) do
+                if strata == containerStrata then containerIndex = index end
+                if strata == "HIGH" then highIndex = index end
+            end
+
+            if containerIndex ~= nil and highIndex ~= nil and containerIndex < highIndex then targetStrata = "HIGH" end
+            if targetStrata ~= nil and overlay:GetFrameStrata() ~= targetStrata then overlay:SetFrameStrata(targetStrata) end
+            if mapPinSet ~= nil and mapPinSet.toggles ~= nil and targetStrata ~= nil and mapPinSet.toggles:GetFrameStrata() ~= targetStrata then
+                mapPinSet.toggles:SetFrameStrata(targetStrata)
+            end
+            if navBar == nil and navButton ~= nil and targetStrata ~= nil and navButton:GetFrameStrata() ~= targetStrata then
+                navButton:SetFrameStrata(targetStrata)
+            end
+            if overlay.SyncSidePanelToggle ~= nil then overlay.SyncSidePanelToggle() end
+        end
+
+        overlay.SyncOverlayStrata = SyncOverlayStrata
+        overlay:HookScript("OnShow", SyncOverlayStrata)
         overlay:SetAllPoints(container)
         if overlay.SetClipsChildren ~= nil then overlay:SetClipsChildren(true) end
         overlay.bg = overlay:CreateTexture(nil, "BACKGROUND")
@@ -1078,7 +1102,6 @@ function D4:CreateInstanceMap(provider)
             ["getFrameLevel"] = function() return overlay:GetFrameLevel() + OVERLAY_CONTROL_OFFSET end,
         })
 
-        local navBar = GetNavBar()
         if navBar ~= nil then
             navButton = CreateNavButton(navBar)
         elseif D4:CheckTemplates("SettingsDropdownWithButtonsTemplate") then
@@ -1094,6 +1117,8 @@ function D4:CreateInstanceMap(provider)
             navButton:SetPoint("BOTTOMLEFT", container, "BOTTOMLEFT", LEVEL_BUTTON_OFFSET, LEVEL_BUTTON_OFFSET)
             navButton:SetFrameLevel(overlay:GetFrameLevel() + OVERLAY_CONTROL_OFFSET)
         end
+
+        SyncOverlayStrata()
 
         overlay:HookScript("OnSizeChanged", function()
             if levelButton ~= nil and levelButton:IsShown() then levelButton:Layout() end
@@ -1224,8 +1249,8 @@ function D4:CreateInstanceMap(provider)
 
         if not overlay:IsShown() then
             overlay:Show()
-        elseif overlay.SyncSidePanelToggle ~= nil then
-            overlay.SyncSidePanelToggle()
+        elseif overlay.SyncOverlayStrata ~= nil then
+            overlay.SyncOverlayStrata()
         end
         UpdatePosArrow(info)
     end
