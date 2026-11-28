@@ -716,7 +716,7 @@ end
 local function GetMode(mapID)
 	if MapUtils.IsOneMap and MapUtils:IsOneMap() then return MODE_FULL end
 
-	return GetStyle(mapID) == "MAP" and not GetEmbeddedCityStyle(mapID) and not (MapUtils.IsMinimapCavesEnabled and MapUtils:IsMinimapCavesEnabled()) and MODE_OFF or MODE_AREAS
+	return GetStyle(mapID) == "MAP" and not GetEmbeddedCityStyle(mapID) and not (MapUtils.IsMinimapInteriorsEnabled and MapUtils:IsMinimapInteriorsEnabled()) and MODE_OFF or MODE_AREAS
 end
 
 local rectCache = {}
@@ -1405,6 +1405,7 @@ local MinimapLayer
 local function SyncBlizzardArt()
 	local cityDetail = MinimapLayer.cityDetailHost ~= nil and MinimapLayer.cityDetailHost == WorldMapFrame:GetMapID()
 	local hide = cityDetail or container ~= nil and container:IsShown() and container.built == MODE_FULL and (not container.cityMode or GetEmbeddedCityStyle(WorldMapFrame:GetMapID()) ~= nil)
+	local terrainLevel = MinimapLayer.frame and MinimapLayer.frame:GetFrameLevel()
 	if container and container:IsShown() and not hide and MinimapLayer.frame then
 		local level = container:GetFrameLevel() + 4
 		for pin in WorldMapFrame:EnumeratePinsByTemplate("MapExplorationPinTemplate") do
@@ -1412,16 +1413,23 @@ local function SyncBlizzardArt()
 		end
 
 		if MinimapLayer.frame:GetFrameLevel() ~= level then MinimapLayer.frame:SetFrameLevel(level) end
-		if MinimapLayer.caveFrame and MinimapLayer.caveFrame:GetFrameLevel() ~= level + 1 then MinimapLayer.caveFrame:SetFrameLevel(level + 1) end
+		terrainLevel = level
 	end
 
-	local cityBase = MinimapLayer.caveFrame or MinimapLayer.frame
-	local cityLevel = cityBase and cityBase:GetFrameLevel() + 1
-	if cityLevel and GetEmbeddedCityStyle(WorldMapFrame:GetMapID()) then
+	local interiorBase = terrainLevel
+	if terrainLevel and GetEmbeddedCityStyle(WorldMapFrame:GetMapID()) then
+		local cityLevel = terrainLevel + 1
 		for mapID, city in pairs(cities) do
 			if CITY_MAPS[mapID] and city.frame:GetFrameLevel() ~= cityLevel then city.frame:SetFrameLevel(cityLevel) end
 			if city.terrain and city.terrain:GetFrameLevel() ~= cityLevel + 1 then city.terrain:SetFrameLevel(cityLevel + 1) end
 		end
+
+		interiorBase = cityLevel + 1
+	end
+
+	if interiorBase then
+		if MinimapLayer.caveFrame and MinimapLayer.caveFrame:GetFrameLevel() ~= interiorBase + 1 then MinimapLayer.caveFrame:SetFrameLevel(interiorBase + 1) end
+		if MinimapLayer.buildingFrame and MinimapLayer.buildingFrame:GetFrameLevel() ~= interiorBase + 2 then MinimapLayer.buildingFrame:SetFrameLevel(interiorBase + 2) end
 	end
 
 	if not hide and not container.blizzardHidden then return end
@@ -1456,6 +1464,14 @@ function base.ApplyLevels(level, embedded)
 		base.levelKey = nil
 	end
 
+	if MinimapLayer.buildingFrame == nil then
+		MinimapLayer.buildingFrame = CreateFrame("FRAME", nil, container)
+		MinimapLayer.buildingFrame:SetAllPoints(container)
+		MinimapLayer.buildingFrame:EnableMouse(false)
+		MinimapLayer.buildingFrame:Hide()
+		base.levelKey = nil
+	end
+
 	MinimapLayer.frame:Show()
 	local key = format("%d:%d:%s:%s", level, base.artCount or 0, tostring(embedded), tostring(container.blizzardHidden))
 	if key == base.levelKey then return end
@@ -1470,10 +1486,13 @@ function base.ApplyLevels(level, embedded)
 	end
 
 	MinimapLayer.frame:SetFrameLevel(level + 4)
-	MinimapLayer.caveFrame:SetFrameLevel(level + 5)
 	for _, city in pairs(cities) do
 		city.frame:SetFrameLevel(level + 3)
 	end
+
+	local interiorBase = embedded and level + 6 or level + 4
+	MinimapLayer.caveFrame:SetFrameLevel(interiorBase + 1)
+	MinimapLayer.buildingFrame:SetFrameLevel(interiorBase + 2)
 end
 
 base.ApplyLevels = MapUtils.Profile("ZoneDetail.ApplyLevels", base.ApplyLevels)
@@ -1539,6 +1558,7 @@ function base.fade.Apply()
 
 	if MinimapLayer.frame ~= nil and MinimapLayer.alpha ~= nil then MinimapLayer.frame:SetAlpha(MinimapLayer.alpha * fade.detail) end
 	if MinimapLayer.caveFrame ~= nil and MinimapLayer.caveAlpha ~= nil then MinimapLayer.caveFrame:SetAlpha(MinimapLayer.caveAlpha * fade.detail) end
+	if MinimapLayer.buildingFrame ~= nil and MinimapLayer.buildingAlpha ~= nil then MinimapLayer.buildingFrame:SetAlpha(MinimapLayer.buildingAlpha * fade.detail) end
 	for _, city in pairs(MinimapLayer.cityOverlays or {}) do
 		if city.terrain then city.terrain:SetAlpha((MinimapLayer.cityAlpha or 1) * fade.detail) end
 	end
@@ -1677,7 +1697,51 @@ MinimapLayer = {
 	caveIntersections = {},
 	caveFadeStart = 420,
 	caveFadeEnd = 680,
-	caveAlpha = 0
+	caveAlpha = 0,
+	buildingTemplateData = {},
+	buildingTemplates = nil,
+	buildingData = {},
+	buildingParsed = {},
+	buildingActive = {},
+	buildingPools = {},
+	buildingPlaceCache = {},
+	buildingIntersections = {},
+	buildingFadeStart = 420,
+	buildingFadeEnd = 680,
+	buildingAlpha = 0
+}
+
+MinimapLayer.interiorLayers = {
+	["cave"] = {
+		["prefix"] = "c",
+		["frameKey"] = "caveFrame",
+		["alphaKey"] = "caveAlpha",
+		["fadeStartKey"] = "caveFadeStart",
+		["fadeEndKey"] = "caveFadeEnd",
+		["templateDataKey"] = "caveTemplateData",
+		["templatesKey"] = "caveTemplates",
+		["dataKey"] = "caveData",
+		["parsedKey"] = "caveParsed",
+		["activeKey"] = "caveActive",
+		["poolsKey"] = "cavePools",
+		["placeCacheKey"] = "cavePlaceCache",
+		["intersectionsKey"] = "caveIntersections"
+	},
+	["building"] = {
+		["prefix"] = "b",
+		["frameKey"] = "buildingFrame",
+		["alphaKey"] = "buildingAlpha",
+		["fadeStartKey"] = "buildingFadeStart",
+		["fadeEndKey"] = "buildingFadeEnd",
+		["templateDataKey"] = "buildingTemplateData",
+		["templatesKey"] = "buildingTemplates",
+		["dataKey"] = "buildingData",
+		["parsedKey"] = "buildingParsed",
+		["activeKey"] = "buildingActive",
+		["poolsKey"] = "buildingPools",
+		["placeCacheKey"] = "buildingPlaceCache",
+		["intersectionsKey"] = "buildingIntersections"
+	}
 }
 
 function MapUtils:AddMinimapCaveTemplates(dataFlavor, data)
@@ -1688,7 +1752,8 @@ end
 
 function MapUtils:AddMinimapCaves(dataFlavor, instance, data)
 	if MapUtils.GetRevealFlavor == nil or dataFlavor ~= MapUtils:GetRevealFlavor() then return end
-	MinimapLayer.caveData[instance] = data
+	MinimapLayer.caveData[instance] = MinimapLayer.caveData[instance] or {}
+	tinsert(MinimapLayer.caveData[instance], data)
 	MinimapLayer.caveParsed[instance] = nil
 end
 
@@ -1703,10 +1768,39 @@ function MapUtils:IsMinimapCavesEnabled()
 	return true
 end
 
-function MinimapLayer.GetCaveTemplates()
-	if MinimapLayer.caveTemplates ~= nil then return MinimapLayer.caveTemplates end
+function MapUtils:AddMinimapBuildingTemplates(dataFlavor, data)
+	if MapUtils.GetRevealFlavor == nil or dataFlavor ~= MapUtils:GetRevealFlavor() then return end
+	tinsert(MinimapLayer.buildingTemplateData, data)
+	MinimapLayer.buildingTemplates = nil
+end
+
+function MapUtils:AddMinimapBuildings(dataFlavor, instance, data)
+	if MapUtils.GetRevealFlavor == nil or dataFlavor ~= MapUtils:GetRevealFlavor() then return end
+	MinimapLayer.buildingData[instance] = MinimapLayer.buildingData[instance] or {}
+	tinsert(MinimapLayer.buildingData[instance], data)
+	MinimapLayer.buildingParsed[instance] = nil
+end
+
+function MapUtils:HasMinimapBuildings()
+	return next(MinimapLayer.buildingData) ~= nil
+end
+
+function MapUtils:IsMinimapBuildingsEnabled()
+	if not MapUtils:HasMinimapBuildings() then return false end
+	if type(MAUTTAB) == "table" and MAUTTAB["WORLDMAPBUILDINGS"] == false then return false end
+
+	return true
+end
+
+function MapUtils:IsMinimapInteriorsEnabled()
+	return MapUtils:IsMinimapCavesEnabled() or MapUtils:IsMinimapBuildingsEnabled()
+end
+
+function MinimapLayer.GetInteriorTemplates(spec)
+	local cached = MinimapLayer[spec.templatesKey]
+	if cached ~= nil then return cached end
 	local templates = {}
-	for _, chunk in ipairs(MinimapLayer.caveTemplateData) do
+	for _, chunk in ipairs(MinimapLayer[spec.templateDataKey]) do
 		for entry in string.gmatch(chunk, "[^;]+") do
 			local idText, tileText = string.match(entry, "^(%d+)=(.+)$")
 			local wmoID = idText and tonumber(idText)
@@ -1726,73 +1820,100 @@ function MinimapLayer.GetCaveTemplates()
 		end
 	end
 
-	MinimapLayer.caveTemplates = templates
+	MinimapLayer[spec.templatesKey] = templates
 
 	return templates
 end
 
-function MinimapLayer.GetCaves(instance)
-	if MinimapLayer.caveParsed[instance] ~= nil then return MinimapLayer.caveParsed[instance] or nil end
-	local data = MinimapLayer.caveData[instance]
-	if data == nil then
-		MinimapLayer.caveParsed[instance] = false
+function MinimapLayer.GetCaveTemplates()
+	return MinimapLayer.GetInteriorTemplates(MinimapLayer.interiorLayers.cave)
+end
+
+function MinimapLayer.GetInteriors(spec, instance)
+	local parsed = MinimapLayer[spec.parsedKey]
+	if parsed[instance] ~= nil then return parsed[instance] or nil end
+	local chunks = MinimapLayer[spec.dataKey][instance]
+	if chunks == nil then
+		parsed[instance] = false
 
 		return nil
 	end
 
+	if type(chunks) == "string" then chunks = {chunks} end
 	local list = {}
 	local idx = 0
-	for entry in string.gmatch(data, "[^;]+") do
-		local wmoID, ox, oy, ry, sc, minWx, maxWx, minWy, maxWy = strsplit(":", entry)
-		wmoID, ox, oy, ry, sc = tonumber(wmoID), tonumber(ox), tonumber(oy), tonumber(ry), tonumber(sc)
-		minWx, maxWx, minWy, maxWy = tonumber(minWx), tonumber(maxWx), tonumber(minWy), tonumber(maxWy)
-		if wmoID ~= nil and ox ~= nil and oy ~= nil and ry ~= nil and sc ~= nil and minWx ~= nil and maxWx ~= nil and minWy ~= nil and maxWy ~= nil then
-			idx = idx + 1
-			local rad = math.rad(ry)
-			tinsert(list, {wmoID, ox, oy, math.cos(rad) * sc, math.sin(rad) * sc, minWx, maxWx, minWy, maxWy, idx})
+	for _, data in ipairs(chunks) do
+		for entry in string.gmatch(data, "[^;]+") do
+			local wmoID, ox, oy, ry, sc, minWx, maxWx, minWy, maxWy = strsplit(":", entry)
+			wmoID, ox, oy, ry, sc = tonumber(wmoID), tonumber(ox), tonumber(oy), tonumber(ry), tonumber(sc)
+			minWx, maxWx, minWy, maxWy = tonumber(minWx), tonumber(maxWx), tonumber(minWy), tonumber(maxWy)
+			if wmoID ~= nil and ox ~= nil and oy ~= nil and ry ~= nil and sc ~= nil and minWx ~= nil and maxWx ~= nil and minWy ~= nil and maxWy ~= nil then
+				idx = idx + 1
+				local rad = math.rad(ry)
+				tinsert(list, {wmoID, ox, oy, math.cos(rad) * sc, math.sin(rad) * sc, minWx, maxWx, minWy, maxWy, idx})
+			end
 		end
 	end
 
-	MinimapLayer.caveParsed[instance] = list
+	parsed[instance] = list
 
 	return list
 end
 
-function MinimapLayer.ReleaseCave(key)
-	local texture = MinimapLayer.caveActive[key]
+function MinimapLayer.GetCaves(instance)
+	return MinimapLayer.GetInteriors(MinimapLayer.interiorLayers.cave, instance)
+end
+
+function MinimapLayer.ReleaseInterior(spec, key)
+	local active = MinimapLayer[spec.activeKey]
+	local texture = active[key]
 	if texture == nil then return end
 	texture:Hide()
 	if texture.explorationMask then
 		RemoveMapMask(texture, texture.explorationMask)
 		texture.explorationMask = nil
 	end
-	MinimapLayer.caveActive[key] = nil
-	tinsert(MinimapLayer.cavePools[texture.continentID], texture)
+	active[key] = nil
+	tinsert(MinimapLayer[spec.poolsKey][texture.continentID], texture)
+end
+
+function MinimapLayer.ReleaseCave(key)
+	MinimapLayer.ReleaseInterior(MinimapLayer.interiorLayers.cave, key)
+end
+
+function MinimapLayer.HideInterior(spec)
+	for key in pairs(MinimapLayer[spec.activeKey]) do
+		MinimapLayer.ReleaseInterior(spec, key)
+	end
+
+	wipe(MinimapLayer[spec.placeCacheKey])
+	MinimapLayer[spec.alphaKey] = 0
+	local frame = MinimapLayer[spec.frameKey]
+	if frame ~= nil then
+		frame:SetAlpha(0)
+		frame:Hide()
+	end
 end
 
 function MinimapLayer.HideCaves()
-	for key in pairs(MinimapLayer.caveActive) do
-		MinimapLayer.ReleaseCave(key)
-	end
-
-	wipe(MinimapLayer.cavePlaceCache)
-	MinimapLayer.caveAlpha = 0
-	if MinimapLayer.caveFrame ~= nil then
-		MinimapLayer.caveFrame:SetAlpha(0)
-		MinimapLayer.caveFrame:Hide()
-	end
+	MinimapLayer.HideInterior(MinimapLayer.interiorLayers.cave)
 end
 
-function MinimapLayer.AcquireCave(continentID, mask)
-	local pool = MinimapLayer.cavePools[continentID]
+function MinimapLayer.HideBuildings()
+	MinimapLayer.HideInterior(MinimapLayer.interiorLayers.building)
+end
+
+function MinimapLayer.AcquireInterior(spec, continentID, mask)
+	local pools = MinimapLayer[spec.poolsKey]
+	local pool = pools[continentID]
 	if pool == nil then
 		pool = {}
-		MinimapLayer.cavePools[continentID] = pool
+		pools[continentID] = pool
 	end
 
 	local texture = tremove(pool)
 	if texture == nil then
-		texture = MinimapLayer.caveFrame:CreateTexture(nil, "ARTWORK")
+		texture = MinimapLayer[spec.frameKey]:CreateTexture(nil, "ARTWORK")
 		if texture.SetSnapToPixelGrid ~= nil then texture:SetSnapToPixelGrid(false) end
 		if texture.SetTexelSnappingBias ~= nil then texture:SetTexelSnappingBias(0) end
 		texture.continentID = continentID
@@ -1808,17 +1929,28 @@ function MinimapLayer.AcquireCave(continentID, mask)
 	return texture
 end
 
-function MinimapLayer.GetCaveShare(tilePixels, host, tileU, spaceWidth, width, scrollContainer)
-	local start, finish = MinimapLayer.caveFadeStart, MinimapLayer.caveFadeEnd
-	if container.built == MODE_AREAS then
+function MinimapLayer.GetInteriorShare(spec, tilePixels, host, tileU, spaceWidth, width, scrollContainer)
+	local start, finish = MinimapLayer[spec.fadeStartKey], MinimapLayer[spec.fadeEndKey]
+	if container.built == MODE_AREAS or container.cityMode then
+		if CITY_MAPS[host] and scrollContainer.GetScaleForMinZoom then
+			local minScale = scrollContainer:GetScaleForMinZoom()
+			if minScale and minScale > 0 then
+				local minTilePixels = tileU * spaceWidth * width * minScale
+				if minTilePixels > start * 0.9 then
+					start = math.max(start, minTilePixels * 1.15)
+					finish = math.max(finish, start + 180)
+				end
+			end
+		end
+
 		local hostInfo = C_Map.GetMapInfo(host)
-		if hostInfo and hostInfo.mapType == Enum.UIMapType.Zone and scrollContainer.GetScaleForMaxZoom then
+		if hostInfo and hostInfo.mapType >= Enum.UIMapType.Zone and scrollContainer.GetScaleForMaxZoom then
 			local maxScale = scrollContainer:GetScaleForMaxZoom()
 			if maxScale and maxScale > 0 then
 				local maxTilePixels = tileU * spaceWidth * width * maxScale
 				if maxTilePixels < finish then
 					finish = math.max(220, maxTilePixels * 0.92)
-					start = math.max(140, finish * 0.62)
+					start = math.max(140, math.min(start, finish * 0.62))
 				end
 			end
 		end
@@ -1827,7 +1959,13 @@ function MinimapLayer.GetCaveShare(tilePixels, host, tileU, spaceWidth, width, s
 	return MinimapLayer.GetTerrainShare(tilePixels, start, finish)
 end
 
-function MinimapLayer.PlaceCaveTile(wanted, key, continentID, mask, fileID, zBucket, U00, V00, au, av, bu, bv, det, left, right, top, bottom, fogTint, showUnexplored)
+function MinimapLayer.GetCaveShare(tilePixels, host, tileU, spaceWidth, width, scrollContainer)
+	return MinimapLayer.GetInteriorShare(MinimapLayer.interiorLayers.cave, tilePixels, host, tileU, spaceWidth, width, scrollContainer)
+end
+
+function MinimapLayer.PlaceInteriorTile(spec, wanted, key, continentID, mask, fileID, zBucket, U00, V00, au, av, bu, bv, det, left, right, top, bottom, fogTint, showUnexplored)
+	local active = MinimapLayer[spec.activeKey]
+	local intersections = MinimapLayer[spec.intersectionsKey]
 	local function EvalUV(U, V)
 		local dU, dV = U - U00, V - V00
 
@@ -1836,8 +1974,8 @@ function MinimapLayer.PlaceCaveTile(wanted, key, continentID, mask, fileID, zBuc
 
 	if showUnexplored then
 		wanted[key] = true
-		if not MinimapLayer.caveActive[key] then
-			local texture = MinimapLayer.AcquireCave(continentID, mask)
+		if not active[key] then
+			local texture = MinimapLayer.AcquireInterior(spec, continentID, mask)
 			texture:SetDrawLayer("ARTWORK", zBucket - 8)
 			local desaturation = 1 - (1 - MinimapLayer.desaturation) * fogTint[4]
 			texture:SetDesaturation(fogTint[5] and 1 or desaturation)
@@ -1852,14 +1990,14 @@ function MinimapLayer.PlaceCaveTile(wanted, key, continentID, mask, fileID, zBuc
 			texture:SetPoint("TOPLEFT", container, "TOPLEFT", left * container.refWidth, -top * container.refHeight)
 			texture:SetSize((right - left) * container.refWidth, (bottom - top) * container.refHeight)
 			texture:Show()
-			MinimapLayer.caveActive[key] = texture
+			active[key] = texture
 		end
 	end
 
-	local pieces = MinimapLayer.caveIntersections[key]
+	local pieces = intersections[key]
 	if not pieces then
 		pieces = {}
-		MinimapLayer.caveIntersections[key] = pieces
+		intersections[key] = pieces
 		for index, piece in ipairs(MinimapLayer.explored[continentID] or {}) do
 			local l, r = math.max(left, piece[1]), math.min(right, piece[2])
 			local t, b = math.max(top, piece[3]), math.min(bottom, piece[4])
@@ -1870,8 +2008,8 @@ function MinimapLayer.PlaceCaveTile(wanted, key, continentID, mask, fileID, zBuc
 	for _, piece in ipairs(pieces) do
 		local l, r, t, b, explorationMask, pieceKey = unpack(piece)
 		wanted[pieceKey] = true
-		if not MinimapLayer.caveActive[pieceKey] then
-			local texture = MinimapLayer.AcquireCave(continentID, mask)
+		if not active[pieceKey] then
+			local texture = MinimapLayer.AcquireInterior(spec, continentID, mask)
 			texture:SetDrawLayer("ARTWORK", zBucket)
 			texture:SetDesaturation(MinimapLayer.desaturation)
 			texture:SetVertexColor(unpack(MinimapLayer.tint))
@@ -1887,33 +2025,67 @@ function MinimapLayer.PlaceCaveTile(wanted, key, continentID, mask, fileID, zBuc
 			AddMapMask(texture, explorationMask)
 			texture.explorationMask = explorationMask
 			texture:Show()
-			MinimapLayer.caveActive[pieceKey] = texture
+			active[pieceKey] = texture
 		end
 	end
 end
 
-function MinimapLayer.PlaceCaves(wanted, source, continentID, mask, transform, minX, maxX, minY, maxY, fogTint, showUnexplored, tintKey)
-	local caves = MinimapLayer.GetCaves(source.instance)
-	if caves == nil or #caves == 0 then return 0 end
-	local templates = MinimapLayer.GetCaveTemplates()
+function MinimapLayer.CollectVisibleInteriorTiles(c, tiles, minX, maxX, minY, maxY)
+	local ox, oy, cs, sn = c[2], c[3], c[4], c[5]
+	local visIdx = {}
+	local subParts = {}
+	for ti = 1, #tiles do
+		local t = tiles[ti]
+		local lx0, ly0 = t[2], t[3]
+		local lx1, ly1 = lx0 + t[4], ly0 + t[5]
+		local wx00, wy00 = ox - (cs * lx0 - sn * ly1), oy - (sn * lx0 + cs * ly1)
+		local wx10, wy10 = ox - (cs * lx1 - sn * ly1), oy - (sn * lx1 + cs * ly1)
+		local wx01, wy01 = ox - (cs * lx0 - sn * ly0), oy - (sn * lx0 + cs * ly0)
+		local wx11, wy11 = wx10 + wx01 - wx00, wy10 + wy01 - wy00
+		if math.max(wx00, wx10, wx01, wx11) >= minX and math.min(wx00, wx10, wx01, wx11) <= maxX and math.max(wy00, wy10, wy01, wy11) >= minY and math.min(wy00, wy10, wy01, wy11) <= maxY then
+			tinsert(visIdx, ti)
+			tinsert(subParts, tostring(ti))
+		end
+	end
+
+	return visIdx, subParts
+end
+
+function MinimapLayer.PlaceInterior(spec, wanted, source, continentID, mask, transform, minX, maxX, minY, maxY, fogTint, showUnexplored, tintKey)
+	local items = MinimapLayer.GetInteriors(spec, source.instance)
+	if items == nil or #items == 0 then return 0 end
+	local templates = MinimapLayer.GetInteriorTemplates(spec)
 	local visible = {}
-	for i = 1, #caves do
-		local c = caves[i]
-		if c[7] >= minX and c[6] <= maxX and c[9] >= minY and c[8] <= maxY then tinsert(visible, c) end
+	local idParts = {}
+	local tileCount = 0
+	for i = 1, #items do
+		local c = items[i]
+		local tiles = c[7] >= minX and c[6] <= maxX and c[9] >= minY and c[8] <= maxY and templates[c[1]] or nil
+		if tiles ~= nil then
+			if #tiles <= 16 then
+				tinsert(visible, {c, tiles, nil})
+				tinsert(idParts, tostring(c[10]))
+				tileCount = tileCount + #tiles
+			else
+				local visIdx, subParts = MinimapLayer.CollectVisibleInteriorTiles(c, tiles, minX, maxX, minY, maxY)
+				if #visIdx > 0 then
+					tinsert(visible, {c, tiles, visIdx})
+					tinsert(idParts, c[10] .. "(" .. table.concat(subParts, ",") .. ")")
+					tileCount = tileCount + #visIdx
+				end
+			end
+		end
 	end
 
 	if #visible == 0 then return 0 end
-	local idParts = {}
-	for i = 1, #visible do
-		idParts[i] = tostring(visible[i][10])
-	end
-
 	local cacheKey = format("%s:%s:%s", table.concat(idParts, ","), tostring(showUnexplored), tintKey)
-	local cached = MinimapLayer.cavePlaceCache[source.id]
+	local placeCache = MinimapLayer[spec.placeCacheKey]
+	local active = MinimapLayer[spec.activeKey]
+	local cached = placeCache[source.id]
 	local reuse = cached ~= nil and cached.key == cacheKey
 	if reuse then
 		for key in pairs(cached.wanted) do
-			if not MinimapLayer.caveActive[key] then
+			if not active[key] then
 				reuse = false
 				break
 			end
@@ -1922,37 +2094,38 @@ function MinimapLayer.PlaceCaves(wanted, source, continentID, mask, transform, m
 
 	local sourceWanted = reuse and cached.wanted or {}
 	if not reuse then
+		local prefix = spec.prefix
 		for i = 1, #visible do
-			local c = visible[i]
-			local tiles = templates[c[1]]
-			if tiles ~= nil then
-				local ox, oy, cs, sn, placeIdx = c[2], c[3], c[4], c[5], c[10]
-				for ti = 1, #tiles do
-					local t = tiles[ti]
-					local lx0, ly0, wYds, hYds = t[2], t[3], t[4], t[5]
-					local lx1, ly1 = lx0 + wYds, ly0 + hYds
-					local U00, V00 = MinimapLayer.ToWorld(transform, ox - (cs * lx0 - sn * ly1), oy - (sn * lx0 + cs * ly1))
-					local U10, V10 = MinimapLayer.ToWorld(transform, ox - (cs * lx1 - sn * ly1), oy - (sn * lx1 + cs * ly1))
-					local U01, V01 = MinimapLayer.ToWorld(transform, ox - (cs * lx0 - sn * ly0), oy - (sn * lx0 + cs * ly0))
-					local U11, V11 = U10 + U01 - U00, V10 + V01 - V00
-					local au, av = U10 - U00, U01 - U00
-					local bu, bv = V10 - V00, V01 - V00
-					local det = au * bv - av * bu
-					if math.abs(det) > 1e-12 then
-						local left = math.min(U00, U10, U01, U11)
-						local right = math.max(U00, U10, U01, U11)
-						local top = math.min(V00, V10, V01, V11)
-						local bottom = math.max(V00, V10, V01, V11)
-						if right > left and bottom > top then
-							local key = format("c:%d:%d:%d", source.id, placeIdx, ti)
-							MinimapLayer.PlaceCaveTile(sourceWanted, key, continentID, mask, t[1], t[6], U00, V00, au, av, bu, bv, det, left, right, top, bottom, fogTint, showUnexplored)
-						end
+			local entry = visible[i]
+			local c, tiles, visIdx = entry[1], entry[2], entry[3]
+			local ox, oy, cs, sn, placeIdx = c[2], c[3], c[4], c[5], c[10]
+			local n = visIdx and #visIdx or #tiles
+			for j = 1, n do
+				local ti = visIdx and visIdx[j] or j
+				local t = tiles[ti]
+				local lx0, ly0, wYds, hYds = t[2], t[3], t[4], t[5]
+				local lx1, ly1 = lx0 + wYds, ly0 + hYds
+				local U00, V00 = MinimapLayer.ToWorld(transform, ox - (cs * lx0 - sn * ly1), oy - (sn * lx0 + cs * ly1))
+				local U10, V10 = MinimapLayer.ToWorld(transform, ox - (cs * lx1 - sn * ly1), oy - (sn * lx1 + cs * ly1))
+				local U01, V01 = MinimapLayer.ToWorld(transform, ox - (cs * lx0 - sn * ly0), oy - (sn * lx0 + cs * ly0))
+				local U11, V11 = U10 + U01 - U00, V10 + V01 - V00
+				local au, av = U10 - U00, U01 - U00
+				local bu, bv = V10 - V00, V01 - V00
+				local det = au * bv - av * bu
+				if math.abs(det) > 1e-12 then
+					local left = math.min(U00, U10, U01, U11)
+					local right = math.max(U00, U10, U01, U11)
+					local top = math.min(V00, V10, V01, V11)
+					local bottom = math.max(V00, V10, V01, V11)
+					if right > left and bottom > top then
+						local key = format("%s:%d:%d:%d", prefix, source.id, placeIdx, ti)
+						MinimapLayer.PlaceInteriorTile(spec, sourceWanted, key, continentID, mask, t[1], t[6], U00, V00, au, av, bu, bv, det, left, right, top, bottom, fogTint, showUnexplored)
 					end
 				end
 			end
 		end
 
-		MinimapLayer.cavePlaceCache[source.id] = {
+		placeCache[source.id] = {
 			["key"] = cacheKey,
 			["wanted"] = sourceWanted
 		}
@@ -1962,7 +2135,15 @@ function MinimapLayer.PlaceCaves(wanted, source, continentID, mask, transform, m
 		wanted[key] = true
 	end
 
-	return #visible
+	return tileCount
+end
+
+function MinimapLayer.PlaceCaves(wanted, source, continentID, mask, transform, minX, maxX, minY, maxY, fogTint, showUnexplored, tintKey)
+	return MinimapLayer.PlaceInterior(MinimapLayer.interiorLayers.cave, wanted, source, continentID, mask, transform, minX, maxX, minY, maxY, fogTint, showUnexplored, tintKey)
+end
+
+function MinimapLayer.PlaceBuildings(wanted, source, continentID, mask, transform, minX, maxX, minY, maxY, fogTint, showUnexplored, tintKey)
+	return MinimapLayer.PlaceInterior(MinimapLayer.interiorLayers.building, wanted, source, continentID, mask, transform, minX, maxX, minY, maxY, fogTint, showUnexplored, tintKey)
 end
 
 function MapUtils:AddMinimapCoarse(dataFlavor, instance, name)
@@ -2132,6 +2313,7 @@ function MinimapLayer.HideAll()
 
 	wipe(MinimapLayer.placeCache)
 	MinimapLayer.HideCaves()
+	MinimapLayer.HideBuildings()
 	MinimapLayer.signature = nil
 end
 
@@ -2220,12 +2402,20 @@ function MinimapLayer.UpdateExploration(host)
 		end
 	end
 
+	for _, pieces in pairs(MinimapLayer.buildingIntersections or {}) do
+		for _, piece in ipairs(pieces) do
+			if MinimapLayer.buildingActive[piece[6]] then MinimapLayer.ReleaseInterior(MinimapLayer.interiorLayers.building, piece[6]) end
+		end
+	end
+
 	wipe(MinimapLayer.placeCache)
 	wipe(MinimapLayer.cavePlaceCache)
+	wipe(MinimapLayer.buildingPlaceCache)
 	MinimapLayer.signature = nil
 	MinimapLayer.explorationSignature = signature
 	MinimapLayer.intersections = {}
 	MinimapLayer.caveIntersections = {}
+	MinimapLayer.buildingIntersections = {}
 	local hostInfo = C_Map.GetMapInfo(host)
 	local singleZone = container.built == MODE_AREAS and hostInfo and hostInfo.mapType == Enum.UIMapType.Zone
 	local usedMasks = {}
@@ -2518,7 +2708,7 @@ function MinimapLayer.ShowCityDetail(mapID, detail, host, width, height, level)
 		frame.host, frame.width, frame.height = host, width, height
 	end
 
-	frame:SetFrameLevel(level or child:GetFrameLevel() + FRAME_LEVEL_OFFSET + 6)
+	frame:SetFrameLevel(level or child:GetFrameLevel() + FRAME_LEVEL_OFFSET + 8)
 
 	return true
 end
@@ -2553,7 +2743,7 @@ function MinimapLayer.UpdateCityDetail(force)
 		local embedded = embeddedStyle and city and city.frame:IsShown()
 		local detailStyle = GetStyle(mapID)
 		local canShow = supported and detailStyle ~= "MAP" and width > 0 and height > 0 and (onCityMap or embedded or world and city and city.count > 0)
-		local level = embedded and city.frame:GetFrameLevel() + 2
+		local level = embedded and city.frame:GetFrameLevel() + 4
 		if canShow and MinimapLayer.ShowCityDetail(mapID, detail, host, width, height, level) then
 			local mask = (embedded or world and not onCityMap) and city and city.masked and city.mask or nil
 			if detail.frame.cityMask ~= mask then
@@ -2598,9 +2788,10 @@ function MinimapLayer.Update()
 	local style = GetStyle(not embeddedStyle and host or nil)
 	local cityTerrain = embeddedStyle and embeddedStyle ~= "MAP"
 	local cavesOn = MapUtils:IsMinimapCavesEnabled()
+	local buildingsOn = MapUtils:IsMinimapBuildingsEnabled()
 	local underground = UNDERGROUND[host] and not MapUtils:IsOneMap()
-	if underground or not container:IsShown() or container.refWidth == nil or style == "MAP" and not cityTerrain and not cavesOn then
-		if MinimapLayer.signature ~= nil or next(MinimapLayer.active) ~= nil or next(MinimapLayer.caveActive) ~= nil then MinimapLayer.HideAll() end
+	if underground or not container:IsShown() or container.refWidth == nil or style == "MAP" and not cityTerrain and not cavesOn and not buildingsOn then
+		if MinimapLayer.signature ~= nil or next(MinimapLayer.active) ~= nil or next(MinimapLayer.caveActive) ~= nil or next(MinimapLayer.buildingActive) ~= nil then MinimapLayer.HideAll() end
 
 		return
 	end
@@ -2617,7 +2808,7 @@ function MinimapLayer.Update()
 	local width, height = scrollContainer.Child:GetSize()
 	if hostLeft == nil or x == nil or y == nil or scale == nil or scale <= 0 or width == nil or width <= 0 or height == nil or height <= 0 then return end
 	MinimapLayer.UpdateExploration(host)
-	local changed = base.Changed(MinimapLayer.viewState, host, style, scale, x, y, cavesOn, showUnexplored, fogTint[1], fogTint[2], fogTint[3], fogTint[4], fogTint[5] == true)
+	local changed = base.Changed(MinimapLayer.viewState, host, style, scale, x, y, cavesOn, buildingsOn, showUnexplored, fogTint[1], fogTint[2], fogTint[3], fogTint[4], fogTint[5] == true)
 	if not changed and MinimapLayer.signature ~= nil then return end
 	MinimapLayer.signature = true
 	local spaceWidth, spaceHeight = hostRight - hostLeft, hostBottom - hostTop
@@ -2626,9 +2817,11 @@ function MinimapLayer.Update()
 	local halfV = scrollContainer:GetHeight() / (2 * scale * height) / spaceHeight
 	local wanted = {}
 	local wantedCaves = {}
+	local wantedBuildings = {}
 	local alpha = 0
 	local cityAlpha = 0
 	local caveAlpha = 0
+	local buildingAlpha = 0
 	MinimapLayer.cityOverlays = {}
 	if cityTerrain then
 		for mapID, city in pairs(cities) do
@@ -2663,9 +2856,10 @@ function MinimapLayer.Update()
 				local tilePixels = tileU * spaceWidth * width * scale
 				local share = terrain and 1 or style ~= "MAP" and MinimapLayer.GetTerrainShare(tilePixels, zoneStart, zoneEnd) or 0
 				local cityShare = embeddedStyle == "TERRAIN" and 1 or cityTerrain and MinimapLayer.GetTerrainShare(tilePixels, cityStart, cityEnd) or 0
-				local caveShare = cavesOn and MinimapLayer.GetCaveShare(tilePixels, host, tileU, spaceWidth, width, scrollContainer) or 0
-				info.tilePixels, info.share, info.caveShare = tilePixels, share, caveShare
-				if share > 0 or cityShare > 0 or caveShare > 0 then
+				local caveShare = cavesOn and MinimapLayer.GetInteriorShare(MinimapLayer.interiorLayers.cave, tilePixels, host, tileU, spaceWidth, width, scrollContainer) or 0
+				local buildingShare = buildingsOn and MinimapLayer.GetInteriorShare(MinimapLayer.interiorLayers.building, tilePixels, host, tileU, spaceWidth, width, scrollContainer) or 0
+				info.tilePixels, info.share, info.caveShare, info.buildingShare = tilePixels, share, caveShare, buildingShare
+				if share > 0 or cityShare > 0 or caveShare > 0 or buildingShare > 0 then
 					local minX, maxX, minY, maxY
 					for _, corner in ipairs({{-1, -1}, {1, -1}, {-1, 1}, {1, 1}}) do
 						local yardX, yardY = MinimapLayer.ToYards(transform, centerU + corner[1] * halfU, centerV + corner[2] * halfV)
@@ -2683,6 +2877,11 @@ function MinimapLayer.Update()
 					if caveShare > 0 and minX <= maxX and minY <= maxY then
 						info.caves = MinimapLayer.PlaceCaves(wantedCaves, source, continentID, mask, transform, minX, maxX, minY, maxY, fogTint, showUnexplored, tintKey)
 						if info.caves > 0 then caveAlpha = math.max(caveAlpha, MinimapLayer.maxAlpha * math.min(1, caveShare)) end
+					end
+
+					if buildingShare > 0 and minX <= maxX and minY <= maxY then
+						info.buildings = MinimapLayer.PlaceBuildings(wantedBuildings, source, continentID, mask, transform, minX, maxX, minY, maxY, fogTint, showUnexplored, tintKey)
+						if info.buildings > 0 then buildingAlpha = math.max(buildingAlpha, MinimapLayer.maxAlpha * math.min(1, buildingShare)) end
 					end
 
 					if share > 0 or cityShare > 0 then
@@ -2783,18 +2982,27 @@ function MinimapLayer.Update()
 			for key in pairs(MinimapLayer.caveActive) do
 				if not wantedCaves[key] then MinimapLayer.ReleaseCave(key) end
 			end
+
+			for key in pairs(MinimapLayer.buildingActive) do
+				if not wantedBuildings[key] then MinimapLayer.ReleaseInterior(MinimapLayer.interiorLayers.building, key) end
+			end
 		end
 	else
 		MinimapLayer.waitSince = MinimapLayer.waitSince or now
 		MinimapLayer.signature = nil
 	end
 
-	MinimapLayer.alpha, MinimapLayer.cityAlpha, MinimapLayer.caveAlpha = alpha, cityAlpha, caveAlpha
+	MinimapLayer.alpha, MinimapLayer.cityAlpha, MinimapLayer.caveAlpha, MinimapLayer.buildingAlpha = alpha, cityAlpha, caveAlpha, buildingAlpha
 	MinimapLayer.frame:SetAlpha(alpha * base.fade.detail)
 	if MinimapLayer.caveFrame ~= nil then
 		local finalCaveAlpha = caveAlpha * base.fade.detail
 		MinimapLayer.caveFrame:SetAlpha(finalCaveAlpha)
 		MinimapLayer.caveFrame:SetShown(finalCaveAlpha > 0)
+	end
+	if MinimapLayer.buildingFrame ~= nil then
+		local finalBuildingAlpha = buildingAlpha * base.fade.detail
+		MinimapLayer.buildingFrame:SetAlpha(finalBuildingAlpha)
+		MinimapLayer.buildingFrame:SetShown(finalBuildingAlpha > 0)
 	end
 	for _, city in pairs(MinimapLayer.cityOverlays) do
 		city.terrain:SetAlpha(cityAlpha * base.fade.detail)
@@ -2803,7 +3011,7 @@ end
 
 function MapUtils:GetZoneDetailTilePixelsPerScale(mapID)
 	local style = GetStyle(mapID)
-	if container == nil or container.refWidth == nil or style == "MAP" and GetEmbeddedCityStyle(mapID) ~= "MIXED" and not MapUtils:IsMinimapCavesEnabled() then return nil end
+	if container == nil or container.refWidth == nil or style == "MAP" and GetEmbeddedCityStyle(mapID) ~= "MIXED" and not MapUtils:IsMinimapInteriorsEnabled() then return nil end
 	local detail = UNDERGROUND[mapID]
 	if detail and detail.frame and detail.frame.host == mapID then return detail.frame:GetWidth() * MinimapLayer.tile / 1024 end
 	local left, right = GetSpaceRect(mapID)
@@ -2827,7 +3035,7 @@ function MapUtils:GetZoneDetailTileFullPixels(mapID)
 		local _, cityEnd = MapUtils:GetTerrainFadeThresholds(true)
 		finish = math.max(GetStyle() == "MIXED" and zoneEnd or 0, cityEnd)
 	elseif style ~= "MIXED" then
-		finish = style == "MAP" and MapUtils:IsMinimapCavesEnabled() and MinimapLayer.caveFadeEnd or TERRAIN_FADE_END
+		finish = style == "MAP" and MapUtils:IsMinimapInteriorsEnabled() and math.max(MinimapLayer.caveFadeEnd, MinimapLayer.buildingFadeEnd) or TERRAIN_FADE_END
 	end
 
 	return finish
@@ -2886,8 +3094,13 @@ function MapUtils:PrintMinimapTileDebug()
 		activeCaves = activeCaves + 1
 	end
 
+	local activeBuildings = 0
+	for _ in pairs(MinimapLayer.buildingActive) do
+		activeBuildings = activeBuildings + 1
+	end
+
 	local left, right, top, bottom = GetSpaceRect(host)
-	MinimapLayer.DebugLine(format("active textures %d, cave textures %d (alpha %.2f), spaceRect %s, maxZoom %s, view %s", active, activeCaves, MinimapLayer.caveAlpha or 0, left and format("%.4f %.4f %.4f %.4f", left, right, top, bottom) or "nil", scrollContainer and scrollContainer.GetScaleForMaxZoom and format("%.3f", scrollContainer:GetScaleForMaxZoom()) or "?", scrollContainer and format("%.0fx%.0f", scrollContainer:GetWidth(), scrollContainer:GetHeight()) or "?"))
+	MinimapLayer.DebugLine(format("active textures %d, cave textures %d (alpha %.2f), building textures %d (alpha %.2f), spaceRect %s, maxZoom %s, view %s", active, activeCaves, MinimapLayer.caveAlpha or 0, activeBuildings, MinimapLayer.buildingAlpha or 0, left and format("%.4f %.4f %.4f %.4f", left, right, top, bottom) or "nil", scrollContainer and scrollContainer.GetScaleForMaxZoom and format("%.3f", scrollContainer:GetScaleForMaxZoom()) or "?", scrollContainer and format("%.0fx%.0f", scrollContainer:GetWidth(), scrollContainer:GetHeight()) or "?"))
 	if type(MAUTTAB) == "table" then MAUTTAB["TILEDEBUG"] = MinimapLayer.debugLines end
 end
 
@@ -2926,6 +3139,7 @@ end
 function base.GetHoverLevel()
 	local level = MinimapLayer.frame and MinimapLayer.frame:GetFrameLevel() or container:GetFrameLevel() + 4
 	if MinimapLayer.caveFrame then level = math.max(level, MinimapLayer.caveFrame:GetFrameLevel()) end
+	if MinimapLayer.buildingFrame then level = math.max(level, MinimapLayer.buildingFrame:GetFrameLevel()) end
 	for _, city in pairs(cities) do
 		level = math.max(level, city.frame:GetFrameLevel())
 		if city.terrain then level = math.max(level, city.terrain:GetFrameLevel()) end
@@ -3036,6 +3250,7 @@ local function Install()
 		return frames
 	end)
 	MapUtils:RegisterRenderLayer("Cave minimaps", function() return MinimapLayer.caveFrame end)
+	MapUtils:RegisterRenderLayer("Building minimaps", function() return MinimapLayer.buildingFrame end)
 	MapUtils:RegisterRenderLayer("City art", function()
 		local frames = {}
 		for _, city in pairs(cities) do

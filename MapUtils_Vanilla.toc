@@ -91,6 +91,7 @@ data\era\zonemasks.lua
 zonedetail.lua
 data\era\minimaptiles.lua
 data\era\minimapcaves.lua
+data\era\minimapbuildings.lua
 data\era\minimaplod.lua
 data\era\minimapcoarse.lua
 debug.lua

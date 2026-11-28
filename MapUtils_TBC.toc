@@ -93,6 +93,7 @@ data\tbc\zonemasks.lua
 zonedetail.lua
 data\tbc\minimaptiles.lua
 data\tbc\minimapcaves.lua
+data\tbc\minimapbuildings.lua
 data\tbc\minimaplod.lua
 data\tbc\minimapcoarse.lua
 debug.lua

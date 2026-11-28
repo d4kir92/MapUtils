@@ -10,6 +10,7 @@ ignore:
   - convergences_wowhead.lua
   - data/cata/instances.lua
   - data/cata/questgivers.lua
+  - data/era/minimapbuildings.lua
   - data/era/minimapcaves.lua
   - data/era/minimapcoarse.lua
   - data/era/minimaplod.lua
@@ -20,6 +21,7 @@ ignore:
   - data/forever/extraart.lua
   - data/forever/instances.lua
   - data/forever/librarybooks.lua
+  - data/forever/minimapbuildings.lua
   - data/forever/minimapcaves.lua
   - data/forever/minimapcoarse.lua
   - data/forever/minimaplod.lua
